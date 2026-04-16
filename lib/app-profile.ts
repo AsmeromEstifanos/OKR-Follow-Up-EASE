@@ -52,7 +52,7 @@ const EASE_OKR_PROFILE: AppProfile = {
     leafLevelPlural: "KPIs"
   },
   codePrefixes: {
-    midLevel: "KR",
+    midLevel: "OBJ",
     leafLevel: "KPI"
   }
 };
