@@ -154,6 +154,10 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "StrategicTheme", type: "text" },
       { name: "ObjectiveType", type: "text" },
       { name: "OkrCycle", type: "text" },
+      { name: "MetricType", type: "text" },
+      { name: "BaselineValue", type: "number" },
+      { name: "TargetValue", type: "number" },
+      { name: "CurrentValue", type: "number" },
       { name: "Blockers", type: "multilineText", optional: true },
       { name: "KeyRisksDependency", type: "multilineText" },
       { name: "Notes", type: "multilineText" },
@@ -163,6 +167,8 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "Rag", type: "text" },
       { name: "StartDate", type: "text" },
       { name: "EndDate", type: "text" },
+      { name: "DueDate", type: "text" },
+      { name: "CheckInFrequency", type: "text" },
       { name: "LastCheckinAt", type: "text" }
     ]
   },
@@ -1061,6 +1067,10 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     StrategicTheme: objective.strategicTheme,
     ObjectiveType: objective.objectiveType,
     OkrCycle: objective.okrCycle,
+    MetricType: objective.metricType,
+    BaselineValue: objective.baselineValue,
+    TargetValue: objective.targetValue,
+    CurrentValue: objective.currentValue,
     ...(capabilities.hasObjectiveBlockersColumn ? { Blockers: objective.blockers ?? "" } : {}),
     KeyRisksDependency: objective.keyRisksDependency,
     Notes: objective.notes,
@@ -1070,6 +1080,8 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     Rag: objective.rag,
     StartDate: objective.startDate,
     EndDate: objective.endDate,
+    DueDate: objective.dueDate,
+    CheckInFrequency: objective.checkInFrequency,
     LastCheckinAt: objective.lastCheckinAt ?? ""
   }));
 
@@ -1310,6 +1322,10 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "StrategicTheme",
     "ObjectiveType",
     "OkrCycle",
+    "MetricType",
+    "BaselineValue",
+    "TargetValue",
+    "CurrentValue",
     ...(hasObjectiveBlockersColumn ? ["Blockers"] : []),
     "KeyRisksDependency",
     "Notes",
@@ -1319,6 +1335,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "Rag",
     "StartDate",
     "EndDate",
+    "DueDate",
+    "CheckInFrequency",
     "LastCheckinAt"
   ];
   const keyResultSelectFields = [
@@ -1461,6 +1479,10 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         strategicTheme: asString(item.fields?.StrategicTheme),
         objectiveType: asString(item.fields?.ObjectiveType) as Objective["objectiveType"],
         okrCycle: asString(item.fields?.OkrCycle) as Objective["okrCycle"],
+        metricType: asString(item.fields?.MetricType) as Objective["metricType"],
+        baselineValue: asNumber(item.fields?.BaselineValue, 0),
+        targetValue: asNumber(item.fields?.TargetValue, 100),
+        currentValue: asNumber(item.fields?.CurrentValue, 0),
         blockers: asString(item.fields?.Blockers),
         keyRisksDependency: asString(item.fields?.KeyRisksDependency),
         notes: asString(item.fields?.Notes),
@@ -1470,6 +1492,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         rag: asString(item.fields?.Rag) as Objective["rag"],
         startDate: asString(item.fields?.StartDate),
         endDate: asString(item.fields?.EndDate),
+        dueDate: asString(item.fields?.DueDate),
+        checkInFrequency: asString(item.fields?.CheckInFrequency) as Objective["checkInFrequency"],
         lastCheckinAt: asNullableString(item.fields?.LastCheckinAt)
       } as Objective;
     })

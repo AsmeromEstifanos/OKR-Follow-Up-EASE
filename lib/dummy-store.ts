@@ -561,8 +561,8 @@ function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
   const objectiveKrs = store.keyResults.filter((kr) => kr.objectiveKey === objectiveKey);
 
   if (objectiveKrs.length === 0) {
-    objective.progressPct = 0;
-    objective.rag = getRagFromProgress(0, store.config.ragThresholds);
+    objective.progressPct = computeKrProgress(objective.baselineValue, objective.targetValue, objective.currentValue);
+    objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
     return;
   }
 
@@ -619,6 +619,20 @@ function migrateObjectiveDefaults(store: StoreState): void {
       objective.okrCycle = getOkrCycleFromDate(objective.startDate);
     }
 
+    objective.metricType = normalizeMetricType(objective.metricType);
+
+    if (!Number.isFinite(objective.baselineValue)) {
+      objective.baselineValue = 0;
+    }
+
+    if (!Number.isFinite(objective.targetValue)) {
+      objective.targetValue = 100;
+    }
+
+    if (!Number.isFinite(objective.currentValue)) {
+      objective.currentValue = Number.isFinite(objective.progressPct) ? objective.progressPct : 0;
+    }
+
     if (objective.blockers === undefined || objective.blockers === null) {
       objective.blockers = "";
     }
@@ -629,6 +643,18 @@ function migrateObjectiveDefaults(store: StoreState): void {
 
     if (!objective.notes) {
       objective.notes = objective.description ?? "";
+    }
+
+    if (!objective.dueDate) {
+      objective.dueDate = objective.endDate || objective.startDate;
+    }
+
+    if (!objective.endDate) {
+      objective.endDate = objective.dueDate || objective.startDate;
+    }
+
+    if (!objective.checkInFrequency) {
+      objective.checkInFrequency = "Weekly";
     }
 
     if (typeof objective.lastCheckinAt !== "string" && objective.lastCheckinAt !== null) {
@@ -1245,6 +1271,13 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const blockers = normalizeName(input.blockers || "");
   const notes = normalizeName(input.notes || input.description || "");
   const cycle = normalizeOkrCycle(input.okrCycle);
+  const metricType = normalizeMetricType(input.metricType);
+  const baselineValue = Number.isFinite(input.baselineValue) ? input.baselineValue : 0;
+  const targetValue = Number.isFinite(input.targetValue) ? input.targetValue : 100;
+  const currentValue = Number.isFinite(input.currentValue) ? input.currentValue : 0;
+  const dueDate = normalizeName(input.dueDate || input.endDate || "");
+  const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
+  const progressPct = input.progressPct ?? computeKrProgress(baselineValue, targetValue, currentValue);
 
   const objective: Objective = {
     objectiveKey,
@@ -1260,15 +1293,21 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     strategicTheme: strategicTheme || "General",
     objectiveType: (input.objectiveType ?? "Committed") as ObjectiveType,
     okrCycle: cycle,
+    metricType,
+    baselineValue,
+    targetValue,
+    currentValue,
     blockers,
     keyRisksDependency: input.keyRisksDependency || "",
     notes,
     status: input.status,
-    progressPct: input.progressPct ?? 0,
+    progressPct,
     confidence: input.confidence,
     rag: input.rag,
     startDate: input.startDate,
-    endDate: input.endDate,
+    endDate: input.endDate || dueDate,
+    dueDate,
+    checkInFrequency,
     lastCheckinAt: nowIso()
   };
 
@@ -1331,6 +1370,22 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     objective.okrCycle = normalizeOkrCycle(patch.okrCycle);
   }
 
+  if (patch.metricType !== undefined) {
+    objective.metricType = normalizeMetricType(patch.metricType);
+  }
+
+  if (patch.baselineValue !== undefined) {
+    objective.baselineValue = patch.baselineValue;
+  }
+
+  if (patch.targetValue !== undefined) {
+    objective.targetValue = patch.targetValue;
+  }
+
+  if (patch.currentValue !== undefined) {
+    objective.currentValue = patch.currentValue;
+  }
+
   if (patch.blockers !== undefined) {
     objective.blockers = normalizeName(patch.blockers);
   }
@@ -1362,9 +1417,27 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
 
   if (patch.endDate !== undefined) {
     objective.endDate = normalizeName(patch.endDate);
+    if (patch.dueDate === undefined) {
+      objective.dueDate = objective.endDate;
+    }
   }
 
-  if (patch.progressPct === undefined) {
+  if (patch.dueDate !== undefined) {
+    objective.dueDate = normalizeName(patch.dueDate);
+    objective.endDate = objective.dueDate;
+  }
+
+  if (patch.checkInFrequency !== undefined) {
+    objective.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+  }
+
+  const objectiveMetricsChanged =
+    patch.baselineValue !== undefined || patch.targetValue !== undefined || patch.currentValue !== undefined;
+
+  if (patch.progressPct === undefined && objectiveMetricsChanged) {
+    objective.progressPct = computeKrProgress(objective.baselineValue, objective.targetValue, objective.currentValue);
+    objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
+  } else if (patch.progressPct === undefined) {
     recalcObjectiveInStore(store, objective.objectiveKey);
   }
 

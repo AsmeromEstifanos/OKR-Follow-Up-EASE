@@ -62,6 +62,10 @@ export interface Objective {
   strategicTheme: string;
   objectiveType: ObjectiveType;
   okrCycle: OkrCycle;
+  metricType: MetricType;
+  baselineValue: number;
+  targetValue: number;
+  currentValue: number;
   blockers?: string;
   keyRisksDependency: string;
   notes: string;
@@ -71,6 +75,8 @@ export interface Objective {
   rag: Rag;
   startDate: string;
   endDate: string;
+  dueDate: string;
+  checkInFrequency: CheckInFrequency;
   lastCheckinAt: string | null;
 }
 
@@ -167,6 +173,10 @@ export type UpdateObjectiveInput = Partial<
     | "strategicTheme"
     | "objectiveType"
     | "okrCycle"
+    | "metricType"
+    | "baselineValue"
+    | "targetValue"
+    | "currentValue"
     | "blockers"
     | "keyRisksDependency"
     | "notes"
@@ -175,6 +185,8 @@ export type UpdateObjectiveInput = Partial<
     | "progressPct"
     | "startDate"
     | "endDate"
+    | "dueDate"
+    | "checkInFrequency"
   >
 >;
 export type CreateKeyResultInput = Omit<

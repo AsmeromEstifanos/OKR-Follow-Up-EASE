@@ -74,6 +74,8 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
           objectiveTypeOptions={config.fieldOptions.objectiveTypes}
           objectiveStatusOptions={config.fieldOptions.objectiveStatuses}
           objectiveCycleOptions={config.fieldOptions.objectiveCycles}
+          metricTypeOptions={config.fieldOptions.keyResultMetricTypes}
+          checkInFrequencyOptions={config.fieldOptions.checkInFrequencies}
         />
       </section>
 

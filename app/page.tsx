@@ -304,6 +304,8 @@ export default async function DashboardPage({
                             fieldOptions.objectiveStatuses
                           }
                           objectiveCycleOptions={fieldOptions.objectiveCycles}
+                          metricTypeOptions={fieldOptions.keyResultMetricTypes}
+                          checkInFrequencyOptions={fieldOptions.checkInFrequencies}
                         />
                       </div>
                     </div>

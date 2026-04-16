@@ -25,6 +25,10 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "strategicTheme",
   "objectiveType",
   "okrCycle",
+  "metricType",
+  "baselineValue",
+  "targetValue",
+  "currentValue",
   "blockers",
   "keyRisksDependency",
   "notes",
@@ -32,7 +36,9 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "confidence",
   "progressPct",
   "startDate",
-  "endDate"
+  "endDate",
+  "dueDate",
+  "checkInFrequency"
 ]);
 const READ_ONLY_FIELDS = new Set(["objectiveKey", "rag"]);
 
@@ -130,6 +136,22 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
     patch.okrCycle = expectString(raw, "okrCycle");
   }
 
+  if (raw.metricType !== undefined) {
+    patch.metricType = expectString(raw, "metricType");
+  }
+
+  if (raw.baselineValue !== undefined) {
+    patch.baselineValue = expectNumber(raw, "baselineValue");
+  }
+
+  if (raw.targetValue !== undefined) {
+    patch.targetValue = expectNumber(raw, "targetValue");
+  }
+
+  if (raw.currentValue !== undefined) {
+    patch.currentValue = expectNumber(raw, "currentValue");
+  }
+
   if (raw.blockers !== undefined) {
     patch.blockers = expectString(raw, "blockers", true);
   }
@@ -160,6 +182,14 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
 
   if (raw.endDate !== undefined) {
     patch.endDate = expectString(raw, "endDate");
+  }
+
+  if (raw.dueDate !== undefined) {
+    patch.dueDate = expectString(raw, "dueDate");
+  }
+
+  if (raw.checkInFrequency !== undefined) {
+    patch.checkInFrequency = expectString(raw, "checkInFrequency");
   }
 
   return patch;

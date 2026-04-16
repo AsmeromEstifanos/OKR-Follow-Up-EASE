@@ -5,7 +5,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
-import type { ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
+import type { CheckInFrequency, MetricType, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,6 +21,8 @@ type Props = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
+  metricTypeOptions: MetricType[];
+  checkInFrequencyOptions: CheckInFrequency[];
 };
 
 type ApiError = {
@@ -39,8 +41,13 @@ type PendingObjective = {
   ownerEmail: string;
   objectiveType: ObjectiveType;
   status: ObjectiveStatus;
-  progressPct: number;
   okrCycle: OkrCycle;
+  metricType: MetricType;
+  baselineValue: number;
+  targetValue: number;
+  currentValue: number;
+  dueDate: string;
+  checkInFrequency: CheckInFrequency;
   blockers: string;
   keyRisksDependency: string;
   notes: string;
@@ -95,7 +102,9 @@ export default function DashboardObjectiveControls({
   adminEmails,
   objectiveTypeOptions,
   objectiveStatusOptions,
-  objectiveCycleOptions
+  objectiveCycleOptions,
+  metricTypeOptions,
+  checkInFrequencyOptions
 }: Props): JSX.Element {
   const labels = appProfile.labels;
   const midLevelLower = labels.midLevelSingular.toLowerCase();
@@ -113,9 +122,13 @@ export default function DashboardObjectiveControls({
   const [objectiveCodePreview, setObjectiveCodePreview] = useState<string>("");
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>(objectiveTypeOptions[0] ?? "Committed");
   const [status, setStatus] = useState<ObjectiveStatus>(objectiveStatusOptions[0] ?? "NotStarted");
-  const [progress, setProgress] = useState<string>("0");
-  const [progressPct, setProgressPct] = useState<string>("0");
   const [okrCycle, setOkrCycle] = useState<OkrCycle>(objectiveCycleOptions[0] ?? defaultCycle);
+  const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
+  const [baselineValue, setBaselineValue] = useState<string>("0");
+  const [targetValue, setTargetValue] = useState<string>("100");
+  const [currentValue, setCurrentValue] = useState<string>("0");
+  const [dueDate, setDueDate] = useState<string>(defaultEndDate ?? todayPlus(90));
+  const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
   const [blockers, setBlockers] = useState<string>("");
   const [keyRisksDependency, setKeyRisksDependency] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -147,9 +160,13 @@ export default function DashboardObjectiveControls({
     void loadObjectiveCodePreview();
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
-    setProgress("0");
-    setProgressPct("0");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
+    setMetricType(metricTypeOptions[0] ?? "Operational");
+    setBaselineValue("0");
+    setTargetValue("100");
+    setCurrentValue("0");
+    setDueDate(defaultEndDate ?? todayPlus(90));
+    setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
     setKeyRisksDependency("");
     setNotes("");
@@ -163,9 +180,13 @@ export default function DashboardObjectiveControls({
     setOwnerEmail("");
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
-    setProgress("0");
-    setProgressPct("0");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
+    setMetricType(metricTypeOptions[0] ?? "Operational");
+    setBaselineValue("0");
+    setTargetValue("100");
+    setCurrentValue("0");
+    setDueDate(defaultEndDate ?? todayPlus(90));
+    setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
     setKeyRisksDependency("");
     setNotes("");
@@ -183,9 +204,13 @@ export default function DashboardObjectiveControls({
     setObjectiveCodePreview("");
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
-    setProgress("0");
-    setProgressPct("0");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
+    setMetricType(metricTypeOptions[0] ?? "Operational");
+    setBaselineValue("0");
+    setTargetValue("100");
+    setCurrentValue("0");
+    setDueDate(defaultEndDate ?? todayPlus(90));
+    setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
     setKeyRisksDependency("");
     setNotes("");
@@ -210,26 +235,38 @@ export default function DashboardObjectiveControls({
     }
 
     const startDate = defaultStartDate ?? todayPlus(0);
-    const endDate = defaultEndDate ?? todayPlus(90);
-    const rawProgress = Number(progress);
-    const rawProgressPct = Number(progressPct);
-    const hasProgress = Number.isFinite(rawProgress);
-    const hasProgressPct = Number.isFinite(rawProgressPct);
+    const resolvedDueDate = dueDate || defaultEndDate || todayPlus(90);
+    const resolvedBaselineValue = Number(baselineValue);
+    const resolvedTargetValue = Number(targetValue);
+    const resolvedCurrentValue = Number(currentValue);
 
-    if (!hasProgress && !hasProgressPct) {
-      setError("Provide Progress or Progress %.");
+    if (
+      !Number.isFinite(resolvedBaselineValue) ||
+      !Number.isFinite(resolvedTargetValue) ||
+      !Number.isFinite(resolvedCurrentValue)
+    ) {
+      setError("Baseline, target, and current values must be numbers.");
       return null;
     }
 
-    const resolvedProgressPct = hasProgressPct ? rawProgressPct : rawProgress;
+    if (!resolvedDueDate) {
+      setError("Due date is required.");
+      return null;
+    }
+
     return {
       title: trimmedTitle,
       owner: owner.trim(),
       ownerEmail: ownerEmail.trim(),
       objectiveType,
       status,
-      progressPct: Math.min(100, Math.max(0, resolvedProgressPct)),
       okrCycle,
+      metricType,
+      baselineValue: resolvedBaselineValue,
+      targetValue: resolvedTargetValue,
+      currentValue: resolvedCurrentValue,
+      dueDate: resolvedDueDate,
+      checkInFrequency,
       blockers: blockers.trim(),
       keyRisksDependency: keyRisksDependency.trim(),
       notes: notes.trim()
@@ -273,7 +310,6 @@ export default function DashboardObjectiveControls({
     }
 
     const startDate = defaultStartDate ?? todayPlus(0);
-    const endDate = defaultEndDate ?? todayPlus(90);
     setIsSaving(true);
     setError("");
     const batch = beginOperationBatch("Saving objectives", staged.length);
@@ -298,15 +334,20 @@ export default function DashboardObjectiveControls({
             strategicTheme,
             objectiveType: item.objectiveType,
             okrCycle: item.okrCycle,
+            metricType: item.metricType,
+            baselineValue: item.baselineValue,
+            targetValue: item.targetValue,
+            currentValue: item.currentValue,
             blockers: item.blockers,
             keyRisksDependency: item.keyRisksDependency,
             notes: item.notes,
             status: item.status,
-            progressPct: item.progressPct,
             confidence: "Medium",
             rag: "Amber",
             startDate,
-            endDate
+            endDate: item.dueDate,
+            dueDate: item.dueDate,
+            checkInFrequency: item.checkInFrequency
           })
         });
         const payload = await readJson<ApiError>(response);
@@ -422,28 +463,77 @@ export default function DashboardObjectiveControls({
               </select>
             </div>
             <div className="field">
-              <label>Progress</label>
+              <label>{labels.midLevelSingular} Metric Type</label>
+              <select
+                name="objectiveMetricType"
+                value={metricType}
+                onChange={(event) => setMetricType(event.target.value as MetricType)}
+                disabled={isSaving}
+              >
+                {metricTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Baseline Value</label>
               <input
-                name="objectiveProgress"
+                name="objectiveBaselineValue"
                 type="number"
                 step="any"
-                value={progress}
-                onChange={(event) => setProgress(event.target.value)}
-                placeholder="0"
+                value={baselineValue}
+                onChange={(event) => setBaselineValue(event.target.value)}
                 disabled={isSaving}
               />
             </div>
             <div className="field">
-              <label>Progress %</label>
+              <label>Target Value</label>
               <input
-                name="objectiveProgressPct"
+                name="objectiveTargetValue"
                 type="number"
                 step="any"
-                value={progressPct}
-                onChange={(event) => setProgressPct(event.target.value)}
-                placeholder="0"
+                value={targetValue}
+                onChange={(event) => setTargetValue(event.target.value)}
                 disabled={isSaving}
               />
+            </div>
+            <div className="field">
+              <label>Current Value</label>
+              <input
+                name="objectiveCurrentValue"
+                type="number"
+                step="any"
+                value={currentValue}
+                onChange={(event) => setCurrentValue(event.target.value)}
+                disabled={isSaving}
+              />
+            </div>
+            <div className="field">
+              <label>Due Date</label>
+              <input
+                name="objectiveDueDate"
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+                disabled={isSaving}
+              />
+            </div>
+            <div className="field">
+              <label>Check-in Frequency</label>
+              <select
+                name="objectiveCheckInFrequency"
+                value={checkInFrequency}
+                onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)}
+                disabled={isSaving}
+              >
+                {checkInFrequencyOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>OKR Cycle</label>

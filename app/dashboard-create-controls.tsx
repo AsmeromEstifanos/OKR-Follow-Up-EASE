@@ -156,8 +156,12 @@ export default function DashboardCreateControls(): JSX.Element {
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>("Committed");
   const [objectiveStatus, setObjectiveStatus] = useState<ObjectiveStatus>("OnTrack");
   const [objectiveCycle, setObjectiveCycle] = useState<OkrCycle>(getCurrentCycle());
-  const [objectiveProgress, setObjectiveProgress] = useState<string>("0 / 100");
-  const [objectiveProgressPct, setObjectiveProgressPct] = useState<string>("0");
+  const [objectiveMetricType, setObjectiveMetricType] = useState<MetricType>("Operational");
+  const [objectiveBaselineValue, setObjectiveBaselineValue] = useState<string>("0");
+  const [objectiveTargetValue, setObjectiveTargetValue] = useState<string>("100");
+  const [objectiveCurrentValue, setObjectiveCurrentValue] = useState<string>("0");
+  const [objectiveDueDate, setObjectiveDueDate] = useState<string>(getCycleDateRange(getCurrentCycle()).endDate);
+  const [objectiveCheckInFrequency, setObjectiveCheckInFrequency] = useState<CheckInFrequency>("Weekly");
   const [objectiveBlockers, setObjectiveBlockers] = useState<string>("");
   const [objectiveKeyRisksDependency, setObjectiveKeyRisksDependency] = useState<string>("");
   const [objectiveNotes, setObjectiveNotes] = useState<string>("");
@@ -397,23 +401,21 @@ export default function DashboardCreateControls(): JSX.Element {
       return;
     }
 
-    const parsedObjectiveProgress = parseProgressValue(objectiveProgress);
-    const objectivePctValue = Number(objectiveProgressPct);
-    const hasObjectivePct = Number.isFinite(objectivePctValue);
+    const baselineValue = Number(objectiveBaselineValue);
+    const targetValue = Number(objectiveTargetValue);
+    const currentValue = Number(objectiveCurrentValue);
 
-    if (!parsedObjectiveProgress && !hasObjectivePct) {
-      setError("Provide Objective Progress (for example: 45 / 100) or Progress %.");
+    if (!Number.isFinite(baselineValue) || !Number.isFinite(targetValue) || !Number.isFinite(currentValue)) {
+      setError("Baseline, target, and current values must be valid numbers.");
       return;
     }
 
-    let resolvedObjectiveProgressPct = 0;
-    if (hasObjectivePct) {
-      resolvedObjectiveProgressPct = objectivePctValue;
-    } else if (parsedObjectiveProgress) {
-      resolvedObjectiveProgressPct = (parsedObjectiveProgress.current / parsedObjectiveProgress.target) * 100;
+    if (!objectiveDueDate) {
+      setError("Due date is required.");
+      return;
     }
 
-  const { startDate, endDate } = getCycleDateRange(objectiveCycle);
+    const { startDate } = getCycleDateRange(objectiveCycle);
 
     setIsBusy(true);
     setError("");
@@ -436,7 +438,10 @@ export default function DashboardCreateControls(): JSX.Element {
           strategicTheme: objectiveStrategicTheme.trim(),
           objectiveType,
           okrCycle: objectiveCycle,
-          progressPct: clampProgressPct(resolvedObjectiveProgressPct),
+          metricType: objectiveMetricType,
+          baselineValue,
+          targetValue,
+          currentValue,
           blockers: objectiveBlockers.trim(),
           keyRisksDependency: objectiveKeyRisksDependency.trim(),
           notes: objectiveNotes.trim(),
@@ -444,7 +449,9 @@ export default function DashboardCreateControls(): JSX.Element {
           confidence: "Medium",
           rag: "Amber",
           startDate,
-          endDate
+          endDate: objectiveDueDate,
+          dueDate: objectiveDueDate,
+          checkInFrequency: objectiveCheckInFrequency
         })
       });
 
@@ -459,8 +466,12 @@ export default function DashboardCreateControls(): JSX.Element {
     setObjectiveCodePreview("");
     setObjectiveTitle("");
     setObjectiveStrategicTheme("");
-    setObjectiveProgress("0 / 100");
-    setObjectiveProgressPct("0");
+    setObjectiveMetricType("Operational");
+    setObjectiveBaselineValue("0");
+    setObjectiveTargetValue("100");
+    setObjectiveCurrentValue("0");
+    setObjectiveDueDate(getCycleDateRange(objectiveCycle).endDate);
+    setObjectiveCheckInFrequency("Weekly");
     setObjectiveBlockers("");
     setObjectiveKeyRisksDependency("");
     setObjectiveNotes("");
@@ -708,22 +719,78 @@ export default function DashboardCreateControls(): JSX.Element {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="quick-objective-progress">Progress</label>
+              <label htmlFor="quick-objective-metric-type">Metric Type</label>
+              <select
+                id="quick-objective-metric-type"
+                value={objectiveMetricType}
+                onChange={(event) => setObjectiveMetricType(event.target.value as MetricType)}
+              >
+                {(config?.fieldOptions.keyResultMetricTypes ?? ["Operational"]).map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="quick-objective-baseline">Baseline Value</label>
               <input
-                id="quick-objective-progress"
-                value={objectiveProgress}
-                onChange={(event) => setObjectiveProgress(event.target.value)}
-                placeholder="45 / 100"
+                id="quick-objective-baseline"
+                type="number"
+                step="any"
+                value={objectiveBaselineValue}
+                onChange={(event) => setObjectiveBaselineValue(event.target.value)}
               />
             </div>
             <div className="field">
-              <label htmlFor="quick-objective-progress-pct">Progress %</label>
+              <label htmlFor="quick-objective-target">Target Value</label>
               <input
-                id="quick-objective-progress-pct"
+                id="quick-objective-target"
                 type="number"
                 step="any"
-                value={objectiveProgressPct}
-                onChange={(event) => setObjectiveProgressPct(event.target.value)}
+                value={objectiveTargetValue}
+                onChange={(event) => setObjectiveTargetValue(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="quick-objective-current">Current Value</label>
+              <input
+                id="quick-objective-current"
+                type="number"
+                step="any"
+                value={objectiveCurrentValue}
+                onChange={(event) => setObjectiveCurrentValue(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="quick-objective-due-date">Due Date</label>
+              <input
+                id="quick-objective-due-date"
+                type="date"
+                value={objectiveDueDate}
+                onChange={(event) => setObjectiveDueDate(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="quick-objective-checkin-frequency">Check-in Frequency</label>
+              <select
+                id="quick-objective-checkin-frequency"
+                value={objectiveCheckInFrequency}
+                onChange={(event) => setObjectiveCheckInFrequency(event.target.value as CheckInFrequency)}
+              >
+                {CHECKIN_FREQUENCY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="quick-objective-progress-pct">Progress</label>
+              <input
+                id="quick-objective-progress-pct"
+                value={objectiveCurrentValue && objectiveTargetValue ? `${objectiveCurrentValue} / ${objectiveTargetValue}` : ""}
+                readOnly
               />
             </div>
           </div>

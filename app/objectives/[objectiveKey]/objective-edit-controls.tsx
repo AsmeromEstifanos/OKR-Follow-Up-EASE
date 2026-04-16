@@ -4,7 +4,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
-import type { Confidence, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
+import type { CheckInFrequency, Confidence, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,6 +14,8 @@ type ObjectiveEditControlsProps = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
+  metricTypeOptions: MetricType[];
+  checkInFrequencyOptions: CheckInFrequency[];
 };
 
 type ObjectiveDraft = {
@@ -26,6 +28,10 @@ type ObjectiveDraft = {
   strategicTheme: string;
   objectiveType: ObjectiveType;
   okrCycle: OkrCycle;
+  metricType: MetricType;
+  baselineValue: string;
+  targetValue: string;
+  currentValue: string;
   blockers: string;
   keyRisksDependency: string;
   notes: string;
@@ -35,6 +41,8 @@ type ObjectiveDraft = {
   progressPct: string;
   startDate: string;
   endDate: string;
+  dueDate: string;
+  checkInFrequency: CheckInFrequency;
 };
 
 type ApiError = {
@@ -68,6 +76,10 @@ function toDraft(objective: Objective): ObjectiveDraft {
     strategicTheme: objective.strategicTheme,
     objectiveType: objective.objectiveType,
     okrCycle: objective.okrCycle,
+    metricType: objective.metricType,
+    baselineValue: String(objective.baselineValue),
+    targetValue: String(objective.targetValue),
+    currentValue: String(objective.currentValue),
     blockers: objective.blockers ?? "",
     keyRisksDependency: objective.keyRisksDependency,
     notes: objective.notes,
@@ -76,7 +88,9 @@ function toDraft(objective: Objective): ObjectiveDraft {
     progressValue: String(Math.round(objective.progressPct)),
     progressPct: String(objective.progressPct),
     startDate: toDateInput(objective.startDate),
-    endDate: toDateInput(objective.endDate)
+    endDate: toDateInput(objective.endDate),
+    dueDate: toDateInput(objective.dueDate),
+    checkInFrequency: objective.checkInFrequency
   };
 }
 
@@ -85,7 +99,9 @@ export default function ObjectiveEditControls({
   departmentOptions,
   objectiveTypeOptions,
   objectiveStatusOptions,
-  objectiveCycleOptions
+  objectiveCycleOptions,
+  metricTypeOptions,
+  checkInFrequencyOptions
 }: ObjectiveEditControlsProps): JSX.Element {
   const router = useRouter();
   const currentUserEmail = useCurrentUserEmail();
@@ -106,11 +122,26 @@ export default function ObjectiveEditControls({
 
     const parsedProgressValue = Number(draft.progressValue);
     const parsedProgressPct = Number(draft.progressPct);
+    const baselineValue = Number(draft.baselineValue);
+    const targetValue = Number(draft.targetValue);
+    const currentValue = Number(draft.currentValue);
     const hasProgressPct = Number.isFinite(parsedProgressPct);
     const hasProgressValue = Number.isFinite(parsedProgressValue);
 
     if (!hasProgressPct && !hasProgressValue) {
       setError("Provide Progress or Progress % as a valid number.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!Number.isFinite(baselineValue) || !Number.isFinite(targetValue) || !Number.isFinite(currentValue)) {
+      setError("Baseline, target, and current values must be valid numbers.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!draft.dueDate) {
+      setError("Due date is required.");
       setIsSaving(false);
       return;
     }
@@ -133,6 +164,10 @@ export default function ObjectiveEditControls({
         strategicTheme: draft.strategicTheme.trim(),
         objectiveType: draft.objectiveType,
         okrCycle: draft.okrCycle,
+        metricType: draft.metricType,
+        baselineValue,
+        targetValue,
+        currentValue,
         blockers: draft.blockers.trim(),
         keyRisksDependency: draft.keyRisksDependency.trim(),
         notes: draft.notes.trim(),
@@ -140,7 +175,9 @@ export default function ObjectiveEditControls({
         confidence: draft.confidence,
         progressPct: resolvedProgressPct,
         startDate: draft.startDate,
-        endDate: draft.endDate
+        endDate: draft.dueDate,
+        dueDate: draft.dueDate,
+        checkInFrequency: draft.checkInFrequency
       })
     });
 
@@ -266,6 +303,54 @@ export default function ObjectiveEditControls({
             </div>
 
             <div className="field">
+              <label htmlFor="objective-metric-edit">Metric Type</label>
+              <select
+                id="objective-metric-edit"
+                value={draft.metricType}
+                onChange={(event) => setDraft((current) => ({ ...current, metricType: event.target.value as MetricType }))}
+              >
+                {metricTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="objective-baseline-edit">Baseline Value</label>
+              <input
+                id="objective-baseline-edit"
+                type="number"
+                step="any"
+                value={draft.baselineValue}
+                onChange={(event) => setDraft((current) => ({ ...current, baselineValue: event.target.value }))}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="objective-target-edit">Target Value</label>
+              <input
+                id="objective-target-edit"
+                type="number"
+                step="any"
+                value={draft.targetValue}
+                onChange={(event) => setDraft((current) => ({ ...current, targetValue: event.target.value }))}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="objective-current-edit">Current Value</label>
+              <input
+                id="objective-current-edit"
+                type="number"
+                step="any"
+                value={draft.currentValue}
+                onChange={(event) => setDraft((current) => ({ ...current, currentValue: event.target.value }))}
+              />
+            </div>
+
+            <div className="field">
               <label htmlFor="objective-status-edit">Status</label>
               <select
                 id="objective-status-edit"
@@ -335,6 +420,33 @@ export default function ObjectiveEditControls({
                 value={draft.endDate}
                 onChange={(event) => setDraft((current) => ({ ...current, endDate: event.target.value }))}
               />
+            </div>
+
+            <div className="field">
+              <label htmlFor="objective-due-edit">Due Date</label>
+              <input
+                id="objective-due-edit"
+                type="date"
+                value={draft.dueDate}
+                onChange={(event) => setDraft((current) => ({ ...current, dueDate: event.target.value }))}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="objective-frequency-edit">Check-in Frequency</label>
+              <select
+                id="objective-frequency-edit"
+                value={draft.checkInFrequency}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, checkInFrequency: event.target.value as CheckInFrequency }))
+                }
+              >
+                {checkInFrequencyOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
 
           </div>
