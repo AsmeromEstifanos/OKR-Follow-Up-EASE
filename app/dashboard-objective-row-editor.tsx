@@ -81,12 +81,36 @@ function formatStatus(value: ObjectiveStatus): string {
   return value;
 }
 
+function formatCheckinFrequency(value: CheckInFrequency): string {
+  if (value === "BiWeekly") {
+    return "Bi-weekly";
+  }
+
+  if (value === "AdHoc") {
+    return "Ad Hoc";
+  }
+
+  return value;
+}
+
 function formatDate(value: string | null): string {
   if (!value) {
     return "-";
   }
 
   return new Date(value).toLocaleDateString();
+}
+
+function formatMetricValue(value: number): string {
+  return value.toLocaleString();
+}
+
+function toDateInput(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+
+  return value.slice(0, 10);
 }
 
 function clampPercent(value: number): number {
@@ -139,10 +163,14 @@ export default function DashboardObjectiveRowEditor({
   const [title, setTitle] = useState<string>(objective.title);
   const [owner, setOwner] = useState<string>(resolveOwnerName(objective.owner));
   const [ownerEmail, setOwnerEmail] = useState<string>(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-  const [objectiveType, setObjectiveType] = useState<ObjectiveType>(objective.objectiveType);
+  const [metricType, setMetricType] = useState<MetricType>(objective.metricType);
+  const [baselineValue, setBaselineValue] = useState<string>(String(objective.baselineValue));
+  const [targetValue, setTargetValue] = useState<string>(String(objective.targetValue));
+  const [currentValue, setCurrentValue] = useState<string>(String(objective.currentValue));
   const [status, setStatus] = useState<ObjectiveStatus>(objective.status);
   const [progressPct, setProgressPct] = useState<string>(String(objective.progressPct));
-  const [okrCycle, setOkrCycle] = useState<OkrCycle>(objective.okrCycle);
+  const [dueDate, setDueDate] = useState<string>(toDateInput(objective.dueDate));
+  const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(objective.checkInFrequency);
   const [blockers, setBlockers] = useState<string>(objective.blockers ?? "");
   const [keyRisksDependency, setKeyRisksDependency] = useState<string>(objective.keyRisksDependency ?? "");
   const [notes, setNotes] = useState<string>(objective.notes ?? objective.description ?? "");
@@ -159,10 +187,14 @@ export default function DashboardObjectiveRowEditor({
     setTitle(objective.title);
     setOwner(resolveOwnerName(objective.owner));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-    setObjectiveType(objective.objectiveType);
+    setMetricType(objective.metricType);
+    setBaselineValue(String(objective.baselineValue));
+    setTargetValue(String(objective.targetValue));
+    setCurrentValue(String(objective.currentValue));
     setStatus(objective.status);
     setProgressPct(String(objective.progressPct));
-    setOkrCycle(objective.okrCycle);
+    setDueDate(toDateInput(objective.dueDate));
+    setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
     setKeyRisksDependency(objective.keyRisksDependency ?? "");
     setNotes(objective.notes ?? objective.description ?? "");
@@ -173,10 +205,14 @@ export default function DashboardObjectiveRowEditor({
     setTitle(objective.title);
     setOwner(resolveOwnerName(objective.owner));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-    setObjectiveType(objective.objectiveType);
+    setMetricType(objective.metricType);
+    setBaselineValue(String(objective.baselineValue));
+    setTargetValue(String(objective.targetValue));
+    setCurrentValue(String(objective.currentValue));
     setStatus(objective.status);
     setProgressPct(String(objective.progressPct));
-    setOkrCycle(objective.okrCycle);
+    setDueDate(toDateInput(objective.dueDate));
+    setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
     setKeyRisksDependency(objective.keyRisksDependency ?? "");
     setNotes(objective.notes ?? objective.description ?? "");
@@ -198,6 +234,20 @@ export default function DashboardObjectiveRowEditor({
       return;
     }
 
+    const baseline = Number(baselineValue);
+    let target = Number(targetValue);
+    let current = Number(currentValue);
+
+    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
+      setError("Baseline, target, and current values must be numbers.");
+      return;
+    }
+
+    if (!dueDate) {
+      setError("Due date is required.");
+      return;
+    }
+
     const numericProgressPct = Number(progressPct);
     if (!Number.isFinite(numericProgressPct)) {
       setError("Provide Progress %.");
@@ -205,6 +255,7 @@ export default function DashboardObjectiveRowEditor({
     }
 
     const resolvedProgressPct = numericProgressPct;
+    current = baseline + ((target - baseline) * resolvedProgressPct) / 100;
 
     setIsSaving(true);
     setError("");
@@ -220,10 +271,15 @@ export default function DashboardObjectiveRowEditor({
         title: title.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        objectiveType,
+        metricType,
+        baselineValue: baseline,
+        targetValue: target,
+        currentValue: current,
         status,
         progressPct: clampPercent(resolvedProgressPct),
-        okrCycle,
+        dueDate,
+        endDate: dueDate,
+        checkInFrequency,
         blockers: blockers.trim(),
         keyRisksDependency: keyRisksDependency.trim(),
         notes: notes.trim()
@@ -364,126 +420,178 @@ export default function DashboardObjectiveRowEditor({
               inputClassName="objective-row-input"
               placeholder="Owner (optional)"
             />
-          ) : (
-            objective.owner || "-"
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <select
-              className="objective-row-select"
-              value={objectiveType}
-              onChange={(event) => setObjectiveType(event.target.value as ObjectiveType)}
-              disabled={isSaving}
-            >
-              {objectiveTypeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          ) : (
-            objective.objectiveType
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <select
-              className="objective-row-select"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as ObjectiveStatus)}
-              disabled={isSaving}
-            >
-              {objectiveStatusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          ) : (
-            formatStatus(objective.status)
-          )}
-        </td>
-        <td>
-          <span className={ragPillClass(objective.rag)}>{objective.rag}</span>
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <input
-              className="objective-row-input"
-              type="number"
-              step="any"
-              value={progressPct}
-              onChange={(event) => setProgressPct(event.target.value)}
-              placeholder="Progress %"
-              disabled={isSaving}
-            />
-          ) : (
-            `${objective.progressPct}%`
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <select
-              className="objective-row-select"
-              value={okrCycle}
-              onChange={(event) => setOkrCycle(event.target.value as OkrCycle)}
-              disabled={isSaving}
-            >
-              {objectiveCycleOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          ) : (
-            objective.okrCycle
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <input
-              className="objective-row-input"
-              value={blockers}
-              onChange={(event) => setBlockers(event.target.value)}
-              placeholder="Blockers"
-              disabled={isSaving}
-            />
-          ) : (
-            objective.blockers || "-"
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <input
-              className="objective-row-input"
-              value={keyRisksDependency}
-              onChange={(event) => setKeyRisksDependency(event.target.value)}
-              placeholder="Key Risks/Dependancy"
-              disabled={isSaving}
-            />
-          ) : (
-            objective.keyRisksDependency || "-"
-          )}
-        </td>
-        <td>
-          {isEditing && canEdit ? (
-            <input
-              className="objective-row-input"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Notes"
-              disabled={isSaving}
-            />
-          ) : (
-            objective.notes || objective.description || "-"
-          )}
-        </td>
-        <td>{formatDate(objective.lastCheckinAt)}</td>
+        ) : (
+          objective.owner || "-"
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <select
+            className="objective-row-select"
+            value={metricType}
+            onChange={(event) => setMetricType(event.target.value as MetricType)}
+            disabled={isSaving}
+          >
+            {metricTypeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          objective.metricType
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            type="number"
+            step="any"
+            value={baselineValue}
+            onChange={(event) => setBaselineValue(event.target.value)}
+            disabled={isSaving}
+          />
+        ) : (
+          formatMetricValue(objective.baselineValue)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            type="number"
+            step="any"
+            value={targetValue}
+            onChange={(event) => setTargetValue(event.target.value)}
+            disabled={isSaving}
+          />
+        ) : (
+          formatMetricValue(objective.targetValue)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            type="number"
+            step="any"
+            value={currentValue}
+            onChange={(event) => setCurrentValue(event.target.value)}
+            disabled={isSaving}
+          />
+        ) : (
+          formatMetricValue(objective.currentValue)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            type="number"
+            step="any"
+            value={progressPct}
+            onChange={(event) => setProgressPct(event.target.value)}
+            placeholder="Progress %"
+            disabled={isSaving}
+          />
+        ) : (
+          `${objective.progressPct}%`
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <select
+            className="objective-row-select"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as ObjectiveStatus)}
+            disabled={isSaving}
+          >
+            {objectiveStatusOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          formatStatus(objective.status)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            type="date"
+            value={dueDate}
+            onChange={(event) => setDueDate(event.target.value)}
+            disabled={isSaving}
+          />
+        ) : (
+          formatDate(objective.dueDate)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <select
+            className="objective-row-select"
+            value={checkInFrequency}
+            onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)}
+            disabled={isSaving}
+          >
+            {checkInFrequencyOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          formatCheckinFrequency(objective.checkInFrequency)
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            value={blockers}
+            onChange={(event) => setBlockers(event.target.value)}
+            placeholder="Blockers"
+            disabled={isSaving}
+          />
+        ) : (
+          objective.blockers || "-"
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            value={keyRisksDependency}
+            onChange={(event) => setKeyRisksDependency(event.target.value)}
+            placeholder="Key Risks/Dependancy"
+            disabled={isSaving}
+          />
+        ) : (
+          objective.keyRisksDependency || "-"
+        )}
+      </td>
+      <td>
+        {isEditing && canEdit ? (
+          <input
+            className="objective-row-input"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Notes"
+            disabled={isSaving}
+          />
+        ) : (
+          objective.notes || objective.description || "-"
+        )}
+      </td>
+      <td>{formatDate(objective.lastCheckinAt)}</td>
       </tr>
       {isExpanded ? (
         <tr className="board-details-row">
-          <td colSpan={11}>
+          <td colSpan={14}>
             <div className="board-objective-details">
               <div className="board-objective-content">
                 <DashboardKeyResultControls

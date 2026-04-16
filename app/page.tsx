@@ -315,11 +315,14 @@ export default async function DashboardPage({
                           <tr>
                             <th>{labels.midLevelSingular}</th>
                             <th>Owner</th>
-                            <th>{labels.midLevelSingular} Type</th>
-                            <th>Health</th>
-                            <th>RAG</th>
+                            <th>{labels.midLevelSingular} Metric Type</th>
+                            <th>Baseline Value</th>
+                            <th>Target Value</th>
+                            <th>Current Value</th>
                             <th>Progress %</th>
-                            <th>OKR Cycle</th>
+                            <th>Health</th>
+                            <th>Due Date</th>
+                            <th>Check-in Frequency</th>
                             <th>Blockers</th>
                             <th>Key Risks/Dependancy</th>
                             <th>Notes</th>
@@ -329,7 +332,7 @@ export default async function DashboardPage({
                         <tbody>
                           {section.objectives.length === 0 ? (
                             <tr className="board-empty-row">
-                              <td colSpan={11}>
+                              <td colSpan={14}>
                                 No {labels.midLevelPlural.toLowerCase()} yet for this {labels.topLevelSingular.toLowerCase()}.
                               </td>
                             </tr>
