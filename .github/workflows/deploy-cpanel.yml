@@ -1,0 +1,174 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cpanel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      APP_DIR: ${{ secrets.CPANEL_APP_DIR }}
+      APP_PORT: ${{ secrets.CPANEL_APP_PORT }}
+      RESTART_COMMAND: ${{ secrets.CPANEL_RESTART_COMMAND }}
+      NEXT_PUBLIC_BASE_PATH: /ease-okr
+      NEXT_PUBLIC_APP_PROFILE: ease-okr
+      NEXT_PUBLIC_AZURE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_AZURE_CLIENT_ID }}
+      NEXT_PUBLIC_AAD_TENANT_ID: ${{ secrets.AZURE_APP_TENANT_ID }}
+      NEXT_PUBLIC_AZURE_AUTHORITY: https://login.microsoftonline.com/${{ secrets.AZURE_APP_TENANT_ID }}
+      NEXT_PUBLIC_REDIRECT_URI: https://sol-ventures.com/ease-okr
+      NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: https://sol-ventures.com/ease-okr
+      NEXT_PUBLIC_LOGIN_SCOPES: openid profile email User.Read Sites.Read.All Sites.ReadWrite.All
+      NEXT_PUBLIC_SHAREPOINT_SITE_URL: https://easeint1.sharepoint.com/sites/OKRFollowUp
+      NEXT_PUBLIC_SHAREPOINT_STORAGE_LIST: EASE OKR Store
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check application
+        run: npx tsc --noEmit --incremental false
+
+      - name: Validate public auth env
+        run: |
+          test -n "$NEXT_PUBLIC_AZURE_CLIENT_ID" || (echo "Missing NEXT_PUBLIC_AZURE_CLIENT_ID" && exit 1)
+          test -n "$NEXT_PUBLIC_AAD_TENANT_ID" || (echo "Missing NEXT_PUBLIC_AAD_TENANT_ID" && exit 1)
+          test "$NEXT_PUBLIC_AAD_TENANT_ID" != "undefined" || (echo "NEXT_PUBLIC_AAD_TENANT_ID resolved to undefined" && exit 1)
+          echo "Public auth env is configured."
+
+      - name: Build application
+        run: npm run build
+
+      - name: Create deployment archive
+        run: |
+          tar -czf deploy.tgz \
+            .next \
+            app \
+            lib \
+            public \
+            app.js \
+            next.config.mjs \
+            package.json \
+            package-lock.json
+
+      - name: Upload archive to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          key: ${{ secrets.CPANEL_SSH_KEY }}
+          port: ${{ secrets.CPANEL_PORT || 22 }}
+          source: deploy.tgz
+          target: /tmp/okr-follow-up-deploy
+
+      - name: Extract, install production deps, and restart on cPanel
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          key: ${{ secrets.CPANEL_SSH_KEY }}
+          port: ${{ secrets.CPANEL_PORT || 22 }}
+          script_stop: true
+          envs: APP_DIR,APP_PORT,RESTART_COMMAND
+          script: |
+            set -e
+
+            if [ -z "$APP_DIR" ]; then
+              echo "CPANEL_APP_DIR secret is required."
+              exit 1
+            fi
+
+            mkdir -p "$APP_DIR"
+            mkdir -p /tmp/okr-follow-up-deploy/extracted
+
+            tar -xzf /tmp/okr-follow-up-deploy/deploy.tgz -C /tmp/okr-follow-up-deploy/extracted
+            find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "tmp" ! -name "logs" -exec rm -rf {} +
+
+            cp -R /tmp/okr-follow-up-deploy/extracted/. "$APP_DIR"
+            cd "$APP_DIR"
+
+            if [ -n "$APP_PORT" ]; then
+              export APP_PORT="$APP_PORT"
+            fi
+
+            APP_NAME="$(basename "$APP_DIR")"
+            NODE_BIN_DIR=""
+            for candidate in "$HOME/nodevenv/$APP_NAME" "$HOME/nodevenv/public_html/$APP_NAME"; do
+              if [ -d "$candidate" ]; then
+                FOUND_BIN_DIR="$(find "$candidate" -maxdepth 3 -type d -path '*/bin' | head -n 1)"
+                if [ -n "$FOUND_BIN_DIR" ]; then
+                  NODE_BIN_DIR="$FOUND_BIN_DIR"
+                  break
+                fi
+              fi
+            done
+
+            if [ -n "$NODE_BIN_DIR" ]; then
+              export PATH="$NODE_BIN_DIR:$PATH"
+            fi
+
+            if ! command -v npm >/dev/null 2>&1; then
+              echo "npm is not available in this SSH session."
+              echo "Expected a cPanel nodevenv bin directory under $HOME/nodevenv/$APP_NAME or a host-level Node install."
+              echo "Current PATH: $PATH"
+              if [ -d "$HOME/nodevenv" ]; then
+                echo "Available nodevenv directories:"
+                find "$HOME/nodevenv" -maxdepth 3 -type d | sed 's#^#- #'
+              else
+                echo "$HOME/nodevenv does not exist."
+              fi
+              exit 127
+            fi
+
+            echo "Using npm: $(command -v npm)"
+            npm --version
+            node --version
+
+            export NODE_ENV=production
+
+            echo "Installing production dependencies"
+            npm ci --omit=dev --no-audit --no-fund
+
+            echo "Restarting application"
+            (
+              set +e
+              if [ -n "$RESTART_COMMAND" ]; then
+                echo "Running custom restart command"
+                sh -lc "$RESTART_COMMAND"
+                echo "Custom restart exit code: $?"
+              else
+                echo "Ensuring tmp directory exists"
+                mkdir -p tmp
+                echo "tmp mkdir exit code: $?"
+                echo "Touching tmp/restart.txt"
+                touch tmp/restart.txt
+                echo "touch exit code: $?"
+                if [ -x "$HOME/nodevenv/$APP_NAME/20/bin/passenger-config" ]; then
+                  echo "Attempting passenger-config restart-app"
+                  "$HOME/nodevenv/$APP_NAME/20/bin/passenger-config" restart-app "$APP_DIR"
+                  echo "passenger-config exit code: $?"
+                else
+                  echo "passenger-config not found for $APP_NAME"
+                fi
+              fi
+              exit 0
+            ) || true
+
+            echo "Cleaning temp deployment files"
+            rm -rf /tmp/okr-follow-up-deploy
+
+            echo "Deployment complete"
