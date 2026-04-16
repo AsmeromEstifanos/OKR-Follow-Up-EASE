@@ -7,7 +7,7 @@ import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
 import type { CheckInFrequency, MetricType, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   positionName: string;
@@ -23,6 +23,12 @@ type Props = {
   objectiveCycleOptions: OkrCycle[];
   metricTypeOptions: MetricType[];
   checkInFrequencyOptions: CheckInFrequency[];
+  departmentOptions?: Array<{
+    name: string;
+    ownerEmail?: string;
+  }>;
+  displayLabelSingular?: string;
+  displayLabelPlural?: string;
 };
 
 type ApiError = {
@@ -104,14 +110,35 @@ export default function DashboardObjectiveControls({
   objectiveStatusOptions,
   objectiveCycleOptions,
   metricTypeOptions,
-  checkInFrequencyOptions
+  checkInFrequencyOptions,
+  departmentOptions,
+  displayLabelSingular,
+  displayLabelPlural
 }: Props): JSX.Element {
   const labels = appProfile.labels;
-  const midLevelLower = labels.midLevelSingular.toLowerCase();
+  const entityLabelSingular = displayLabelSingular ?? labels.midLevelSingular;
+  const entityLabelPlural = displayLabelPlural ?? labels.midLevelPlural;
+  const entityLabelLower = entityLabelSingular.toLowerCase();
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
+  const availableDepartments = useMemo(
+    () =>
+      departmentOptions && departmentOptions.length > 0
+        ? departmentOptions
+        : [{ name: positionName, ownerEmail: positionOwnerEmail }],
+    [departmentOptions, positionName, positionOwnerEmail],
+  );
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(
+    availableDepartments[0]?.name ?? positionName,
+  );
+  const selectedDepartmentOwnerEmail = availableDepartments.find(
+    (department) =>
+      department.name.toLowerCase() === selectedDepartment.trim().toLowerCase(),
+  )?.ownerEmail;
+  const normalizedPositionOwnerEmail = normalizeEmail(
+    selectedDepartmentOwnerEmail ?? positionOwnerEmail,
+  );
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
   const canCreate = Boolean(normalizedUserEmail) && (isAdmin || normalizedUserEmail === normalizedPositionOwnerEmail);
   const [isAdding, setIsAdding] = useState<boolean>(false);
@@ -136,8 +163,9 @@ export default function DashboardObjectiveControls({
   const [error, setError] = useState<string>("");
 
   const loadObjectiveCodePreview = async (): Promise<void> => {
+    const departmentName = selectedDepartment.trim();
     const params = new URLSearchParams({
-      department: positionName,
+      department: departmentName,
       ventureName: strategicTheme,
       strategicTheme
     });
@@ -225,12 +253,27 @@ export default function DashboardObjectiveControls({
 
     void loadObjectiveCodePreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdding, positionName, strategicTheme]);
+  }, [isAdding, selectedDepartment, strategicTheme]);
+
+  useEffect(() => {
+    const matchingDepartment = availableDepartments.find(
+      (department) =>
+        department.name.toLowerCase() === positionName.trim().toLowerCase(),
+    );
+    if (matchingDepartment) {
+      setSelectedDepartment(matchingDepartment.name);
+      return;
+    }
+
+    if (availableDepartments[0]) {
+      setSelectedDepartment(availableDepartments[0].name);
+    }
+  }, [availableDepartments, positionName]);
 
   const buildPendingObjective = (): PendingObjective | null => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError(`${labels.midLevelSingular} title is required.`);
+      setError(`${entityLabelSingular} title is required.`);
       return null;
     }
 
@@ -305,7 +348,7 @@ export default function DashboardObjectiveControls({
     }
 
     if (staged.length === 0) {
-      setError(`Add at least one ${midLevelLower} first.`);
+      setError(`Add at least one ${entityLabelLower} first.`);
       return;
     }
 
@@ -329,7 +372,7 @@ export default function DashboardObjectiveControls({
             description: item.notes,
             owner: item.owner,
             ownerEmail: item.ownerEmail,
-            department: positionName,
+            department: selectedDepartment,
             ventureName: strategicTheme,
             strategicTheme,
             objectiveType: item.objectiveType,
@@ -353,7 +396,10 @@ export default function DashboardObjectiveControls({
         const payload = await readJson<ApiError>(response);
 
         if (!response.ok) {
-          setError(payload?.error ?? `Failed to add ${midLevelLower} at line ${index + 1}.`);
+          setError(
+            payload?.error ??
+              `Failed to add ${entityLabelLower} at line ${index + 1}.`,
+          );
           setIsSaving(false);
           batch.finish();
           return;
@@ -368,7 +414,11 @@ export default function DashboardObjectiveControls({
       router.refresh();
     } catch (error) {
       batch.finish();
-      setError(error instanceof Error ? error.message : `Failed to save ${labels.midLevelPlural.toLowerCase()}.`);
+      setError(
+        error instanceof Error
+          ? error.message
+          : `Failed to save ${entityLabelPlural.toLowerCase()}.`,
+      );
       setIsSaving(false);
       return;
     }
@@ -383,7 +433,7 @@ export default function DashboardObjectiveControls({
           onClick={isAdding ? closeAdd : openAdd}
           disabled={isSaving}
         >
-          Add {labels.midLevelSingular}
+          Add {entityLabelSingular}
         </button>
       ) : null}
       {canCreate && isAdding ? (
@@ -396,17 +446,34 @@ export default function DashboardObjectiveControls({
         >
           <div className="objective-form-grid">
             <div className="field">
-              <label>{labels.midLevelSingular} Code</label>
+              <label>{entityLabelSingular} Code</label>
               <input
                 name="objectiveCode"
                 value={objectiveCodePreview}
                 readOnly
-                aria-label={`${labels.midLevelSingular} code for ${positionName}`}
+                aria-label={`${entityLabelSingular} code for ${selectedDepartment}`}
                 disabled={isSaving}
               />
             </div>
+            {availableDepartments.length > 1 ? (
+              <div className="field">
+                <label>Department</label>
+                <select
+                  name="objectiveDepartment"
+                  value={selectedDepartment}
+                  onChange={(event) => setSelectedDepartment(event.target.value)}
+                  disabled={isSaving}
+                >
+                  {availableDepartments.map((department) => (
+                    <option key={department.name} value={department.name}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <OwnerInput
-              id={`objective-owner-${positionName.replace(/\s+/g, "-").toLowerCase()}`}
+              id={`objective-owner-${selectedDepartment.replace(/\s+/g, "-").toLowerCase()}`}
               label="Owner (optional)"
               value={owner}
               onChange={setOwner}
@@ -421,19 +488,19 @@ export default function DashboardObjectiveControls({
               <input name="objectiveOwnerEmail" value={ownerEmail} readOnly disabled={isSaving} />
             </div>
             <div className="field objective-field-wide">
-              <label>{labels.midLevelSingular}</label>
+              <label>{entityLabelSingular}</label>
               <textarea
                 name="objectiveTitle"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder={labels.midLevelSingular}
-                aria-label={`${labels.midLevelSingular} title for ${positionName}`}
+                placeholder={entityLabelSingular}
+                aria-label={`${entityLabelSingular} title for ${selectedDepartment}`}
                 autoFocus
                 disabled={isSaving}
               />
             </div>
             <div className="field">
-              <label>{labels.midLevelSingular} Type</label>
+              <label>{entityLabelSingular} Type</label>
               <select
                 name="objectiveType"
                 value={objectiveType}
@@ -463,7 +530,7 @@ export default function DashboardObjectiveControls({
               </select>
             </div>
             <div className="field">
-              <label>{labels.midLevelSingular} Metric Type</label>
+              <label>{entityLabelSingular} Metric Type</label>
               <select
                 name="objectiveMetricType"
                 value={metricType}
@@ -588,7 +655,7 @@ export default function DashboardObjectiveControls({
           </div>
           {pendingObjectives.length > 0 ? (
             <div className="field objective-field-wide">
-              <label>Pending {labels.midLevelPlural}</label>
+              <label>Pending {entityLabelPlural}</label>
               <ul>
                 {pendingObjectives.map((item, index) => (
                   <li key={`${item.title}-${index}`}>
@@ -600,7 +667,8 @@ export default function DashboardObjectiveControls({
                 ))}
               </ul>
               <p className="message">
-                You have {pendingObjectives.length} unsaved {labels.midLevelPlural.toLowerCase()}. Click Save All.
+                You have {pendingObjectives.length} unsaved{" "}
+                {entityLabelPlural.toLowerCase()}. Click Save All.
               </p>
             </div>
           ) : null}

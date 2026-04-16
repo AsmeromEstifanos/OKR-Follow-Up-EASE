@@ -1008,6 +1008,64 @@ a {
   flex: 1 1 auto;
 }
 
+.ease-objective-shell {
+  min-width: 0;
+}
+
+.ease-objective-group {
+  overflow: hidden;
+}
+
+.ease-objective-header {
+  border-bottom: 0;
+}
+
+.ease-objective-toggle {
+  padding-bottom: 0.4rem;
+}
+
+.ease-objective-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ease-objective-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.55rem;
+  padding: 0 0.9rem 0.85rem;
+  border-top: 1px solid #d8dfee;
+  border-bottom: 1px solid #d8dfee;
+  background: #f7fbff;
+}
+
+.ease-objective-summary-item {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.ease-objective-summary-label {
+  color: #6e7f9c;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ease-objective-edit-panel {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid #d8dfee;
+  background: #ffffff;
+}
+
+.ease-objective-content {
+  padding-top: 0.8rem;
+}
+
 .objective-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
