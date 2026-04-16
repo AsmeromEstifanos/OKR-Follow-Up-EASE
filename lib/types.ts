@@ -101,11 +101,34 @@ export interface KeyResult {
   lastCheckinAt: string | null;
 }
 
+export interface Kpi {
+  kpiKey: string;
+  kpiCode?: string;
+  objectiveKey: string;
+  krKey: string;
+  periodKey: string;
+  title: string;
+  owner?: string;
+  ownerEmail?: string;
+  metricType: MetricType;
+  baselineValue: number;
+  targetValue: number;
+  currentValue: number;
+  progressPct: number;
+  status: KrStatus;
+  dueDate: string;
+  checkInFrequency: CheckInFrequency;
+  blockers?: string;
+  notes: string;
+  lastCheckinAt: string | null;
+}
+
 export interface CheckIn {
   checkInAt: string;
   periodKey: string;
   objectiveKey: string;
   krKey: string;
+  kpiKey?: string;
   owner: string;
   status: KrStatus;
   confidence: Confidence;
@@ -121,7 +144,9 @@ export interface DashboardMe {
   owner: string;
   myObjectives: Objective[];
   myKeyResults: KeyResult[];
+  myKpis: Kpi[];
   missingCheckIns: KeyResult[];
+  missingKpis: Kpi[];
   atRiskObjectives: Objective[];
 }
 
@@ -148,6 +173,7 @@ export interface ActivityLogEntry {
 export interface ObjectiveWithContext {
   objective: Objective;
   keyResults: KeyResult[];
+  kpis: Kpi[];
   latestCheckIns: Record<string, CheckIn | null>;
 }
 
@@ -201,11 +227,45 @@ export type CreateKeyResultInput = Omit<
   notes?: string;
   lastCheckinAt?: string | null;
 };
+
+export type CreateKpiInput = Omit<
+  Kpi,
+  "kpiKey" | "progressPct" | "lastCheckinAt" | "checkInFrequency" | "blockers" | "notes"
+> & {
+  kpiKey?: string;
+  kpiCode?: string;
+  progressPct?: number;
+  checkInFrequency?: CheckInFrequency;
+  blockers?: string;
+  notes?: string;
+  lastCheckinAt?: string | null;
+};
 export type UpdateKeyResultInput = Partial<
   Pick<
     KeyResult,
     | "objectiveKey"
     | "krCode"
+    | "periodKey"
+    | "title"
+    | "owner"
+    | "ownerEmail"
+    | "metricType"
+    | "baselineValue"
+    | "targetValue"
+    | "currentValue"
+    | "status"
+    | "dueDate"
+    | "checkInFrequency"
+    | "blockers"
+    | "notes"
+  >
+>;
+export type UpdateKpiInput = Partial<
+  Pick<
+    Kpi,
+    | "objectiveKey"
+    | "krKey"
+    | "kpiCode"
     | "periodKey"
     | "title"
     | "owner"

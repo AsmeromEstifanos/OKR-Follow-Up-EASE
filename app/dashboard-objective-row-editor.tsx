@@ -1,14 +1,15 @@
 "use client";
 
 import { appProfile } from "@/lib/app-profile";
-import DashboardKeyResultControls from "@/app/dashboard-key-result-controls";
-import DashboardKeyResultRowEditor from "@/app/dashboard-key-result-row-editor";
+import DashboardKrControls from "@/app/dashboard-kr-controls";
+import DashboardKrRowEditor from "@/app/dashboard-kr-row-editor";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type {
   CheckInFrequency,
+  Kpi,
   KeyResult,
   KrStatus,
   MetricType,
@@ -22,6 +23,11 @@ import { Fragment, useEffect, useState } from "react";
 
 type KeyResultRowData = {
   keyResult: KeyResult;
+  kpis?: Array<{
+    kpi: Kpi;
+    latestUpdateNotes?: string;
+    latestUpdatedAt?: string | null;
+  }>;
   latestUpdateNotes?: string;
   latestUpdatedAt?: string | null;
 };
@@ -151,6 +157,9 @@ export default function DashboardObjectiveRowEditor({
   checkInFrequencyOptions
 }: Props): JSX.Element {
   const labels = appProfile.labels;
+  const itemLabel = appProfile.key === "ease-okr" ? "Objective" : labels.midLevelSingular;
+  const childLabel = appProfile.key === "ease-okr" ? "Key Result" : labels.leafLevelSingular;
+  const childLabelPlural = appProfile.key === "ease-okr" ? "Key Results" : labels.leafLevelPlural;
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const objectiveCode = objective.objectiveCode ?? objective.objectiveKey;
@@ -230,7 +239,7 @@ export default function DashboardObjectiveRowEditor({
     }
 
     if (!title.trim()) {
-      setError(`${labels.midLevelSingular} title is required.`);
+      setError(`${itemLabel} title is required.`);
       return;
     }
 
@@ -288,7 +297,7 @@ export default function DashboardObjectiveRowEditor({
 
     if (!response.ok) {
       const payload = await readJson<ApiError>(response);
-      setError(payload?.error ?? `Failed to update ${labels.midLevelSingular.toLowerCase()}.`);
+      setError(payload?.error ?? `Failed to update ${itemLabel.toLowerCase()}.`);
       setIsSaving(false);
       return;
     }
@@ -305,8 +314,8 @@ export default function DashboardObjectiveRowEditor({
 
     const warning =
       keyResults.length > 0
-        ? `Delete ${labels.midLevelSingular.toLowerCase()} '${objective.title}'? This will also delete ${keyResults.length} ${labels.leafLevelPlural.toLowerCase()}.`
-        : `Delete ${labels.midLevelSingular.toLowerCase()} '${objective.title}'? This action cannot be undone.`;
+        ? `Delete ${itemLabel.toLowerCase()} '${objective.title}'? This will also delete ${keyResults.length} ${childLabelPlural.toLowerCase()}.`
+        : `Delete ${itemLabel.toLowerCase()} '${objective.title}'? This action cannot be undone.`;
 
     if (!window.confirm(warning)) {
       return;
@@ -324,7 +333,7 @@ export default function DashboardObjectiveRowEditor({
 
     if (!response.ok) {
       const payload = await readJson<ApiError>(response);
-      setError(payload?.error ?? `Failed to delete ${labels.midLevelSingular.toLowerCase()}.`);
+      setError(payload?.error ?? `Failed to delete ${itemLabel.toLowerCase()}.`);
       setIsSaving(false);
       return;
     }
@@ -347,7 +356,7 @@ export default function DashboardObjectiveRowEditor({
                 className="objective-row-input"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder={labels.midLevelSingular}
+                placeholder={itemLabel}
                 autoFocus
                 disabled={isSaving}
               />
@@ -358,8 +367,8 @@ export default function DashboardObjectiveRowEditor({
               <button
                 type="button"
                 className="objective-edit-trigger"
-                aria-label={`Edit ${labels.midLevelSingular.toLowerCase()} ${objective.title}`}
-                title={`Edit ${labels.midLevelSingular.toLowerCase()}`}
+                aria-label={`Edit ${itemLabel.toLowerCase()} ${objective.title}`}
+                title={`Edit ${itemLabel.toLowerCase()}`}
                 onClick={() => setIsEditing(true)}
                 disabled={isSaving}
               >
@@ -379,7 +388,7 @@ export default function DashboardObjectiveRowEditor({
               aria-expanded={isExpanded}
               onClick={() => setIsExpanded((current) => !current)}
             >
-              {labels.leafLevelPlural} ({keyResults.length})
+              {childLabelPlural} ({keyResults.length})
             </button>
           ) : null}
           {isEditing && canEdit ? (
@@ -594,7 +603,7 @@ export default function DashboardObjectiveRowEditor({
           <td colSpan={14}>
             <div className="board-objective-details">
               <div className="board-objective-content">
-                <DashboardKeyResultControls
+                <DashboardKrControls
                   objectiveKey={objective.objectiveKey}
                   defaultDueDate={objective.endDate}
                   defaultOwner={objective.owner || ""}
@@ -607,14 +616,14 @@ export default function DashboardObjectiveRowEditor({
                 <table className="board-subtable">
                   <thead>
                     <tr className="board-subheader-row">
-                      <th>{labels.leafLevelSingular}</th>
+                      <th>{childLabel}</th>
                       <th>Owner</th>
-                      <th>{labels.leafLevelSingular} Metric Type</th>
+                      <th>{childLabel} Metric Type</th>
                       <th>Baseline Value</th>
                       <th>Target Value</th>
                       <th>Current Value</th>
-                      <th>{labels.leafLevelSingular} Progress %</th>
-                      <th>{labels.leafLevelSingular} Status</th>
+                      <th>{childLabel} Progress %</th>
+                      <th>{childLabel} Status</th>
                       <th>Due Date</th>
                       <th>Check-in Frequency</th>
                       <th>Blockers</th>
@@ -626,16 +635,14 @@ export default function DashboardObjectiveRowEditor({
                   <tbody>
                     {keyResults.length === 0 ? (
                       <tr className="board-empty-row">
-                        <td colSpan={14}>No {labels.leafLevelPlural.toLowerCase()} for this {labels.midLevelSingular.toLowerCase()} yet.</td>
+                        <td colSpan={14}>No {childLabelPlural.toLowerCase()} for this {itemLabel.toLowerCase()} yet.</td>
                       </tr>
                     ) : (
                       keyResults.map((item) => (
-                        <DashboardKeyResultRowEditor
+                        <DashboardKrRowEditor
                           key={item.keyResult.krKey}
                           keyResult={item.keyResult}
-                          objectiveKeyRisksDependency={objective.keyRisksDependency}
-                          latestUpdateNotes={item.latestUpdateNotes}
-                          latestUpdatedAt={item.latestUpdatedAt}
+                          kpis={item.kpis ?? []}
                           positionOwnerEmail={positionOwnerEmail}
                           adminEmails={adminEmails}
                           metricTypeOptions={metricTypeOptions}

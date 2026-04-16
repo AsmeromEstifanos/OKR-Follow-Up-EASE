@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 
 type Props = {
   objectiveKey: string;
-  krKey: string;
   defaultDueDate: string;
   defaultOwner: string;
   positionOwnerEmail?: string;
@@ -22,7 +21,7 @@ type Props = {
 
 type ApiError = { error?: string };
 type OwnerSuggestion = { displayName: string; principalName: string; mail: string };
-type PendingKpi = {
+type PendingKr = {
   title: string;
   owner: string;
   ownerEmail: string;
@@ -68,9 +67,8 @@ function getNextDisplayCode(code: string, fallbackPrefix: string): string {
   return `${match[1].toUpperCase()}-${String(numeric + 1).padStart(match[2].length, "0")}`;
 }
 
-export default function DashboardKeyResultControls({
+export default function DashboardKrControls({
   objectiveKey,
-  krKey,
   defaultDueDate,
   defaultOwner,
   positionOwnerEmail,
@@ -79,8 +77,7 @@ export default function DashboardKeyResultControls({
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
-  const itemLabel = "KPI";
-  const itemLabelPlural = "KPIs";
+  const itemLabel = "Key Result";
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
@@ -104,19 +101,25 @@ export default function DashboardKeyResultControls({
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
   const [blockers, setBlockers] = useState("");
   const [notes, setNotes] = useState("");
-  const [pendingItems, setPendingItems] = useState<PendingKpi[]>([]);
+  const [pendingItems, setPendingItems] = useState<PendingKr[]>([]);
   const [error, setError] = useState("");
 
   const loadCodePreview = async (): Promise<void> => {
-    const response = await fetch(apiPath(`/api/codes/kpi?krKey=${encodeURIComponent(krKey)}`), { cache: "no-store" });
+    const response = await fetch(apiPath(`/api/codes/kr?objectiveKey=${encodeURIComponent(objectiveKey)}`), { cache: "no-store" });
     if (!response.ok) {
-      setCodePreview("KPI-001");
+      setCodePreview("KR-001");
       return;
     }
 
     const payload = (await response.json()) as { code?: string };
-    setCodePreview(payload.code?.trim() || "KPI-001");
+    setCodePreview(payload.code?.trim() || "KR-001");
   };
+
+  useEffect(() => {
+    if (isAdding) {
+      void loadCodePreview();
+    }
+  }, [isAdding, objectiveKey]);
 
   const resetDraft = (): void => {
     setTitle("");
@@ -143,25 +146,12 @@ export default function DashboardKeyResultControls({
     resetDraft();
   };
 
-  useEffect(() => {
-    if (!isAdding) return;
-    void loadCodePreview();
-  }, [isAdding, krKey]);
-
-  useEffect(() => {
-    if (!isAdding) {
-      setOwner(sanitizedDefaultOwner);
-      setOwnerEmail("");
-    }
-  }, [isAdding, sanitizedDefaultOwner]);
-
-  const buildPendingItem = (): PendingKpi | null => {
+  const buildPendingItem = (): PendingKr | null => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       setError(`${itemLabel} title is required.`);
       return null;
     }
-
     const baseline = Number(baselineValue);
     const target = Number(targetValue);
     const current = Number(currentValue);
@@ -169,7 +159,6 @@ export default function DashboardKeyResultControls({
       setError("Baseline, target, and current values must be numbers.");
       return null;
     }
-
     if (!dueDate) {
       setError("Due date is required.");
       return null;
@@ -191,15 +180,6 @@ export default function DashboardKeyResultControls({
     };
   };
 
-  const queueItem = (): void => {
-    const draft = buildPendingItem();
-    if (!draft) return;
-    setPendingItems((current) => [...current, draft]);
-    resetDraft();
-    setError("");
-    setCodePreview((current) => getNextDisplayCode(current, "KPI"));
-  };
-
   const saveAll = async (): Promise<void> => {
     if (isSaving) return;
     const staged = [...pendingItems];
@@ -208,7 +188,6 @@ export default function DashboardKeyResultControls({
       if (!current) return;
       staged.push(current);
     }
-
     if (staged.length === 0) {
       setError(`Add at least one ${itemLabel.toLowerCase()} first.`);
       return;
@@ -216,13 +195,13 @@ export default function DashboardKeyResultControls({
 
     setIsSaving(true);
     setError("");
-    const batch = beginOperationBatch("Saving KPIs", staged.length);
+    const batch = beginOperationBatch("Saving key results", staged.length);
 
     try {
       for (let index = 0; index < staged.length; index += 1) {
         batch.setCurrentStep(index + 1);
         const item = staged[index];
-        const response = await fetch(apiPath("/api/kpis"), {
+        const response = await fetch(apiPath("/api/krs"), {
           method: "POST",
           headers: {
             "content-type": "application/json",
@@ -230,7 +209,6 @@ export default function DashboardKeyResultControls({
           },
           body: JSON.stringify({
             objectiveKey,
-            krKey,
             ...item
           })
         });
@@ -249,7 +227,7 @@ export default function DashboardKeyResultControls({
       router.refresh();
     } catch (err) {
       batch.finish();
-      setError(err instanceof Error ? err.message : `Failed to save ${itemLabelPlural.toLowerCase()}.`);
+      setError(err instanceof Error ? err.message : "Failed to save key results.");
       setIsSaving(false);
     }
   };
@@ -283,7 +261,7 @@ export default function DashboardKeyResultControls({
               <textarea value={title} onChange={(event) => setTitle(event.target.value)} placeholder={itemLabel} autoFocus disabled={isSaving} />
             </div>
             <OwnerInput
-              id={`kpi-owner-${krKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
+              id={`kr-owner-${objectiveKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
               label="Owner (optional)"
               value={owner}
               onChange={setOwner}
@@ -301,63 +279,37 @@ export default function DashboardKeyResultControls({
                 {metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
-            <div className="field">
-              <label>Baseline Value</label>
-              <input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
-            </div>
-            <div className="field">
-              <label>Target Value</label>
-              <input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} />
-            </div>
-            <div className="field">
-              <label>Current Value</label>
-              <input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
-            </div>
+            <div className="field"><label>Baseline Value</label><input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
+            <div className="field"><label>Target Value</label><input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
+            <div className="field"><label>Current Value</label><input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
             <div className="field">
               <label>{itemLabel} Status</label>
               <select value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>
                 {keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
-            <div className="field">
-              <label>Due Date</label>
-              <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} />
-            </div>
+            <div className="field"><label>Due Date</label><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
             <div className="field">
               <label>Check-in Frequency</label>
               <select value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>
                 {checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
-            <div className="field kr-field-wide">
-              <label>Blockers</label>
-              <textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} />
-            </div>
-            <div className="field kr-field-wide">
-              <label>Notes</label>
-              <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} />
-            </div>
+            <div className="field kr-field-wide"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
+            <div className="field kr-field-wide"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
           </div>
           <div className="actions">
-            <button className="btn" type="button" onClick={queueItem} disabled={isSaving}>Add More</button>
+            <button className="btn" type="button" onClick={() => {
+              const draft = buildPendingItem();
+              if (!draft) return;
+              setPendingItems((current) => [...current, draft]);
+              resetDraft();
+              setCodePreview((current) => getNextDisplayCode(current, "KR"));
+              setError("");
+            }} disabled={isSaving}>Add More</button>
             <button className="btn btn-add" type="submit" disabled={isSaving}>Save All{pendingItems.length > 0 ? ` (${pendingItems.length})` : ""}</button>
             <button className="tab-btn" type="button" onClick={closeAdd} disabled={isSaving}>Cancel</button>
           </div>
-          {pendingItems.length > 0 ? (
-            <div className="field kr-field-wide">
-              <label>Pending {itemLabelPlural}</label>
-              <ul>
-                {pendingItems.map((item, index) => (
-                  <li key={`${item.title}-${index}`}>
-                    {item.title}{" "}
-                    <button type="button" className="tab-btn" onClick={() => setPendingItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={isSaving}>
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </form>
       ) : null}
       {error ? <p className="message danger">{error}</p> : null}

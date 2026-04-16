@@ -107,7 +107,9 @@ export default function DashboardObjectiveControls({
   checkInFrequencyOptions
 }: Props): JSX.Element {
   const labels = appProfile.labels;
-  const midLevelLower = labels.midLevelSingular.toLowerCase();
+  const itemLabel = appProfile.key === "ease-okr" ? "Objective" : labels.midLevelSingular;
+  const itemLabelPlural = appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
+  const midLevelLower = itemLabel.toLowerCase();
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
@@ -230,7 +232,7 @@ export default function DashboardObjectiveControls({
   const buildPendingObjective = (): PendingObjective | null => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError(`${labels.midLevelSingular} title is required.`);
+      setError(`${itemLabel} title is required.`);
       return null;
     }
 
@@ -368,7 +370,7 @@ export default function DashboardObjectiveControls({
       router.refresh();
     } catch (error) {
       batch.finish();
-      setError(error instanceof Error ? error.message : `Failed to save ${labels.midLevelPlural.toLowerCase()}.`);
+      setError(error instanceof Error ? error.message : `Failed to save ${itemLabelPlural.toLowerCase()}.`);
       setIsSaving(false);
       return;
     }
@@ -383,7 +385,7 @@ export default function DashboardObjectiveControls({
           onClick={isAdding ? closeAdd : openAdd}
           disabled={isSaving}
         >
-          Add {labels.midLevelSingular}
+          Add {itemLabel}
         </button>
       ) : null}
       {canCreate && isAdding ? (
@@ -396,12 +398,12 @@ export default function DashboardObjectiveControls({
         >
           <div className="objective-form-grid">
             <div className="field">
-              <label>{labels.midLevelSingular} Code</label>
+              <label>{itemLabel} Code</label>
               <input
                 name="objectiveCode"
                 value={objectiveCodePreview}
                 readOnly
-                aria-label={`${labels.midLevelSingular} code for ${positionName}`}
+                aria-label={`${itemLabel} code for ${positionName}`}
                 disabled={isSaving}
               />
             </div>
@@ -421,19 +423,19 @@ export default function DashboardObjectiveControls({
               <input name="objectiveOwnerEmail" value={ownerEmail} readOnly disabled={isSaving} />
             </div>
             <div className="field objective-field-wide">
-              <label>{labels.midLevelSingular}</label>
+              <label>{itemLabel}</label>
               <textarea
                 name="objectiveTitle"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder={labels.midLevelSingular}
-                aria-label={`${labels.midLevelSingular} title for ${positionName}`}
+                placeholder={itemLabel}
+                aria-label={`${itemLabel} title for ${positionName}`}
                 autoFocus
                 disabled={isSaving}
               />
             </div>
             <div className="field">
-              <label>{labels.midLevelSingular} Type</label>
+              <label>{itemLabel} Type</label>
               <select
                 name="objectiveType"
                 value={objectiveType}
@@ -463,7 +465,7 @@ export default function DashboardObjectiveControls({
               </select>
             </div>
             <div className="field">
-              <label>{labels.midLevelSingular} Metric Type</label>
+              <label>{itemLabel} Metric Type</label>
               <select
                 name="objectiveMetricType"
                 value={metricType}
@@ -588,7 +590,7 @@ export default function DashboardObjectiveControls({
           </div>
           {pendingObjectives.length > 0 ? (
             <div className="field objective-field-wide">
-              <label>Pending {labels.midLevelPlural}</label>
+              <label>Pending {itemLabelPlural}</label>
               <ul>
                 {pendingObjectives.map((item, index) => (
                   <li key={`${item.title}-${index}`}>
@@ -600,7 +602,7 @@ export default function DashboardObjectiveControls({
                 ))}
               </ul>
               <p className="message">
-                You have {pendingObjectives.length} unsaved {labels.midLevelPlural.toLowerCase()}. Click Save All.
+                You have {pendingObjectives.length} unsaved {itemLabelPlural.toLowerCase()}. Click Save All.
               </p>
             </div>
           ) : null}

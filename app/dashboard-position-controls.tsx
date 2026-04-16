@@ -46,6 +46,7 @@ export default function DashboardPositionControls({
   adminEmails
 }: Props): JSX.Element {
   const labels = appProfile.labels;
+  const itemLabel = "Position";
   const router = useRouter();
   const currentUserEmail = useCurrentUserEmail();
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizeEmail(currentUserEmail));
@@ -88,13 +89,13 @@ export default function DashboardPositionControls({
 
     const name = positionName.trim();
     if (!name) {
-      setError(`${labels.topLevelSingular} name is required.`);
+      setError(`${itemLabel} name is required.`);
       return;
     }
 
     const duplicate = existingPositionNames.some((existingName) => existingName.toLowerCase() === name.toLowerCase());
     if (duplicate) {
-      setError(`${labels.topLevelSingular} '${name}' already exists.`);
+      setError(`${itemLabel} '${name}' already exists.`);
       return;
     }
 
@@ -138,7 +139,7 @@ export default function DashboardPositionControls({
           onClick={isAdding ? closeAdd : openAdd}
           disabled={isSaving}
         >
-          Add {labels.topLevelSingular}
+          Add {itemLabel}
         </button>
       ) : null}
       {isAdmin && isAdding ? (
@@ -153,8 +154,8 @@ export default function DashboardPositionControls({
             name="positionName"
             value={positionName}
             onChange={(event) => setPositionName(event.target.value)}
-            placeholder={`${labels.topLevelSingular} name`}
-            aria-label={`${labels.topLevelSingular} name`}
+            placeholder={`${itemLabel} name`}
+            aria-label={`${itemLabel} name`}
             autoFocus
             disabled={isSaving}
           />
@@ -166,7 +167,7 @@ export default function DashboardPositionControls({
               setPositionOwnerEmail(user ? user.mail || user.principalName : "");
             }}
             showLabel={false}
-            placeholder={`${labels.topLevelSingular} owner (optional)`}
+            placeholder={`${itemLabel} owner (optional)`}
             disabled={isSaving}
             inputClassName="objective-row-input"
           />
@@ -175,7 +176,7 @@ export default function DashboardPositionControls({
             value={positionOwnerEmail}
             onChange={(event) => setPositionOwnerEmail(event.target.value)}
             placeholder="Owner email (optional)"
-            aria-label={`${labels.topLevelSingular} owner email`}
+            aria-label={`${itemLabel} owner email`}
             disabled={isSaving}
           />
           <button className="btn btn-add" type="submit" disabled={isSaving}>

@@ -57,6 +57,7 @@ export default function DashboardPositionRowControls({
   children
 }: Props): JSX.Element {
   const labels = appProfile.labels;
+  const itemLabel = "Position";
   const router = useRouter();
   const contentId = useId();
   const currentUserEmail = useCurrentUserEmail();
@@ -85,8 +86,8 @@ export default function DashboardPositionRowControls({
       <button
         type="button"
         className="position-edit-trigger"
-        aria-label={`Edit ${labels.topLevelSingular.toLowerCase()} ${positionName}`}
-        title={`Edit ${labels.topLevelSingular.toLowerCase()}`}
+        aria-label={`Edit ${itemLabel.toLowerCase()} ${positionName}`}
+        title={`Edit ${itemLabel.toLowerCase()}`}
         onClick={() => {
           setError("");
           setIsEditing(true);
@@ -120,13 +121,13 @@ export default function DashboardPositionRowControls({
     }
 
     if (!selectedVentureKey || !departmentKey) {
-      setError(`${labels.topLevelSingular} cannot be edited right now.`);
+      setError(`${itemLabel} cannot be edited right now.`);
       return;
     }
 
     const name = nameDraft.trim();
     if (!name) {
-      setError(`${labels.topLevelSingular} name is required.`);
+      setError(`${itemLabel} name is required.`);
       return;
     }
 
@@ -179,14 +180,14 @@ export default function DashboardPositionRowControls({
     }
 
     if (!selectedVentureKey || !departmentKey) {
-      setError(`${labels.topLevelSingular} cannot be deleted right now.`);
+      setError(`${itemLabel} cannot be deleted right now.`);
       return;
     }
 
     const warning =
       objectiveCount > 0
-        ? `Delete ${labels.topLevelSingular.toLowerCase()} '${positionName}'? It currently has ${objectiveCount} ${labels.midLevelPlural.toLowerCase()}. This will also delete related ${labels.leafLevelPlural.toLowerCase()}.`
-        : `Delete ${labels.topLevelSingular.toLowerCase()} '${positionName}'? This action cannot be undone.`;
+        ? `Delete ${itemLabel.toLowerCase()} '${positionName}'? It currently has ${objectiveCount} objectives. This will also delete related key results and KPIs.`
+        : `Delete ${itemLabel.toLowerCase()} '${positionName}'? This action cannot be undone.`;
 
     if (!window.confirm(warning)) {
       return;
@@ -248,8 +249,8 @@ export default function DashboardPositionRowControls({
                 name="positionName"
                 value={nameDraft}
                 onChange={(event) => setNameDraft(event.target.value)}
-                placeholder={labels.topLevelSingular}
-                aria-label={`${labels.topLevelSingular} name`}
+                placeholder={itemLabel}
+                aria-label={`${itemLabel} name`}
                 autoFocus
                 disabled={isSaving}
               />

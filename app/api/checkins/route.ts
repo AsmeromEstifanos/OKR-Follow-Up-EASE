@@ -11,6 +11,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     periodKey: searchParams.get("periodKey") ?? undefined,
     objectiveKey: searchParams.get("objectiveKey") ?? undefined,
     krKey: searchParams.get("krKey") ?? undefined,
+    kpiKey: searchParams.get("kpiKey") ?? undefined,
     owner: searchParams.get("owner") ?? undefined
   });
 

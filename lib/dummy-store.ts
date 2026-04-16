@@ -8,6 +8,7 @@ import type {
   CreateCheckInInput,
   CreateDepartmentInput,
   CreateKeyResultInput,
+  CreateKpiInput,
   CreateObjectiveInput,
   CreatePeriodInput,
   CreateVentureInput,
@@ -15,6 +16,7 @@ import type {
   Department,
   FieldOptions,
   KeyResult,
+  Kpi,
   KrStatus,
   MetricType,
   Objective,
@@ -22,6 +24,7 @@ import type {
   ObjectiveType,
   UpdateObjectiveInput,
   UpdateKeyResultInput,
+  UpdateKpiInput,
   ObjectiveWithContext,
   Period,
   Rag,
@@ -36,6 +39,7 @@ type StoreState = {
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
+  kpis: Kpi[];
   checkIns: CheckIn[];
 };
 
@@ -45,6 +49,7 @@ type PersistedContent = {
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
+  kpis: Kpi[];
   checkIns: CheckIn[];
 };
 
@@ -325,7 +330,7 @@ function getNextObjectiveCode(store: StoreState, departmentName: string, venture
 
 function getNextKrCode(store: StoreState, objectiveKey: string): string {
   const normalizedObjectiveKey = objectiveKey.toLowerCase();
-  const codePrefix = getLeafLevelCodePrefix();
+  const codePrefix = getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
   let maxSequence = 0;
 
   store.keyResults.forEach((kr) => {
@@ -334,6 +339,26 @@ function getNextKrCode(store: StoreState, objectiveKey: string): string {
     }
 
     const candidate = normalizeKey(kr.krCode ?? kr.krKey);
+    const parsed = parseNumberedCode(candidate, codePrefix);
+    if (parsed && parsed > maxSequence) {
+      maxSequence = parsed;
+    }
+  });
+
+  return formatNumberedCode(codePrefix, maxSequence + 1);
+}
+
+function getNextKpiCode(store: StoreState, krKey: string): string {
+  const normalizedKrKey = krKey.toLowerCase();
+  const codePrefix = getLeafLevelCodePrefix();
+  let maxSequence = 0;
+
+  store.kpis.forEach((kpi) => {
+    if (kpi.krKey.toLowerCase() !== normalizedKrKey) {
+      return;
+    }
+
+    const candidate = normalizeKey(kpi.kpiCode ?? kpi.kpiKey);
     const parsed = parseNumberedCode(candidate, codePrefix);
     if (parsed && parsed > maxSequence) {
       maxSequence = parsed;
@@ -512,6 +537,27 @@ function getStatusFromProgress(progressPct: number): KrStatus {
   return "OffTrack";
 }
 
+function recalcKeyResultInStore(store: StoreState, krKey: string): void {
+  const keyResult = store.keyResults.find((item) => item.krKey === krKey);
+  if (!keyResult) {
+    return;
+  }
+
+  const childKpis = store.kpis.filter((kpi) => kpi.krKey === krKey);
+  if (childKpis.length === 0) {
+    keyResult.progressPct = computeKrProgress(keyResult.baselineValue, keyResult.targetValue, keyResult.currentValue);
+    keyResult.status = getStatusFromProgress(keyResult.progressPct);
+    return;
+  }
+
+  const progressPct = computeObjectiveProgress(childKpis);
+  keyResult.progressPct = progressPct;
+  keyResult.currentValue = childKpis.reduce((sum, item) => sum + item.currentValue, 0);
+  keyResult.status = getStatusFromProgress(progressPct);
+  keyResult.lastCheckinAt =
+    sortByDateDescending(childKpis, (item) => item.lastCheckinAt ?? "")[0]?.lastCheckinAt ?? keyResult.lastCheckinAt;
+}
+
 function findVentureByKey(store: StoreState, ventureKey: string): Venture | undefined {
   return store.config.ventures.find((venture) => venture.ventureKey.toLowerCase() === ventureKey.toLowerCase());
 }
@@ -559,6 +605,7 @@ function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
   }
 
   const objectiveKrs = store.keyResults.filter((kr) => kr.objectiveKey === objectiveKey);
+  objectiveKrs.forEach((kr) => recalcKeyResultInStore(store, kr.krKey));
 
   if (objectiveKrs.length === 0) {
     objective.progressPct = computeKrProgress(objective.baselineValue, objective.targetValue, objective.currentValue);
@@ -689,6 +736,32 @@ function migrateKrDefaults(store: StoreState): void {
   });
 }
 
+function migrateKpiDefaults(store: StoreState): void {
+  store.kpis.forEach((kpi) => {
+    if (!kpi.kpiCode) {
+      kpi.kpiCode = kpi.kpiKey;
+    }
+
+    if (!kpi.checkInFrequency) {
+      kpi.checkInFrequency = "Weekly";
+    }
+
+    kpi.metricType = normalizeMetricType(kpi.metricType);
+
+    if (kpi.blockers === undefined || kpi.blockers === null) {
+      kpi.blockers = "";
+    }
+
+    if (kpi.notes === undefined || kpi.notes === null) {
+      kpi.notes = "";
+    }
+
+    if (typeof kpi.lastCheckinAt !== "string" && kpi.lastCheckinAt !== null) {
+      kpi.lastCheckinAt = null;
+    }
+  });
+}
+
 function buildSeedStore(): StoreState {
   const store: StoreState = {
     config: {
@@ -702,6 +775,7 @@ function buildSeedStore(): StoreState {
     periods: [],
     objectives: [],
     keyResults: [],
+    kpis: [],
     checkIns: []
   };
 
@@ -715,6 +789,7 @@ function applyStoreMigrations(store: StoreState): void {
   ensureUniqueDepartmentKeys(store);
   migrateObjectiveDefaults(store);
   migrateKrDefaults(store);
+  migrateKpiDefaults(store);
   persistStore(store);
 }
 
@@ -727,6 +802,7 @@ function toStoreSnapshot(store: StoreState): StoreSnapshot {
       periods: clone(store.periods),
       objectives: clone(store.objectives),
       keyResults: clone(store.keyResults),
+      kpis: clone(store.kpis),
       checkIns: clone(store.checkIns)
     }
   };
@@ -748,6 +824,7 @@ function fromStoreSnapshot(snapshot: StoreSnapshot): StoreState {
   store.periods = clone(snapshot.content.periods);
   store.objectives = clone(snapshot.content.objectives);
   store.keyResults = clone(snapshot.content.keyResults);
+  store.kpis = clone(snapshot.content.kpis ?? []);
   store.checkIns = clone(snapshot.content.checkIns);
   return store;
 }
@@ -801,6 +878,7 @@ function getStore(): StoreState {
 
     storeContainer.__okrDummyStore.objectives = persistedContent.objectives;
     storeContainer.__okrDummyStore.keyResults = persistedContent.keyResults;
+    storeContainer.__okrDummyStore.kpis = persistedContent.kpis ?? [];
     storeContainer.__okrDummyStore.checkIns = persistedContent.checkIns;
   }
 
@@ -831,6 +909,15 @@ function ensureKrExists(store: StoreState, krKey: string): KeyResult {
   }
 
   return kr;
+}
+
+function ensureKpiExists(store: StoreState, kpiKey: string): Kpi {
+  const kpi = store.kpis.find((item) => item.kpiKey === kpiKey);
+  if (!kpi) {
+    throw new Error(`KPI '${kpiKey}' does not exist.`);
+  }
+
+  return kpi;
 }
 
 function isMatch(value: string | undefined, expected?: string): boolean {
@@ -1243,20 +1330,22 @@ export function getObjectiveWithContext(objectiveKey: string): ObjectiveWithCont
   }
 
   const objectiveKrs = store.keyResults.filter((kr) => kr.objectiveKey === objectiveKey);
+  const objectiveKpis = store.kpis.filter((kpi) => kpi.objectiveKey === objectiveKey);
   const latestCheckIns: Record<string, CheckIn | null> = {};
 
-  objectiveKrs.forEach((kr) => {
+  [...objectiveKrs.map((kr) => kr.krKey), ...objectiveKpis.map((kpi) => kpi.kpiKey)].forEach((entityKey) => {
     const latest = sortByDateDescending(
-      store.checkIns.filter((checkIn) => checkIn.krKey === kr.krKey),
+      store.checkIns.filter((checkIn) => checkIn.krKey === entityKey || checkIn.kpiKey === entityKey),
       (checkIn) => checkIn.checkInAt
     )[0];
 
-    latestCheckIns[kr.krKey] = latest ?? null;
+    latestCheckIns[entityKey] = latest ?? null;
   });
 
   return clone({
     objective,
     keyResults: objectiveKrs,
+    kpis: objectiveKpis,
     latestCheckIns
   });
 }
@@ -1464,12 +1553,15 @@ export function deleteObjective(
     (keyResult) => keyResult.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase()
   );
   const relatedKrKeys = new Set(relatedKrs.map((keyResult) => keyResult.krKey.toLowerCase()));
+  const relatedKpis = store.kpis.filter((kpi) => kpi.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase());
+  const relatedKpiKeys = new Set(relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()));
 
   const deletedKrCount = relatedKrs.length;
   const deletedCheckInCount = store.checkIns.filter((checkIn) => {
     return (
       checkIn.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase() ||
-      relatedKrKeys.has(checkIn.krKey.toLowerCase())
+      relatedKrKeys.has(checkIn.krKey.toLowerCase()) ||
+      relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
   }).length;
 
@@ -1477,10 +1569,12 @@ export function deleteObjective(
   store.keyResults = store.keyResults.filter(
     (keyResult) => keyResult.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase()
   );
+  store.kpis = store.kpis.filter((kpi) => kpi.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase());
   store.checkIns = store.checkIns.filter((checkIn) => {
     return (
       checkIn.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase() &&
-      !relatedKrKeys.has(checkIn.krKey.toLowerCase())
+      !relatedKrKeys.has(checkIn.krKey.toLowerCase()) &&
+      !relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
   });
 
@@ -1568,6 +1662,86 @@ export function previewNextObjectiveCode(departmentName: string, ventureName: st
 export function previewNextKrCode(objectiveKey: string): string {
   const store = getStore();
   return getNextKrCode(store, objectiveKey);
+}
+
+type KpiFilters = {
+  periodKey?: string;
+  objectiveKey?: string;
+  krKey?: string;
+  owner?: string;
+  status?: string;
+};
+
+export function listKpis(filters: KpiFilters = {}): Kpi[] {
+  const { periodKey, objectiveKey, krKey, owner, status } = filters;
+
+  const kpis = getStore().kpis.filter((kpi) => {
+    return (
+      isMatch(kpi.periodKey, periodKey) &&
+      isMatch(kpi.objectiveKey, objectiveKey) &&
+      isMatch(kpi.krKey, krKey) &&
+      isMatch(kpi.owner, owner) &&
+      isMatch(kpi.status, status)
+    );
+  });
+
+  return clone(kpis);
+}
+
+export function getKpi(kpiKey: string): Kpi | null {
+  const kpi = getStore().kpis.find((item) => item.kpiKey === kpiKey);
+  return kpi ? clone(kpi) : null;
+}
+
+export function createKpi(input: CreateKpiInput): Kpi {
+  const store = getStore();
+  const requestedKpiCode = normalizeKey(input.kpiCode ?? input.kpiKey ?? "");
+  const kpiKey = getNextNumericKey(store.kpis.map((item) => item.kpiKey));
+  const objective = ensureObjectiveExists(store, input.objectiveKey);
+  const keyResult = ensureKrExists(store, input.krKey);
+
+  if (keyResult.objectiveKey !== objective.objectiveKey) {
+    throw new Error("Key Result does not belong to the provided objective.");
+  }
+
+  const periodKey = resolvePeriodKey(store, input.periodKey, keyResult.periodKey || objective.periodKey);
+  const progressPct = input.progressPct ?? computeKrProgress(input.baselineValue, input.targetValue, input.currentValue);
+  const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
+  const blockers = normalizeName(input.blockers ?? "");
+  const notes = normalizeName(input.notes ?? "");
+
+  const kpi: Kpi = {
+    kpiKey,
+    kpiCode: requestedKpiCode || getNextKpiCode(store, input.krKey),
+    objectiveKey: objective.objectiveKey,
+    krKey: keyResult.krKey,
+    periodKey,
+    title: input.title,
+    owner: normalizeName(input.owner ?? "") || undefined,
+    ownerEmail: normalizeEmail(input.ownerEmail ?? "") || undefined,
+    metricType: normalizeMetricType(input.metricType),
+    baselineValue: input.baselineValue,
+    targetValue: input.targetValue,
+    currentValue: input.currentValue,
+    progressPct,
+    status: input.status,
+    dueDate: input.dueDate,
+    checkInFrequency,
+    blockers,
+    notes,
+    lastCheckinAt: nowIso()
+  };
+
+  store.kpis.push(kpi);
+  recalcKeyResultInStore(store, keyResult.krKey);
+  recalcObjectiveInStore(store, objective.objectiveKey);
+  persistStore(store);
+  return clone(kpi);
+}
+
+export function previewNextKpiCode(krKey: string): string {
+  const store = getStore();
+  return getNextKpiCode(store, krKey);
 }
 
 export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): KeyResult | null {
@@ -1668,6 +1842,115 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
   return clone(keyResult);
 }
 
+export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
+  const store = getStore();
+  const kpi = store.kpis.find((item) => item.kpiKey === kpiKey);
+  if (!kpi) {
+    return null;
+  }
+
+  const previousObjectiveKey = kpi.objectiveKey;
+  const previousKrKey = kpi.krKey;
+
+  if (patch.objectiveKey !== undefined) {
+    const objective = ensureObjectiveExists(store, patch.objectiveKey);
+    kpi.objectiveKey = objective.objectiveKey;
+    if (patch.periodKey === undefined) {
+      kpi.periodKey = objective.periodKey;
+    }
+  }
+
+  if (patch.krKey !== undefined) {
+    const keyResult = ensureKrExists(store, patch.krKey);
+    if (patch.objectiveKey === undefined) {
+      kpi.objectiveKey = keyResult.objectiveKey;
+    }
+    kpi.krKey = keyResult.krKey;
+    if (patch.periodKey === undefined) {
+      kpi.periodKey = keyResult.periodKey;
+    }
+  }
+
+  if (patch.periodKey !== undefined) {
+    ensurePeriodExists(store, patch.periodKey);
+    kpi.periodKey = patch.periodKey;
+  }
+
+  if (patch.kpiCode !== undefined) {
+    kpi.kpiCode = normalizeKey(patch.kpiCode) || kpi.kpiKey;
+  }
+
+  if (patch.title !== undefined) {
+    kpi.title = normalizeName(patch.title);
+  }
+
+  if (patch.owner !== undefined) {
+    kpi.owner = normalizeName(patch.owner) || undefined;
+  }
+
+  if (patch.ownerEmail !== undefined) {
+    kpi.ownerEmail = normalizeEmail(patch.ownerEmail) || undefined;
+  }
+
+  if (patch.metricType !== undefined) {
+    kpi.metricType = normalizeMetricType(patch.metricType);
+  }
+
+  if (patch.baselineValue !== undefined) {
+    kpi.baselineValue = patch.baselineValue;
+  }
+
+  if (patch.targetValue !== undefined) {
+    kpi.targetValue = patch.targetValue;
+  }
+
+  if (patch.currentValue !== undefined) {
+    kpi.currentValue = patch.currentValue;
+  }
+
+  if (patch.status !== undefined) {
+    kpi.status = patch.status;
+  }
+
+  if (patch.dueDate !== undefined) {
+    kpi.dueDate = normalizeName(patch.dueDate);
+  }
+
+  if (patch.checkInFrequency !== undefined) {
+    kpi.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+  }
+
+  if (patch.blockers !== undefined) {
+    kpi.blockers = normalizeName(patch.blockers);
+  }
+
+  if (patch.notes !== undefined) {
+    kpi.notes = normalizeName(patch.notes);
+  }
+
+  kpi.progressPct = computeKrProgress(kpi.baselineValue, kpi.targetValue, kpi.currentValue);
+  if (patch.status === undefined) {
+    kpi.status = getStatusFromProgress(kpi.progressPct);
+  }
+  kpi.lastCheckinAt = nowIso();
+
+  if (previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase() || previousObjectiveKey.toLowerCase() !== kpi.objectiveKey.toLowerCase()) {
+    store.checkIns.forEach((checkIn) => {
+      if ((checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()) {
+        checkIn.objectiveKey = kpi.objectiveKey;
+        checkIn.krKey = kpi.krKey;
+      }
+    });
+  }
+
+  recalcKeyResultInStore(store, previousKrKey);
+  recalcKeyResultInStore(store, kpi.krKey);
+  recalcObjectiveInStore(store, previousObjectiveKey);
+  recalcObjectiveInStore(store, kpi.objectiveKey);
+  persistStore(store);
+  return clone(kpi);
+}
+
 export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInCount: number } | null {
   const store = getStore();
   const krIndex = store.keyResults.findIndex((keyResult) => keyResult.krKey.toLowerCase() === krKey.toLowerCase());
@@ -1677,12 +1960,23 @@ export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInC
   }
 
   const keyResult = store.keyResults[krIndex];
-  const deletedCheckInCount = store.checkIns.filter(
-    (checkIn) => checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase()
-  ).length;
+  const relatedKpis = store.kpis.filter((kpi) => kpi.krKey.toLowerCase() === keyResult.krKey.toLowerCase());
+  const relatedKpiKeys = new Set(relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()));
+  const deletedCheckInCount = store.checkIns.filter((checkIn) => {
+    return (
+      checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase() ||
+      relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
+    );
+  }).length;
 
   store.keyResults.splice(krIndex, 1);
-  store.checkIns = store.checkIns.filter((checkIn) => checkIn.krKey.toLowerCase() !== keyResult.krKey.toLowerCase());
+  store.kpis = store.kpis.filter((kpi) => kpi.krKey.toLowerCase() !== keyResult.krKey.toLowerCase());
+  store.checkIns = store.checkIns.filter((checkIn) => {
+    return (
+      checkIn.krKey.toLowerCase() !== keyResult.krKey.toLowerCase() &&
+      !relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
+    );
+  });
   recalcObjectiveInStore(store, keyResult.objectiveKey);
 
   persistStore(store);
@@ -1692,10 +1986,34 @@ export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInC
   };
 }
 
+export function deleteKpi(kpiKey: string): { kpiKey: string; deletedCheckInCount: number } | null {
+  const store = getStore();
+  const kpiIndex = store.kpis.findIndex((item) => item.kpiKey.toLowerCase() === kpiKey.toLowerCase());
+  if (kpiIndex < 0) {
+    return null;
+  }
+
+  const kpi = store.kpis[kpiIndex];
+  const deletedCheckInCount = store.checkIns.filter(
+    (checkIn) => (checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()
+  ).length;
+
+  store.kpis.splice(kpiIndex, 1);
+  store.checkIns = store.checkIns.filter((checkIn) => (checkIn.kpiKey ?? "").toLowerCase() !== kpi.kpiKey.toLowerCase());
+  recalcKeyResultInStore(store, kpi.krKey);
+  recalcObjectiveInStore(store, kpi.objectiveKey);
+  persistStore(store);
+  return {
+    kpiKey: kpi.kpiKey,
+    deletedCheckInCount
+  };
+}
+
 type CheckInFilters = {
   periodKey?: string;
   objectiveKey?: string;
   krKey?: string;
+  kpiKey?: string;
   owner?: string;
 };
 
@@ -1705,13 +2023,14 @@ type DashboardFilters = {
 };
 
 export function listCheckIns(filters: CheckInFilters = {}): CheckIn[] {
-  const { periodKey, objectiveKey, krKey, owner } = filters;
+  const { periodKey, objectiveKey, krKey, kpiKey, owner } = filters;
 
   const checkIns = getStore().checkIns.filter((checkIn) => {
     return (
       isMatch(checkIn.periodKey, periodKey) &&
       isMatch(checkIn.objectiveKey, objectiveKey) &&
       isMatch(checkIn.krKey, krKey) &&
+      isMatch(checkIn.kpiKey, kpiKey) &&
       isMatch(checkIn.owner, owner)
     );
   });
@@ -1724,6 +2043,7 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
   ensurePeriodExists(store, input.periodKey);
   const objective = ensureObjectiveExists(store, input.objectiveKey);
   const keyResult = ensureKrExists(store, input.krKey);
+  const kpi = input.kpiKey ? ensureKpiExists(store, input.kpiKey) : null;
 
   if (keyResult.objectiveKey !== objective.objectiveKey) {
     throw new Error("KR does not belong to the provided objective.");
@@ -1733,11 +2053,29 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
     throw new Error("KR period does not match the provided period.");
   }
 
+  if (kpi) {
+    if (kpi.krKey !== keyResult.krKey) {
+      throw new Error("KPI does not belong to the provided key result.");
+    }
+
+    if (kpi.objectiveKey !== objective.objectiveKey) {
+      throw new Error("KPI does not belong to the provided objective.");
+    }
+
+    if (kpi.periodKey !== input.periodKey) {
+      throw new Error("KPI period does not match the provided period.");
+    }
+  }
+
   const checkInAt = input.checkInAt ?? nowIso();
   const currentValueSnapshot = input.currentValueSnapshot;
   const progressPctSnapshot =
     input.progressPctSnapshot ??
-    computeKrProgress(keyResult.baselineValue, keyResult.targetValue, currentValueSnapshot);
+    computeKrProgress(
+      (kpi ?? keyResult).baselineValue,
+      (kpi ?? keyResult).targetValue,
+      currentValueSnapshot
+    );
 
   const status = input.status;
   const checkIn: CheckIn = {
@@ -1745,6 +2083,7 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
     periodKey: input.periodKey,
     objectiveKey: input.objectiveKey,
     krKey: input.krKey,
+    kpiKey: input.kpiKey,
     owner: input.owner,
     status,
     confidence: input.confidence,
@@ -1758,12 +2097,22 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
 
   store.checkIns.push(checkIn);
 
-  keyResult.currentValue = currentValueSnapshot;
-  keyResult.progressPct = progressPctSnapshot;
-  keyResult.status = status;
-  keyResult.blockers = normalizeName(input.blockers);
-  keyResult.notes = normalizeName(input.updateNotes);
-  keyResult.lastCheckinAt = checkInAt;
+  if (kpi) {
+    kpi.currentValue = currentValueSnapshot;
+    kpi.progressPct = progressPctSnapshot;
+    kpi.status = status;
+    kpi.blockers = normalizeName(input.blockers);
+    kpi.notes = normalizeName(input.updateNotes);
+    kpi.lastCheckinAt = checkInAt;
+    recalcKeyResultInStore(store, keyResult.krKey);
+  } else {
+    keyResult.currentValue = currentValueSnapshot;
+    keyResult.progressPct = progressPctSnapshot;
+    keyResult.status = status;
+    keyResult.blockers = normalizeName(input.blockers);
+    keyResult.notes = normalizeName(input.updateNotes);
+    keyResult.lastCheckinAt = checkInAt;
+  }
 
   recalcObjectiveInStore(store, keyResult.objectiveKey);
   persistStore(store);
@@ -1817,6 +2166,18 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
 
     return matchesVentureDepartmentFilter(objective);
   });
+  const myKpis = store.kpis.filter((kpi) => {
+    if ((kpi.owner ?? "").toLowerCase() !== normalizedOwner) {
+      return false;
+    }
+
+    const objective = objectiveByKey.get(kpi.objectiveKey.toLowerCase());
+    if (!objective) {
+      return false;
+    }
+
+    return matchesVentureDepartmentFilter(objective);
+  });
   const periodMap = new Map(store.periods.map((period) => [period.periodKey, period]));
 
   const missingCheckIns = myKeyResults.filter((kr) => {
@@ -1827,17 +2188,27 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
 
     return isMissingCheckin(kr.lastCheckinAt, period.status);
   });
+  const missingKpis = myKpis.filter((kpi) => {
+    const period = periodMap.get(kpi.periodKey);
+    if (!period) {
+      return false;
+    }
+
+    return isMissingCheckin(kpi.lastCheckinAt, period.status);
+  });
 
   const atRiskObjectives = myObjectives.filter((objective) => {
     return objective.rag !== "Green" || objective.status === "AtRisk" || objective.status === "OffTrack";
   });
 
   return clone({
-    owner,
-    myObjectives,
-    myKeyResults,
-    missingCheckIns,
-    atRiskObjectives
-  });
+      owner,
+      myObjectives,
+      myKeyResults,
+      myKpis,
+      missingCheckIns,
+      missingKpis,
+      atRiskObjectives
+    });
 }
 

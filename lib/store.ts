@@ -4,29 +4,35 @@ import {
   addVenture as addVentureLocal,
   createCheckIn as createCheckInLocal,
   createKeyResult as createKeyResultLocal,
+  createKpi as createKpiLocal,
   createObjective as createObjectiveLocal,
   createPeriod as createPeriodLocal,
   deleteDepartmentFromVenture as deleteDepartmentFromVentureLocal,
   deleteKeyResult as deleteKeyResultLocal,
+  deleteKpi as deleteKpiLocal,
   deleteObjective as deleteObjectiveLocal,
   deleteVenture as deleteVentureLocal,
   exportStoreSnapshot as exportStoreSnapshotLocal,
   getConfig as getConfigLocal,
   getDashboardForOwner as getDashboardForOwnerLocal,
   getKeyResult as getKeyResultLocal,
+  getKpi as getKpiLocal,
   getObjective as getObjectiveLocal,
   getObjectiveWithContext as getObjectiveWithContextLocal,
   getSeedSnapshot as getSeedSnapshotLocal,
   hydrateStoreFromSnapshot as hydrateStoreFromSnapshotLocal,
   listCheckIns as listCheckInsLocal,
   listKeyResults as listKeyResultsLocal,
+  listKpis as listKpisLocal,
   listObjectives as listObjectivesLocal,
   listPeriods as listPeriodsLocal,
   previewNextKrCode as previewNextKrCodeLocal,
+  previewNextKpiCode as previewNextKpiCodeLocal,
   previewNextObjectiveCode as previewNextObjectiveCodeLocal,
   updateDepartmentInVenture as updateDepartmentInVentureLocal,
   updateFieldOptions as updateFieldOptionsLocal,
   updateKeyResult as updateKeyResultLocal,
+  updateKpi as updateKpiLocal,
   updateObjective as updateObjectiveLocal,
   updatePeriod as updatePeriodLocal,
   updateRagThresholds as updateRagThresholdsLocal,
@@ -55,18 +61,21 @@ import type {
   CreateCheckInInput,
   CreateDepartmentInput,
   CreateKeyResultInput,
+  CreateKpiInput,
   CreateObjectiveInput,
   CreatePeriodInput,
   CreateVentureInput,
   DashboardMe,
   FieldOptions,
   KeyResult,
+  Kpi,
   Objective,
   ObjectiveWithContext,
   Period,
   RagThresholds,
   UpdateDepartmentInput,
   UpdateKeyResultInput,
+  UpdateKpiInput,
   UpdateObjectiveInput,
   UpdateVentureInput,
   Venture
@@ -181,6 +190,7 @@ async function syncStoreToSharePoint(): Promise<void> {
 
 type ObjectiveFilters = Parameters<typeof listObjectivesLocal>[0];
 type KrFilters = Parameters<typeof listKeyResultsLocal>[0];
+type KpiFilters = Parameters<typeof listKpisLocal>[0];
 type CheckInFilters = Parameters<typeof listCheckInsLocal>[0];
 type DashboardFilters = Parameters<typeof getDashboardForOwnerLocal>[1];
 
@@ -400,6 +410,29 @@ export async function previewNextKrCode(objectiveKey: string): Promise<string> {
   return previewNextKrCodeLocal(objectiveKey);
 }
 
+export async function listKpis(filters: KpiFilters = {}): Promise<Kpi[]> {
+  await ensureStoreHydrated();
+  return listKpisLocal(filters);
+}
+
+export async function getKpi(kpiKey: string): Promise<Kpi | null> {
+  await ensureStoreHydrated();
+  return getKpiLocal(kpiKey);
+}
+
+export async function createKpi(input: CreateKpiInput): Promise<Kpi> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Creating KPI");
+  const result = createKpiLocal(input);
+  await syncStoreToSharePoint();
+  return result;
+}
+
+export async function previewNextKpiCode(krKey: string): Promise<string> {
+  await ensureStoreHydrated();
+  return previewNextKpiCodeLocal(krKey);
+}
+
 export async function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Promise<KeyResult | null> {
   await ensureStoreHydrated();
   updateOperationProgress(28, "Updating key result");
@@ -411,10 +444,32 @@ export async function updateKeyResult(krKey: string, patch: UpdateKeyResultInput
   return result;
 }
 
+export async function updateKpi(kpiKey: string, patch: UpdateKpiInput): Promise<Kpi | null> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Updating KPI");
+  const result = updateKpiLocal(kpiKey, patch);
+  if (result) {
+    await syncStoreToSharePoint();
+  }
+
+  return result;
+}
+
 export async function deleteKeyResult(krKey: string): Promise<{ krKey: string; deletedCheckInCount: number } | null> {
   await ensureStoreHydrated();
   updateOperationProgress(28, "Deleting key result");
   const result = deleteKeyResultLocal(krKey);
+  if (result) {
+    await syncStoreToSharePoint();
+  }
+
+  return result;
+}
+
+export async function deleteKpi(kpiKey: string): Promise<{ kpiKey: string; deletedCheckInCount: number } | null> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Deleting KPI");
+  const result = deleteKpiLocal(kpiKey);
   if (result) {
     await syncStoreToSharePoint();
   }

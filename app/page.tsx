@@ -10,6 +10,7 @@ import {
   listAdminEmails,
   listCheckIns,
   listKeyResults,
+  listKpis,
   listObjectives,
   listPeriods,
 } from "@/lib/store";
@@ -107,6 +108,9 @@ export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps): Promise<JSX.Element> {
   const labels = appProfile.labels;
+  const objectiveLabel = appProfile.key === "ease-okr" ? "Objective" : labels.midLevelSingular;
+  const objectiveLabelPlural = appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
+  const positionLabel = "Position";
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const config = await getConfig();
   const ventures = config.ventures;
@@ -159,11 +163,16 @@ export default async function DashboardPage({
   const allKeyResults = (await listKeyResults()).filter((kr) =>
     objectiveKeys.has(kr.objectiveKey.toLowerCase()),
   );
+  const keyResultKeys = new Set(allKeyResults.map((kr) => kr.krKey.toLowerCase()));
+  const allKpis = (await listKpis()).filter((kpi) =>
+    keyResultKeys.has(kpi.krKey.toLowerCase()),
+  );
 
   const latestCheckinByKr = (await listCheckIns()).reduce<Map<string, CheckIn>>(
     (map, checkIn) => {
-      if (!map.has(checkIn.krKey)) {
-        map.set(checkIn.krKey, checkIn);
+      const key = checkIn.kpiKey ?? checkIn.krKey;
+      if (!map.has(key)) {
+        map.set(key, checkIn);
       }
 
       return map;
@@ -177,6 +186,12 @@ export default async function DashboardPage({
     const current = map.get(kr.objectiveKey) ?? [];
     current.push(kr);
     map.set(kr.objectiveKey, current);
+    return map;
+  }, new Map());
+  const kpisByKr = allKpis.reduce<Map<string, typeof allKpis>>((map, kpi) => {
+    const current = map.get(kpi.krKey) ?? [];
+    current.push(kpi);
+    map.set(kpi.krKey, current);
     return map;
   }, new Map());
   const objectivesByPosition = allObjectives.reduce<Map<string, Objective[]>>(
@@ -258,7 +273,7 @@ export default async function DashboardPage({
           </div>
         </div>
         {ownerSections.length === 0 ? (
-          <p className="meta">No {labels.midLevelPlural.toLowerCase()} available.</p>
+          <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
         ) : (
           <div className="board-groups">
             {ownerSections.map((section, sectionIndex) => {
@@ -313,9 +328,9 @@ export default async function DashboardPage({
                       <table className="board-table">
                         <thead>
                           <tr>
-                            <th>{labels.midLevelSingular}</th>
+                            <th>{objectiveLabel}</th>
                             <th>Owner</th>
-                            <th>{labels.midLevelSingular} Metric Type</th>
+                            <th>{objectiveLabel} Metric Type</th>
                             <th>Baseline Value</th>
                             <th>Target Value</th>
                             <th>Current Value</th>
@@ -333,7 +348,7 @@ export default async function DashboardPage({
                           {section.objectives.length === 0 ? (
                             <tr className="board-empty-row">
                               <td colSpan={14}>
-                                No {labels.midLevelPlural.toLowerCase()} yet for this {labels.topLevelSingular.toLowerCase()}.
+                                No {objectiveLabelPlural.toLowerCase()} yet for this {positionLabel.toLowerCase()}.
                               </td>
                             </tr>
                           ) : (
@@ -350,10 +365,21 @@ export default async function DashboardPage({
                                       const latest = latestCheckinByKr.get(
                                         kr.krKey,
                                       );
-                                      return {
-                                        keyResult: kr,
-                                        latestUpdateNotes: latest?.updateNotes,
-                                        latestUpdatedAt: getMostRecentTimestamp(
+                                        return {
+                                          keyResult: kr,
+                                          kpis: (kpisByKr.get(kr.krKey) ?? []).map((kpi) => {
+                                            const latest = latestCheckinByKr.get(kpi.kpiKey);
+                                            return {
+                                              kpi,
+                                              latestUpdateNotes: latest?.updateNotes,
+                                              latestUpdatedAt: getMostRecentTimestamp(
+                                                latest?.checkInAt,
+                                                kpi.lastCheckinAt,
+                                              ),
+                                            };
+                                          }),
+                                          latestUpdateNotes: latest?.updateNotes,
+                                          latestUpdatedAt: getMostRecentTimestamp(
                                           latest?.checkInAt,
                                           kr.lastCheckinAt,
                                         ),
