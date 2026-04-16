@@ -293,7 +293,6 @@ export default async function DashboardPage({
                           key={`${positionScopeKey}::objectives`}
                           positionName={section.positionName}
                           strategicTheme={selectedVenture?.name ?? "SVH"}
-                          defaultPeriodKey={defaultPeriod?.periodKey}
                           defaultStartDate={defaultPeriod?.startDate}
                           defaultEndDate={defaultPeriod?.endDate}
                           defaultCycle={defaultCycle}

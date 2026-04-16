@@ -1,4 +1,4 @@
-import { getConfig, getObjectiveWithContext, listObjectives, listPeriods } from "@/lib/store";
+import { getConfig, getObjectiveWithContext, listObjectives } from "@/lib/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import KeyResultEditControls from "./key-result-edit-controls";
@@ -49,7 +49,6 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
   }
 
   const config = await getConfig();
-  const periodOptions = (await listPeriods()).map((period) => period.periodKey);
   const departmentOptions = config.ventures.flatMap((venture) => venture.departments.map((department) => department.name));
   const objectiveOptions = (await listObjectives()).map((item) => ({
     objectiveKey: item.objectiveKey,
@@ -71,7 +70,6 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
         <p className="meta">Objective code: {objective.objectiveCode ?? objective.objectiveKey}</p>
         <ObjectiveEditControls
           objective={objective}
-          periodOptions={periodOptions}
           departmentOptions={departmentOptions}
           objectiveTypeOptions={config.fieldOptions.objectiveTypes}
           objectiveStatusOptions={config.fieldOptions.objectiveStatuses}
@@ -160,7 +158,6 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
               <KeyResultEditControls
                 key={kr.krKey}
                 keyResult={kr}
-                periodOptions={periodOptions}
                 objectiveOptions={objectiveOptions}
                 metricTypeOptions={config.fieldOptions.keyResultMetricTypes}
                 keyResultStatusOptions={config.fieldOptions.keyResultStatuses}

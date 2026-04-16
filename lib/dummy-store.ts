@@ -64,6 +64,8 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"]
 };
 
+const EASE_FALLBACK_PERIOD_KEY = "EASE-DEFAULT";
+
 const storeContainer = globalThis as {
   __okrDummyStore?: StoreState;
 };
@@ -101,6 +103,69 @@ function toDateOnly(date: Date): string {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function shouldUseImplicitPeriod(): boolean {
+  return getAppProfile().key === "ease-okr";
+}
+
+function isImplicitPeriodKey(periodKey: string): boolean {
+  return periodKey.trim().toUpperCase() === EASE_FALLBACK_PERIOD_KEY;
+}
+
+function buildImplicitPeriod(): Period {
+  const now = new Date();
+  const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+  const startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+  const endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0);
+
+  return {
+    periodKey: EASE_FALLBACK_PERIOD_KEY,
+    name: "Default",
+    startDate: toDateOnly(startDate),
+    endDate: toDateOnly(endDate),
+    status: "Active"
+  };
+}
+
+function ensureImplicitPeriod(store: StoreState): void {
+  if (!shouldUseImplicitPeriod() || store.periods.length > 0) {
+    return;
+  }
+
+  store.periods.push(buildImplicitPeriod());
+}
+
+function getPreferredPeriod(store: StoreState): Period | undefined {
+  const explicitPeriods = store.periods.filter((period) => !isImplicitPeriodKey(period.periodKey));
+  return (
+    explicitPeriods.find((period) => period.status === "Active") ??
+    explicitPeriods[0] ??
+    store.periods.find((period) => period.status === "Active") ??
+    store.periods[0]
+  );
+}
+
+function resolvePeriodKey(store: StoreState, requestedPeriodKey?: string, fallbackPeriodKey?: string): string {
+  const requested = normalizeKey(requestedPeriodKey ?? "");
+  if (requested) {
+    ensurePeriodExists(store, requested);
+    return requested;
+  }
+
+  const fallback = normalizeKey(fallbackPeriodKey ?? "");
+  if (fallback) {
+    ensurePeriodExists(store, fallback);
+    return fallback;
+  }
+
+  ensureImplicitPeriod(store);
+  const resolved = getPreferredPeriod(store);
+  if (!resolved) {
+    throw new Error("No period is configured.");
+  }
+
+  return resolved.periodKey;
 }
 
 function normalizeKey(value: string): string {
@@ -620,6 +685,7 @@ function buildSeedStore(): StoreState {
 
 function applyStoreMigrations(store: StoreState): void {
   store.config.fieldOptions = normalizeFieldOptions(store.config.fieldOptions);
+  ensureImplicitPeriod(store);
   ensureUniqueDepartmentKeys(store);
   migrateObjectiveDefaults(store);
   migrateKrDefaults(store);
@@ -1173,8 +1239,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const store = getStore();
   const requestedObjectiveCode = normalizeKey(input.objectiveCode ?? input.objectiveKey ?? "");
   const objectiveKey = getNextNumericKey(store.objectives.map((objective) => objective.objectiveKey));
-
-  ensurePeriodExists(store, input.periodKey);
+  const periodKey = resolvePeriodKey(store, input.periodKey);
   assertDepartmentExists(store, input.department);
   const strategicTheme = normalizeName(input.strategicTheme || "");
   const blockers = normalizeName(input.blockers || "");
@@ -1185,7 +1250,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     objectiveKey,
     objectiveCode:
       requestedObjectiveCode || getNextObjectiveCode(store, input.department, input.ventureName ?? "", input.strategicTheme),
-    periodKey: input.periodKey,
+    periodKey,
     title: input.title,
     description: input.description || notes,
     owner: normalizeName(input.owner ?? "") || undefined,
@@ -1387,7 +1452,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const krKey = getNextNumericKey(store.keyResults.map((kr) => kr.krKey));
 
   const objective = ensureObjectiveExists(store, input.objectiveKey);
-  ensurePeriodExists(store, input.periodKey);
+  const periodKey = resolvePeriodKey(store, input.periodKey, objective.periodKey);
 
   const progressPct =
     input.progressPct ?? computeKrProgress(input.baselineValue, input.targetValue, input.currentValue);
@@ -1399,7 +1464,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     krKey,
     krCode: requestedKrCode || getNextKrCode(store, input.objectiveKey),
     objectiveKey: input.objectiveKey,
-    periodKey: input.periodKey,
+    periodKey,
     title: input.title,
     owner: normalizeName(input.owner ?? "") || undefined,
     ownerEmail: normalizeEmail(input.ownerEmail ?? "") || undefined,
@@ -1448,8 +1513,11 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
   }
 
   if (patch.objectiveKey !== undefined) {
-    ensureObjectiveExists(store, patch.objectiveKey);
+    const targetObjective = ensureObjectiveExists(store, patch.objectiveKey);
     keyResult.objectiveKey = patch.objectiveKey;
+    if (patch.periodKey === undefined) {
+      keyResult.periodKey = targetObjective.periodKey;
+    }
   }
 
   if (patch.krCode !== undefined) {

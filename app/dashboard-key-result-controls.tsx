@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 
 type Props = {
   objectiveKey: string;
-  periodKey: string;
   defaultDueDate: string;
   defaultOwner: string;
   positionOwnerEmail?: string;
@@ -101,7 +100,6 @@ function getNextDisplayCode(code: string, fallbackPrefix: string): string {
 
 export default function DashboardKeyResultControls({
   objectiveKey,
-  periodKey,
   defaultDueDate,
   defaultOwner,
   positionOwnerEmail,
@@ -296,7 +294,6 @@ export default function DashboardKeyResultControls({
           },
           body: JSON.stringify({
             objectiveKey,
-            periodKey,
             title: item.title,
             owner: item.owner,
             ownerEmail: item.ownerEmail,

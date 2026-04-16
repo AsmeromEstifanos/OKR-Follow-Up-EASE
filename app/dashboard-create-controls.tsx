@@ -10,7 +10,6 @@ import type {
   ObjectiveStatus,
   ObjectiveType,
   OkrCycle,
-  Period,
   KrStatus
 } from "@/lib/types";
 import { apiPath } from "@/lib/base-path";
@@ -62,10 +61,6 @@ function getCycleDateRange(cycle: OkrCycle): { startDate: string; endDate: strin
     startDate: startDate.toISOString().slice(0, 10),
     endDate: endDate.toISOString().slice(0, 10)
   };
-}
-
-function pickDefaultPeriod(periods: Period[]): Period | undefined {
-  return periods.find((period) => period.status === "Active") ?? periods[0];
 }
 
 function parseProgressValue(value: string): { current: number; target: number } | null {
@@ -148,7 +143,6 @@ export default function DashboardCreateControls(): JSX.Element {
   const [error, setError] = useState<string>("");
   const [message, setMessage] = useState<string>("");
 
-  const [periods, setPeriods] = useState<Period[]>([]);
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [config, setConfig] = useState<AppConfig | null>(null);
 
@@ -290,21 +284,15 @@ export default function DashboardCreateControls(): JSX.Element {
   };
 
   const loadData = async (): Promise<void> => {
-    const [periodResp, objectiveResp, configResp] = await Promise.all([
-      fetch(apiPath("/api/periods"), { cache: "no-store" }),
+    const [objectiveResp, configResp] = await Promise.all([
       fetch(apiPath("/api/objectives"), { cache: "no-store" }),
       fetch(apiPath("/api/config"), { cache: "no-store" })
     ]);
 
-    const [periodPayload, objectivePayload, configPayload] = await Promise.all([
-      readJson<Period[] & ApiError>(periodResp),
+    const [objectivePayload, configPayload] = await Promise.all([
       readJson<Objective[] & ApiError>(objectiveResp),
       readJson<AppConfig & ApiError>(configResp)
     ]);
-
-    if (periodResp.ok && periodPayload && Array.isArray(periodPayload)) {
-      setPeriods(periodPayload);
-    }
 
     if (objectiveResp.ok && objectivePayload && Array.isArray(objectivePayload)) {
       setObjectives(objectivePayload);
@@ -394,12 +382,6 @@ export default function DashboardCreateControls(): JSX.Element {
       return;
     }
 
-    const period = pickDefaultPeriod(periods);
-    if (!period) {
-      setError("No period is configured.");
-      return;
-    }
-
     const selectedVenture = selectedObjectiveVenture;
     if (!selectedVenture) {
       setError("Selected venture is not configured.");
@@ -445,7 +427,6 @@ export default function DashboardCreateControls(): JSX.Element {
         },
         body: JSON.stringify({
           objectiveCode: objectiveTitles.length === 1 ? objectiveCodePreview || undefined : undefined,
-          periodKey: period.periodKey,
           title: objectiveTitles[index],
           description: objectiveNotes.trim(),
           owner: objectiveOwner.trim(),
@@ -540,7 +521,6 @@ export default function DashboardCreateControls(): JSX.Element {
         body: JSON.stringify({
           krCode: krTitles.length === 1 ? krCodePreview || undefined : undefined,
           objectiveKey: selectedObjective.objectiveKey,
-          periodKey: selectedObjective.periodKey,
           title: krTitles[index],
           owner: krOwner.trim(),
           ownerEmail: krOwnerEmail.trim(),

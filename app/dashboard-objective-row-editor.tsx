@@ -488,7 +488,6 @@ export default function DashboardObjectiveRowEditor({
               <div className="board-objective-content">
                 <DashboardKeyResultControls
                   objectiveKey={objective.objectiveKey}
-                  periodKey={objective.periodKey}
                   defaultDueDate={objective.endDate}
                   defaultOwner={objective.owner || ""}
                   positionOwnerEmail={positionOwnerEmail}

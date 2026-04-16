@@ -6,11 +6,10 @@ import { apiPath } from "@/lib/base-path";
 import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type { Confidence, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type ObjectiveEditControlsProps = {
   objective: Objective;
-  periodOptions: string[];
   departmentOptions: string[];
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
@@ -18,7 +17,6 @@ type ObjectiveEditControlsProps = {
 };
 
 type ObjectiveDraft = {
-  periodKey: string;
   objectiveCode: string;
   title: string;
   description: string;
@@ -61,7 +59,6 @@ function toDateInput(value: string): string {
 
 function toDraft(objective: Objective): ObjectiveDraft {
   return {
-    periodKey: objective.periodKey,
     objectiveCode: objective.objectiveCode ?? objective.objectiveKey,
     title: objective.title,
     description: objective.description,
@@ -85,7 +82,6 @@ function toDraft(objective: Objective): ObjectiveDraft {
 
 export default function ObjectiveEditControls({
   objective,
-  periodOptions,
   departmentOptions,
   objectiveTypeOptions,
   objectiveStatusOptions,
@@ -98,14 +94,6 @@ export default function ObjectiveEditControls({
   const [draft, setDraft] = useState<ObjectiveDraft>(() => toDraft(objective));
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
-
-  const availablePeriods = useMemo(() => {
-    if (periodOptions.includes(objective.periodKey)) {
-      return periodOptions;
-    }
-
-    return [objective.periodKey, ...periodOptions];
-  }, [objective.periodKey, periodOptions]);
 
   useEffect(() => {
     setDraft(toDraft(objective));
@@ -136,7 +124,6 @@ export default function ObjectiveEditControls({
         "x-user-email": currentUserEmail
       },
       body: JSON.stringify({
-        periodKey: draft.periodKey.trim(),
         objectiveCode: draft.objectiveCode.trim(),
         title: draft.title.trim(),
         description: draft.description.trim(),
@@ -195,21 +182,6 @@ export default function ObjectiveEditControls({
                 value={draft.objectiveCode}
                 onChange={(event) => setDraft((current) => ({ ...current, objectiveCode: event.target.value }))}
               />
-            </div>
-
-            <div className="field">
-              <label htmlFor="objective-period-edit">Period</label>
-              <select
-                id="objective-period-edit"
-                value={draft.periodKey}
-                onChange={(event) => setDraft((current) => ({ ...current, periodKey: event.target.value }))}
-              >
-                {availablePeriods.map((periodKey) => (
-                  <option key={periodKey} value={periodKey}>
-                    {periodKey}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div className="field">

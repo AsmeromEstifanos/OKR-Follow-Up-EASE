@@ -12,7 +12,6 @@ import { useEffect, useState } from "react";
 type Props = {
   positionName: string;
   strategicTheme: string;
-  defaultPeriodKey?: string;
   defaultStartDate?: string;
   defaultEndDate?: string;
   defaultCycle: string;
@@ -88,7 +87,6 @@ function getNextDisplayCode(code: string, fallbackPrefix: string): string {
 export default function DashboardObjectiveControls({
   positionName,
   strategicTheme,
-  defaultPeriodKey,
   defaultStartDate,
   defaultEndDate,
   defaultCycle,
@@ -210,10 +208,6 @@ export default function DashboardObjectiveControls({
       setError(`${labels.midLevelSingular} title is required.`);
       return null;
     }
-    if (!defaultPeriodKey) {
-      setError("No period is configured.");
-      return null;
-    }
 
     const startDate = defaultStartDate ?? todayPlus(0);
     const endDate = defaultEndDate ?? todayPlus(90);
@@ -263,11 +257,6 @@ export default function DashboardObjectiveControls({
       return;
     }
 
-    if (!defaultPeriodKey) {
-      setError("No period is configured.");
-      return;
-    }
-
     const staged = [...pendingObjectives];
     if (staged.length === 0 && title.trim()) {
       const current = buildPendingObjective();
@@ -300,7 +289,6 @@ export default function DashboardObjectiveControls({
             "x-user-email": signedInEmail
           },
           body: JSON.stringify({
-            periodKey: defaultPeriodKey,
             title: item.title,
             description: item.notes,
             owner: item.owner,

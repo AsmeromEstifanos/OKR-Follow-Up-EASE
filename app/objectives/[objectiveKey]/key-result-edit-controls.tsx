@@ -16,7 +16,6 @@ type ObjectiveOption = {
 
 type KeyResultEditControlsProps = {
   keyResult: KeyResult;
-  periodOptions: string[];
   objectiveOptions: ObjectiveOption[];
   metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
@@ -26,7 +25,6 @@ type KeyResultEditControlsProps = {
 type KeyResultDraft = {
   krCode: string;
   objectiveKey: string;
-  periodKey: string;
   title: string;
   owner: string;
   ownerEmail: string;
@@ -65,7 +63,6 @@ function toDraft(keyResult: KeyResult): KeyResultDraft {
   return {
     krCode: keyResult.krCode ?? keyResult.krKey,
     objectiveKey: keyResult.objectiveKey,
-    periodKey: keyResult.periodKey,
     title: keyResult.title,
     owner: resolveOwnerName(keyResult.owner),
     ownerEmail: resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail),
@@ -104,7 +101,6 @@ function parseProgressValue(value: string): { current: number; target: number } 
 
 export default function KeyResultEditControls({
   keyResult,
-  periodOptions,
   objectiveOptions,
   metricTypeOptions,
   keyResultStatusOptions,
@@ -116,14 +112,6 @@ export default function KeyResultEditControls({
   const [draft, setDraft] = useState<KeyResultDraft>(() => toDraft(keyResult));
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
-
-  const availablePeriods = useMemo(() => {
-    if (periodOptions.includes(keyResult.periodKey)) {
-      return periodOptions;
-    }
-
-    return [keyResult.periodKey, ...periodOptions];
-  }, [keyResult.periodKey, periodOptions]);
   const initialDraft = useMemo(() => toDraft(keyResult), [keyResult]);
 
   useEffect(() => {
@@ -178,7 +166,6 @@ export default function KeyResultEditControls({
       body: JSON.stringify({
         krCode: draft.krCode.trim(),
         objectiveKey: draft.objectiveKey.trim(),
-        periodKey: draft.periodKey.trim(),
         title: draft.title.trim(),
         owner: draft.owner.trim(),
         ownerEmail: draft.ownerEmail.trim(),
@@ -239,21 +226,6 @@ export default function KeyResultEditControls({
               {objectiveOptions.map((option) => (
                 <option key={option.objectiveKey} value={option.objectiveKey}>
                   {option.title} ({option.objectiveCode})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor={`kr-period-${keyResult.krKey}`}>Period</label>
-            <select
-              id={`kr-period-${keyResult.krKey}`}
-              value={draft.periodKey}
-              onChange={(event) => setDraft((current) => ({ ...current, periodKey: event.target.value }))}
-            >
-              {availablePeriods.map((periodKey) => (
-                <option key={periodKey} value={periodKey}>
-                  {periodKey}
                 </option>
               ))}
             </select>
