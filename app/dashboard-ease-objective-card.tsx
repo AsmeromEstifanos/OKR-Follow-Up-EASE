@@ -82,6 +82,15 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
+  const denominator = target - baseline;
+  if (!Number.isFinite(denominator) || Math.abs(denominator) < 0.000001) {
+    return clampPercent(fallback);
+  }
+
+  return clampPercent(((current - baseline) / denominator) * 100);
+}
+
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
@@ -159,7 +168,10 @@ export default function DashboardEaseObjectiveCard({
     setNotes(objective.notes ?? objective.description ?? "");
   }, [objective, objectiveCode]);
 
-  const progressValue = useMemo(() => clampPercent(Number(progressPct)), [progressPct]);
+  const progressValue = useMemo(
+    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
+    [baselineValue, currentValue, progressPct, targetValue]
+  );
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -322,7 +334,6 @@ export default function DashboardEaseObjectiveCard({
                 <span className="ease-chip ease-chip-neutral">{objective.okrCycle}</span>
                 <span className="ease-chip ease-chip-neutral">{objective.owner || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
-                <span className="ease-chip ease-chip-neutral">{formatDate(objective.dueDate)}</span>
               </div>
             ) : null}
             {!isEditing ? (
@@ -330,11 +341,10 @@ export default function DashboardEaseObjectiveCard({
                 <div className="ease-progress-bar ease-progress-bar-large">
                   <span style={{ width: `${progressValue}%` }} />
                 </div>
-                <div className="ease-metric-line">
-                  <span>{objective.currentValue} / {objective.targetValue}</span>
-                  <span>{formatCheckinFrequency(objective.checkInFrequency)}</span>
-                  <span>{objective.blockers || "No blockers"}</span>
-                  <span>{objective.keyRisksDependency || "No key risks"}</span>
+                <div className="ease-footer-line">
+                  <span>Progress: {objective.currentValue} / {objective.targetValue}</span>
+                  <span>Due Date: {formatDate(objective.dueDate)}</span>
+                  <span>Last Updated: {formatDate(objective.lastCheckinAt)}</span>
                 </div>
               </div>
             ) : (
@@ -393,7 +403,7 @@ export default function DashboardEaseObjectiveCard({
                   <p className="meta">No key results for this objective yet.</p>
                 ) : (
                   keyResults.map((item) => (
-                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
                   ))
                 )}
               </div>

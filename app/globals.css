@@ -1200,6 +1200,14 @@ a {
   font-size: 0.88rem;
 }
 
+.ease-footer-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.25rem;
+  color: #5c666d;
+  font-size: 0.9rem;
+}
+
 .ease-objective-metrics {
   display: grid;
   gap: 0.7rem;
@@ -1257,20 +1265,6 @@ a {
 
 .ease-progress-ring-kpi span {
   font-size: 0.74rem;
-}
-
-.ease-kr-progress-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) auto auto auto;
-  align-items: center;
-  gap: 0.7rem 1rem;
-  margin-top: 0.75rem;
-}
-
-.ease-progress-label,
-.ease-progress-metric {
-  color: #5d666d;
-  font-size: 0.88rem;
 }
 
 .ease-card-actions {
@@ -1390,7 +1384,6 @@ a {
   .ease-kr-progress-row {
     grid-template-columns: 1fr;
   }
-
   .ease-objective-heading-copy h3 {
     font-size: 1.3rem;
   }

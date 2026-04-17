@@ -71,6 +71,15 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
+  const denominator = target - baseline;
+  if (!Number.isFinite(denominator) || Math.abs(denominator) < 0.000001) {
+    return clampPercent(fallback);
+  }
+
+  return clampPercent(((current - baseline) / denominator) * 100);
+}
+
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
@@ -139,7 +148,10 @@ export default function DashboardEaseKpiCard({
     setNotes(effectiveNotes);
   }, [kpi, codeValue, effectiveNotes]);
 
-  const progressValue = useMemo(() => clampPercent(Number(progressPct)), [progressPct]);
+  const progressValue = useMemo(
+    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
+    [baselineValue, currentValue, progressPct, targetValue]
+  );
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -273,7 +285,6 @@ export default function DashboardEaseKpiCard({
         <div className="ease-kpi-meta">
           <span>{kpi.owner || "-"}</span>
           <span>{kpi.metricType}</span>
-          <span>{formatDate(kpi.dueDate)}</span>
           <span>{formatCheckinFrequency(kpi.checkInFrequency)}</span>
         </div>
       ) : null}
@@ -355,11 +366,10 @@ export default function DashboardEaseKpiCard({
           </div>
         </div>
       ) : (
-        <div className="ease-metric-line">
-          <span>{readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
-          <span>{kpi.metricType}</span>
-          <span>Last update: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
-          <span>{kpi.blockers || "No blockers"}</span>
+        <div className="ease-footer-line">
+          <span>Progress: {readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
+          <span>Due Date: {formatDate(kpi.dueDate)}</span>
+          <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
         </div>
       )}
       {canEdit ? (

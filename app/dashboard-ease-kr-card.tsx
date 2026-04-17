@@ -19,6 +19,7 @@ type KpiRowData = {
 type Props = {
   keyResult: KeyResult;
   kpis: KpiRowData[];
+  latestUpdatedAt?: string | null;
   positionOwnerEmail?: string;
   adminEmails: string[];
   metricTypeOptions: MetricType[];
@@ -74,6 +75,15 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
+  const denominator = target - baseline;
+  if (!Number.isFinite(denominator) || Math.abs(denominator) < 0.000001) {
+    return clampPercent(fallback);
+  }
+
+  return clampPercent(((current - baseline) / denominator) * 100);
+}
+
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
@@ -87,6 +97,7 @@ async function readJson<T>(response: Response): Promise<T | null> {
 export default function DashboardEaseKrCard({
   keyResult,
   kpis,
+  latestUpdatedAt,
   positionOwnerEmail,
   adminEmails,
   metricTypeOptions,
@@ -142,7 +153,10 @@ export default function DashboardEaseKrCard({
     setNotes(keyResult.notes ?? "");
   }, [keyResult, codeValue]);
 
-  const progressValue = useMemo(() => clampPercent(Number(progressPct)), [progressPct]);
+  const progressValue = useMemo(
+    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
+    [baselineValue, currentValue, progressPct, targetValue]
+  );
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -287,19 +301,17 @@ export default function DashboardEaseKrCard({
       </div>
       {!isEditing ? (
         <>
-          <div className="ease-kr-progress-row">
-            <div className="ease-progress-bar">
-              <span style={{ width: `${progressValue}%` }} />
-            </div>
-            <span className="ease-progress-label">{Math.round(progressValue)}%</span>
-            <span className="ease-progress-metric">{keyResult.currentValue} / {keyResult.targetValue}</span>
-            <span className="ease-progress-metric">Owner: {keyResult.owner || "-"}</span>
-          </div>
           <div className="ease-kr-meta">
             <span>{keyResult.metricType}</span>
-            <span>{formatDate(keyResult.dueDate)}</span>
             <span>{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
-            <span>{keyResult.blockers || "No blockers"}</span>
+          </div>
+          <div className="ease-progress-bar">
+            <span style={{ width: `${progressValue}%` }} />
+          </div>
+          <div className="ease-footer-line">
+            <span>Progress: {keyResult.currentValue} / {keyResult.targetValue}</span>
+            <span>Due Date: {formatDate(keyResult.dueDate)}</span>
+            <span>Last Updated: {formatDate(latestUpdatedAt ?? keyResult.lastCheckinAt)}</span>
           </div>
         </>
       ) : (
