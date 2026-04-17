@@ -1287,6 +1287,22 @@ a {
   margin-top: 0.85rem;
 }
 
+.ease-card-actions .tab-btn {
+  padding: 0.16rem 0;
+  border: 0;
+  background: transparent;
+  color: #7a838c;
+  font-size: 0.74rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.16rem;
+}
+
+.ease-card-actions .tab-btn:hover {
+  background: transparent;
+  color: #5f6870;
+}
+
 .ease-subsection-head {
   display: flex;
   justify-content: space-between;

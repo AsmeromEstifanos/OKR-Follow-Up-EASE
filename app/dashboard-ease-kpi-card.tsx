@@ -79,12 +79,11 @@ function clampPercent(value: number): number {
 }
 
 function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
-  const denominator = target - baseline;
-  if (!Number.isFinite(denominator) || Math.abs(denominator) < 0.000001) {
+  if (!Number.isFinite(target) || Math.abs(target) < 0.000001) {
     return clampPercent(fallback);
   }
 
-  return clampPercent(((current - baseline) / denominator) * 100);
+  return clampPercent((current / target) * 100);
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
