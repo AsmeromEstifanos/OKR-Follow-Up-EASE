@@ -1108,9 +1108,10 @@ a {
 }
 
 .ease-objective-heading-copy,
+.ease-kr-main,
 .ease-kpi-title-block {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.95rem;
 }
 
 .ease-objective-heading-copy h3,
@@ -1207,6 +1208,11 @@ a {
 }
 
 .ease-kr-meta,
+.ease-kpi-meta {
+  margin-top: 1rem;
+}
+
+.ease-kr-meta,
 .ease-kpi-meta,
 .ease-metric-line {
   color: #5c666d;
@@ -1225,6 +1231,21 @@ a {
   display: grid;
   gap: 0.9rem;
   margin-top: 1.1rem;
+}
+
+.ease-kr-card .ease-progress-bar,
+.ease-kpi-card .ease-progress-bar {
+  margin-top: 0.95rem;
+}
+
+.ease-kr-card .ease-footer-line,
+.ease-kpi-card .ease-footer-line {
+  margin-top: 0.75rem;
+}
+
+.ease-kr-card .ease-card-actions,
+.ease-kpi-card .ease-card-actions {
+  margin-top: 1.15rem;
 }
 
 .ease-progress-bar {
