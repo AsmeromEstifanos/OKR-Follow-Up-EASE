@@ -1312,6 +1312,19 @@ a {
   padding-top: 0.2rem;
 }
 
+.ease-subsection-head > .kr-controls {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.ease-subsection-head > .kr-controls .kr-add-btn {
+  justify-self: end;
+}
+
+.ease-subsection-head > .kr-controls .kr-form {
+  width: 100%;
+}
+
 .ease-section-toggle {
   display: inline-flex;
   align-items: center;
