@@ -1115,31 +1115,38 @@ a {
   margin: 0;
   color: #172122;
   line-height: 1.15;
+  font-weight: 500;
 }
 
 .ease-objective-heading-copy h3 {
-  font-size: 1.55rem;
+  font-size: 1rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ease-kr-main h4 {
-  font-size: 1.2rem;
+  font-size: 0.9rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ease-kpi-title-block h5 {
-  font-size: 1rem;
+  font-size: 0.82rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ease-card-copy {
   margin: 0;
   color: #6d777b;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   line-height: 1.5;
 }
 
 .ease-card-head-side {
   display: grid;
   justify-items: end;
-  gap: 0.8rem;
+  gap: 0.55rem;
   flex: 0 0 auto;
 }
 
@@ -1147,37 +1154,39 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.34rem 0.78rem;
+  padding: 0.26rem 0.62rem;
   border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 0.82rem;
-  font-weight: 700;
+  border: 1px solid #d7dde2;
+  background: #f4f6f8;
+  color: #4b5560;
+  font-size: 0.72rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .ease-chip-green {
-  color: #0b9f93;
-  background: #e3faf4;
-  border-color: #bdece0;
+  color: #4b5560;
+  background: #f4f6f8;
+  border-color: #d7dde2;
 }
 
 .ease-chip-amber {
-  color: #bb7a0a;
-  background: #fff5de;
-  border-color: #f2dfac;
+  color: #4b5560;
+  background: #f4f6f8;
+  border-color: #d7dde2;
 }
 
 .ease-chip-red {
-  color: #9b3a33;
-  background: #ffefee;
-  border-color: #edc5c1;
+  color: #4b5560;
+  background: #f4f6f8;
+  border-color: #d7dde2;
 }
 
 .ease-chip-neutral {
-  color: #3f464d;
-  background: #f3f5f6;
-  border-color: #e2e6e9;
-  font-weight: 600;
+  color: #4b5560;
+  background: #f4f6f8;
+  border-color: #d7dde2;
+  font-weight: 500;
 }
 
 .ease-objective-chip-row,
@@ -1197,7 +1206,7 @@ a {
 .ease-kpi-meta,
 .ease-metric-line {
   color: #5c666d;
-  font-size: 0.88rem;
+  font-size: 0.76rem;
 }
 
 .ease-footer-line {
@@ -1205,7 +1214,7 @@ a {
   flex-wrap: wrap;
   gap: 0.8rem 1.25rem;
   color: #5c666d;
-  font-size: 0.9rem;
+  font-size: 0.76rem;
 }
 
 .ease-objective-metrics {
@@ -1234,7 +1243,7 @@ a {
 }
 
 .ease-progress-ring {
-  --size: 82px;
+  --size: 68px;
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
@@ -1246,25 +1255,25 @@ a {
 }
 
 .ease-progress-ring span {
-  font-size: 0.96rem;
-  font-weight: 800;
+  font-size: 0.68rem;
+  font-weight: 600;
   color: #172122;
 }
 
 .ease-progress-ring-kr,
 .ease-progress-ring-objective {
-  --size: 76px;
+  --size: 60px;
 }
 
 .ease-progress-ring-kpi {
-  --size: 58px;
+  --size: 48px;
   background:
     radial-gradient(circle at center, #ffffff 56%, transparent 57%),
     conic-gradient(#10b8ab 0 var(--progress), #e8ecee var(--progress) 100%);
 }
 
 .ease-progress-ring-kpi span {
-  font-size: 0.74rem;
+  font-size: 0.62rem;
 }
 
 .ease-card-actions {
@@ -1312,14 +1321,15 @@ a {
   color: #74787d;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .ease-subsection-head h4 {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .ease-subsection-head h5 {
-  font-size: 0.86rem;
+  font-size: 0.76rem;
 }
 
 .ease-kr-section {
@@ -1347,12 +1357,13 @@ a {
   width: fit-content;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem 0.78rem;
+  padding: 0.26rem 0.62rem;
   border-radius: 999px;
-  background: #edf4ff;
-  color: #2f61a6;
-  font-size: 0.82rem;
-  font-weight: 800;
+  background: #f4f6f8;
+  color: #4b5560;
+  border: 1px solid #d7dde2;
+  font-size: 0.72rem;
+  font-weight: 500;
 }
 
 .ease-edit-grid {
@@ -1372,20 +1383,89 @@ a {
 }
 
 @media (max-width: 900px) {
+  .ease-objective-card,
+  .ease-kr-card,
+  .ease-kpi-card {
+    padding: 0.8rem 0.85rem;
+    border-radius: 16px;
+  }
+
+  .ease-objective-top,
+  .ease-kr-head,
+  .ease-kpi-head {
+    gap: 0.55rem;
+  }
+
   .ease-objective-heading {
     flex-direction: column;
+    gap: 0.55rem;
   }
 
   .ease-card-head-side {
     width: 100%;
-    justify-items: start;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
   }
 
-  .ease-kr-progress-row {
-    grid-template-columns: 1fr;
+  .ease-objective-heading-copy,
+  .ease-kr-main,
+  .ease-kpi-title-block {
+    width: 100%;
   }
+
   .ease-objective-heading-copy h3 {
-    font-size: 1.3rem;
+    font-size: 0.84rem;
+    line-height: 1.2;
+  }
+
+  .ease-kr-main h4 {
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .ease-kpi-title-block h5 {
+    font-size: 0.74rem;
+    line-height: 1.2;
+  }
+
+  .ease-card-copy,
+  .ease-kr-meta,
+  .ease-kpi-meta,
+  .ease-footer-line {
+    font-size: 0.68rem;
+  }
+
+  .ease-chip {
+    font-size: 0.64rem;
+    padding: 0.2rem 0.46rem;
+  }
+
+  .ease-progress-ring {
+    --size: 54px;
+  }
+
+  .ease-progress-ring-kr,
+  .ease-progress-ring-objective {
+    --size: 50px;
+  }
+
+  .ease-progress-ring-kpi {
+    --size: 42px;
+  }
+
+  .ease-progress-ring span {
+    font-size: 0.58rem;
+  }
+
+  .ease-progress-ring-kpi span {
+    font-size: 0.54rem;
+  }
+
+  .ease-code-badge {
+    font-size: 0.64rem;
+    padding: 0.2rem 0.46rem;
   }
 }
 
