@@ -59,6 +59,13 @@ function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleDateString() : "-";
 }
 
+function getQuarterLabel(value: string | null): string {
+  if (!value) return "Q1";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Q1";
+  return `Q${Math.floor(date.getMonth() / 3) + 1}`;
+}
+
 function toDateInput(value: string | null): string {
   return value ? value.slice(0, 10) : "";
 }
@@ -302,8 +309,10 @@ export default function DashboardEaseKrCard({
       {!isEditing ? (
         <>
           <div className="ease-kr-meta">
+            <span>{keyResult.owner || "-"}</span>
             <span>{keyResult.metricType}</span>
             <span>{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
+            <span>{getQuarterLabel(keyResult.dueDate)}</span>
           </div>
           <div className="ease-progress-bar">
             <span style={{ width: `${progressValue}%` }} />
