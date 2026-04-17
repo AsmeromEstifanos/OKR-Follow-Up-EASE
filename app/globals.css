@@ -1289,6 +1289,29 @@ a {
   padding-top: 0.2rem;
 }
 
+.ease-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ease-section-toggle span {
+  color: #7b8086;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.ease-section-toggle:focus-visible {
+  outline: 2px solid #8cb7de;
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
 .ease-subsection-head h4,
 .ease-subsection-head h5 {
   margin: 0;

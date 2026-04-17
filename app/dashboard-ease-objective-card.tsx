@@ -117,6 +117,7 @@ export default function DashboardEaseObjectiveCard({
   const objectiveCode = objective.objectiveCode ?? objective.objectiveKey;
 
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -375,18 +376,28 @@ export default function DashboardEaseObjectiveCard({
         {isExpanded ? (
           <div className="ease-kr-section">
             <div className="ease-subsection-head">
-              <h4>Key Results ({keyResults.length})</h4>
+              <button
+                type="button"
+                className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`}
+                aria-expanded={isKrSectionOpen}
+                onClick={() => setIsKrSectionOpen((current) => !current)}
+              >
+                <span aria-hidden="true">{isKrSectionOpen ? "⌄" : "›"}</span>
+                <h4>Key Results ({keyResults.length})</h4>
+              </button>
               <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={objective.owner || ""} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
             </div>
-            <div className="ease-kr-list">
-              {keyResults.length === 0 ? (
-                <p className="meta">No key results for this objective yet.</p>
-              ) : (
-                keyResults.map((item) => (
-                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-                ))
-              )}
-            </div>
+            {isKrSectionOpen ? (
+              <div className="ease-kr-list">
+                {keyResults.length === 0 ? (
+                  <p className="meta">No key results for this objective yet.</p>
+                ) : (
+                  keyResults.map((item) => (
+                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

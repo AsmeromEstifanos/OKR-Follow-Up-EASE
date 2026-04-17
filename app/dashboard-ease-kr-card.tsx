@@ -106,6 +106,7 @@ export default function DashboardEaseKrCard({
   const codeValue = keyResult.krCode ?? keyResult.krKey;
 
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -335,18 +336,28 @@ export default function DashboardEaseKrCard({
       {isExpanded ? (
         <div className="ease-kpi-section">
           <div className="ease-subsection-head">
-            <h5>KPIs ({kpis.length})</h5>
+            <button
+              type="button"
+              className={`ease-section-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
+              aria-expanded={isKpiSectionOpen}
+              onClick={() => setIsKpiSectionOpen((current) => !current)}
+            >
+              <span aria-hidden="true">{isKpiSectionOpen ? "⌄" : "›"}</span>
+              <h5>KPIs ({kpis.length})</h5>
+            </button>
             <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={keyResult.owner || ""} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
           </div>
-          <div className="ease-kpi-list">
-            {kpis.length === 0 ? (
-              <p className="meta">No KPIs for this key result yet.</p>
-            ) : (
-              kpis.map((item) => (
-                <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-              ))
-            )}
-          </div>
+          {isKpiSectionOpen ? (
+            <div className="ease-kpi-list">
+              {kpis.length === 0 ? (
+                <p className="meta">No KPIs for this key result yet.</p>
+              ) : (
+                kpis.map((item) => (
+                  <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                ))
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </article>
