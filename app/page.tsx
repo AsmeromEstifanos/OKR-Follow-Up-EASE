@@ -2,6 +2,7 @@ import DashboardObjectiveControls from "@/app/dashboard-objective-controls";
 import DashboardPositionControls from "@/app/dashboard-position-controls";
 import DashboardPositionRowControls from "@/app/dashboard-position-row-controls";
 import DashboardObjectiveRowEditor from "@/app/dashboard-objective-row-editor";
+import DashboardEaseObjectiveCard from "@/app/dashboard-ease-objective-card";
 import DashboardVentureTabs from "@/app/dashboard-venture-tabs";
 import { appProfile } from "@/lib/app-profile";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
@@ -282,8 +283,8 @@ export default async function DashboardPage({
         {appProfile.key === "ease-okr" ? (
           ownerSections.length === 0 ? (
             <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
-          ) : (
-            <div className="board-groups">
+        ) : (
+          <div className="board-groups">
               {ownerSections.map((section, sectionIndex) => {
                 const sectionStyle = {
                   "--group-color": GROUP_COLORS[sectionIndex % GROUP_COLORS.length]
@@ -325,71 +326,44 @@ export default async function DashboardPage({
                           />
                         </div>
                       </div>
-                      <div className="table-wrap">
-                        <table className="board-table">
-                          <thead>
-                            <tr>
-                              <th>{objectiveLabel}</th>
-                              <th>Owner</th>
-                              <th>{objectiveLabel} Metric Type</th>
-                              <th>Baseline Value</th>
-                              <th>Target Value</th>
-                              <th>Current Value</th>
-                              <th>Progress %</th>
-                              <th>Health</th>
-                              <th>Due Date</th>
-                              <th>Check-in Frequency</th>
-                              <th>Blockers</th>
-                              <th>Key Risks/Dependancy</th>
-                              <th>Notes</th>
-                              <th>Last updated</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {section.objectives.length === 0 ? (
-                              <tr className="board-empty-row">
-                                <td colSpan={14}>
-                                  No {objectiveLabelPlural.toLowerCase()} yet for this department.
-                                </td>
-                              </tr>
-                            ) : (
-                              section.objectives.map((objective) => {
-                                const keyResults = keyResultsByObjective.get(objective.objectiveKey) ?? [];
-                                return (
-                                  <Fragment key={objective.objectiveKey}>
-                                    <DashboardObjectiveRowEditor
-                                      objective={objective}
-                                      keyResults={keyResults.map((kr) => {
-                                        const latest = latestCheckinByKr.get(kr.krKey);
-                                        return {
-                                          keyResult: kr,
-                                          kpis: (kpisByKr.get(kr.krKey) ?? []).map((kpi) => {
-                                            const latestKpi = latestCheckinByKr.get(kpi.kpiKey);
-                                            return {
-                                              kpi,
-                                              latestUpdateNotes: latestKpi?.updateNotes,
-                                              latestUpdatedAt: getMostRecentTimestamp(latestKpi?.checkInAt, kpi.lastCheckinAt)
-                                            };
-                                          }),
-                                          latestUpdateNotes: latest?.updateNotes,
-                                          latestUpdatedAt: getMostRecentTimestamp(latest?.checkInAt, kr.lastCheckinAt)
-                                        };
-                                      })}
-                                      positionOwnerEmail={section.positionOwnerEmail}
-                                      adminEmails={adminEmails}
-                                      objectiveTypeOptions={fieldOptions.objectiveTypes}
-                                      objectiveStatusOptions={fieldOptions.objectiveStatuses}
-                                      objectiveCycleOptions={fieldOptions.objectiveCycles}
-                                      metricTypeOptions={fieldOptions.keyResultMetricTypes}
-                                      keyResultStatusOptions={fieldOptions.keyResultStatuses}
-                                      checkInFrequencyOptions={fieldOptions.checkInFrequencies}
-                                    />
-                                  </Fragment>
-                                );
-                              })
-                            )}
-                          </tbody>
-                        </table>
+                      <div className="ease-objective-list">
+                        {section.objectives.length === 0 ? (
+                          <p className="meta">No {objectiveLabelPlural.toLowerCase()} yet for this department.</p>
+                        ) : (
+                          section.objectives.map((objective) => {
+                            const keyResults = keyResultsByObjective.get(objective.objectiveKey) ?? [];
+                            return (
+                              <DashboardEaseObjectiveCard
+                                key={objective.objectiveKey}
+                                objective={objective}
+                                keyResults={keyResults.map((kr) => {
+                                  const latest = latestCheckinByKr.get(kr.krKey);
+                                  return {
+                                    keyResult: kr,
+                                    kpis: (kpisByKr.get(kr.krKey) ?? []).map((kpi) => {
+                                      const latestKpi = latestCheckinByKr.get(kpi.kpiKey);
+                                      return {
+                                        kpi,
+                                        latestUpdateNotes: latestKpi?.updateNotes,
+                                        latestUpdatedAt: getMostRecentTimestamp(latestKpi?.checkInAt, kpi.lastCheckinAt)
+                                      };
+                                    }),
+                                    latestUpdateNotes: latest?.updateNotes,
+                                    latestUpdatedAt: getMostRecentTimestamp(latest?.checkInAt, kr.lastCheckinAt)
+                                  };
+                                })}
+                                positionOwnerEmail={section.positionOwnerEmail}
+                                adminEmails={adminEmails}
+                                objectiveTypeOptions={fieldOptions.objectiveTypes}
+                                objectiveStatusOptions={fieldOptions.objectiveStatuses}
+                                objectiveCycleOptions={fieldOptions.objectiveCycles}
+                                metricTypeOptions={fieldOptions.keyResultMetricTypes}
+                                keyResultStatusOptions={fieldOptions.keyResultStatuses}
+                                checkInFrequencyOptions={fieldOptions.checkInFrequencies}
+                              />
+                            );
+                          })
+                        )}
                       </div>
                     </DashboardPositionRowControls>
                   </section>
