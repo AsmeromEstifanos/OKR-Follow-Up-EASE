@@ -380,7 +380,7 @@ export default function DashboardObjectiveControls({
     <div className="objective-controls">
       {canCreate ? (
         <button
-          className={`tab-btn tab-btn-add objective-add-btn ${isAdding ? "tab-btn-active" : ""}`}
+          className={`tab-btn objective-add-btn ${isAdding ? "tab-btn-active" : ""}`}
           type="button"
           onClick={isAdding ? closeAdd : openAdd}
           disabled={isSaving}

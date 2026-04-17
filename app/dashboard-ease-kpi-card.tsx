@@ -188,11 +188,10 @@ export default function DashboardEaseKpiCard({
 
     const baseline = Number(baselineValue);
     const target = Number(targetValue);
-    let current = Number(currentValue);
-    const progress = Number(progressPct);
+    const current = Number(currentValue);
 
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current) || !Number.isFinite(progress)) {
-      setError("Baseline, target, current, and progress must be numeric.");
+    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
+      setError("Baseline, target, and current must be numeric.");
       return;
     }
 
@@ -201,7 +200,7 @@ export default function DashboardEaseKpiCard({
       return;
     }
 
-    current = baseline + ((target - baseline) * progress) / 100;
+    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
 
     setIsSaving(true);
     setError("");
@@ -221,6 +220,7 @@ export default function DashboardEaseKpiCard({
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
+        progressPct: resolvedProgress,
         status,
         dueDate,
         checkInFrequency,
@@ -290,10 +290,10 @@ export default function DashboardEaseKpiCard({
       </div>
       {!isEditing ? (
         <div className="ease-kpi-meta">
-          <span>{kpi.owner || "-"}</span>
-          <span>{kpi.metricType}</span>
-          <span>{formatCheckinFrequency(kpi.checkInFrequency)}</span>
-          <span>{getQuarterLabel(kpi.dueDate)}</span>
+          <span className="ease-chip ease-chip-neutral">{kpi.owner || "-"}</span>
+          <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
+          <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
+          <span className="ease-chip ease-chip-neutral">{getQuarterLabel(kpi.dueDate)}</span>
         </div>
       ) : null}
       <div className="ease-progress-bar">
@@ -338,7 +338,7 @@ export default function DashboardEaseKpiCard({
           </div>
           <div className="field">
             <label>Progress %</label>
-            <input className="objective-row-input" type="number" step="any" value={progressPct} onChange={(event) => setProgressPct(event.target.value)} disabled={isSaving} />
+            <input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled />
           </div>
           <div className="field">
             <label>Status</label>

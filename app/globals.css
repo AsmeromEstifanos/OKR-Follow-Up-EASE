@@ -1053,6 +1053,10 @@ a {
   cursor: pointer;
 }
 
+.ease-objective-top-static {
+  cursor: default;
+}
+
 .ease-objective-top:focus-visible,
 .ease-kr-head:focus-visible {
   outline: 2px solid #8cb7de;
@@ -1478,9 +1482,17 @@ a {
 }
 
 .objective-add-btn {
-  padding: 0.32rem 0.62rem;
-  font-size: 0.85rem;
+  padding: 0.26rem 0.58rem;
+  font-size: 0.76rem;
   justify-self: start;
+  border-color: #d7dde2;
+  background: #f7f8f9;
+  color: #5c666d;
+  font-weight: 500;
+}
+
+.objective-add-btn:hover {
+  background: #f1f3f5;
 }
 
 .objective-form {

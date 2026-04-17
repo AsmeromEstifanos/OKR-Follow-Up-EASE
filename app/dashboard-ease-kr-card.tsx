@@ -193,11 +193,10 @@ export default function DashboardEaseKrCard({
 
     const baseline = Number(baselineValue);
     const target = Number(targetValue);
-    let current = Number(currentValue);
-    const progress = Number(progressPct);
+    const current = Number(currentValue);
 
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current) || !Number.isFinite(progress)) {
-      setError("Metric values and progress must be numeric.");
+    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
+      setError("Metric values must be numeric.");
       return;
     }
 
@@ -206,7 +205,7 @@ export default function DashboardEaseKrCard({
       return;
     }
 
-    current = baseline + ((target - baseline) * progress) / 100;
+    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
 
     setIsSaving(true);
     setError("");
@@ -226,6 +225,7 @@ export default function DashboardEaseKrCard({
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
+        progressPct: resolvedProgress,
         status,
         dueDate,
         checkInFrequency,
@@ -309,10 +309,10 @@ export default function DashboardEaseKrCard({
       {!isEditing ? (
         <>
           <div className="ease-kr-meta">
-            <span>{keyResult.owner || "-"}</span>
-            <span>{keyResult.metricType}</span>
-            <span>{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
-            <span>{getQuarterLabel(keyResult.dueDate)}</span>
+            <span className="ease-chip ease-chip-neutral">{keyResult.owner || "-"}</span>
+            <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
+            <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
+            <span className="ease-chip ease-chip-neutral">{getQuarterLabel(keyResult.dueDate)}</span>
           </div>
           <div className="ease-progress-bar">
             <span style={{ width: `${progressValue}%` }} />
@@ -332,7 +332,7 @@ export default function DashboardEaseKrCard({
           <div className="field"><label>Baseline Value</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
-          <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={progressPct} onChange={(event) => setProgressPct(event.target.value)} disabled={isSaving} /></div>
+          <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
           <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
           <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>

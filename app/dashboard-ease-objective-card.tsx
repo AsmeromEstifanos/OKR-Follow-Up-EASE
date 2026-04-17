@@ -34,15 +34,8 @@ type Props = {
   checkInFrequencyOptions: CheckInFrequency[];
 };
 
-type ApiError = {
-  error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
-};
+type ApiError = { error?: string };
+type OwnerSuggestion = { displayName: string; principalName: string; mail: string };
 
 function normalizeEmail(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
@@ -53,12 +46,6 @@ function formatStatus(value: ObjectiveStatus): string {
   if (value === "AtRisk") return "At Risk";
   if (value === "OffTrack") return "Off Track";
   if (value === "NotStarted") return "Not Started";
-  return value;
-}
-
-function formatCheckinFrequency(value: CheckInFrequency): string {
-  if (value === "BiWeekly") return "Bi-weekly";
-  if (value === "AdHoc") return "Ad Hoc";
   return value;
 }
 
@@ -132,7 +119,6 @@ export default function DashboardEaseObjectiveCard({
 
   const objectiveCode = objective.objectiveCode ?? objective.objectiveKey;
 
-  const [isExpanded, setIsExpanded] = useState(true);
   const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -211,11 +197,10 @@ export default function DashboardEaseObjectiveCard({
 
     const baseline = Number(baselineValue);
     const target = Number(targetValue);
-    let current = Number(currentValue);
-    const progress = Number(progressPct);
+    const current = Number(currentValue);
 
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current) || !Number.isFinite(progress)) {
-      setError("Baseline, target, current, and progress must be numeric.");
+    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
+      setError("Baseline, target, and current must be numeric.");
       return;
     }
 
@@ -224,7 +209,7 @@ export default function DashboardEaseObjectiveCard({
       return;
     }
 
-    current = baseline + ((target - baseline) * progress) / 100;
+    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
 
     setIsSaving(true);
     setError("");
@@ -247,7 +232,7 @@ export default function DashboardEaseObjectiveCard({
         targetValue: target,
         currentValue: current,
         status,
-        progressPct: clampPercent(progress),
+        progressPct: resolvedProgress,
         dueDate,
         endDate: dueDate,
         checkInFrequency,
@@ -302,22 +287,7 @@ export default function DashboardEaseObjectiveCard({
   return (
     <article className="ease-objective-card">
       <div className="ease-objective-shell">
-        <div
-          className="ease-objective-top"
-          role="button"
-          tabIndex={0}
-          aria-expanded={isExpanded}
-          onClick={() => setIsExpanded((current) => !current)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              setIsExpanded((current) => !current);
-            }
-          }}
-        >
-          <button type="button" className={`ease-toggle ease-toggle-objective ${isExpanded ? "is-open" : ""}`} aria-hidden="true" tabIndex={-1}>
-            <span aria-hidden="true">{isExpanded ? "⌄" : "›"}</span>
-          </button>
+        <div className="ease-objective-top ease-objective-top-static">
           <div className="ease-objective-main">
             <div className="ease-objective-heading">
               <div className="ease-objective-heading-copy">
@@ -366,7 +336,7 @@ export default function DashboardEaseObjectiveCard({
                 <div className="field"><label>Baseline Value</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={progressPct} onChange={(event) => setProgressPct(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
@@ -383,40 +353,38 @@ export default function DashboardEaseObjectiveCard({
                     <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
                   </>
                 ) : (
-                  <button className="tab-btn" type="button" onClick={(event) => { event.stopPropagation(); setIsEditing(true); }} disabled={isSaving}>Edit Objective</button>
+                  <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit Objective</button>
                 )}
               </div>
             ) : null}
             {error ? <p className="message danger">{error}</p> : null}
           </div>
         </div>
-        {isExpanded ? (
-          <div className="ease-kr-section">
-            <div className="ease-subsection-head">
-              <button
-                type="button"
-                className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`}
-                aria-expanded={isKrSectionOpen}
-                onClick={() => setIsKrSectionOpen((current) => !current)}
-              >
-                <span aria-hidden="true">{isKrSectionOpen ? "⌄" : "›"}</span>
-                <h4>Key Results ({keyResults.length})</h4>
-              </button>
-              <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={objective.owner || ""} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-            </div>
-            {isKrSectionOpen ? (
-              <div className="ease-kr-list">
-                {keyResults.length === 0 ? (
-                  <p className="meta">No key results for this objective yet.</p>
-                ) : (
-                  keyResults.map((item) => (
-                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-                  ))
-                )}
-              </div>
-            ) : null}
+        <div className="ease-kr-section">
+          <div className="ease-subsection-head">
+            <button
+              type="button"
+              className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`}
+              aria-expanded={isKrSectionOpen}
+              onClick={() => setIsKrSectionOpen((current) => !current)}
+            >
+              <span aria-hidden="true">{isKrSectionOpen ? "⌄" : "›"}</span>
+              <h4>Key Results ({keyResults.length})</h4>
+            </button>
+            <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={objective.owner || ""} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
           </div>
-        ) : null}
+          {isKrSectionOpen ? (
+            <div className="ease-kr-list">
+              {keyResults.length === 0 ? (
+                <p className="meta">No key results for this objective yet.</p>
+              ) : (
+                keyResults.map((item) => (
+                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
     </article>
   );
