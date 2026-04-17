@@ -292,7 +292,14 @@ export default function DashboardEaseKrCard({
         <div className="ease-kr-main">
           <div className="ease-code-badge">{codeValue}</div>
           {isEditing ? (
-            <input className="objective-row-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Key Result" autoFocus disabled={isSaving} />
+            <textarea
+              className="objective-row-input ease-title-textarea"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Key Result"
+              autoFocus
+              disabled={isSaving}
+            />
           ) : (
             <h4>{keyResult.title}</h4>
           )}

@@ -292,7 +292,14 @@ export default function DashboardEaseObjectiveCard({
               <div className="ease-objective-heading-copy">
                 <div className="ease-code-badge">{objectiveCode}</div>
                 {isEditing ? (
-                  <input className="objective-row-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
+                  <textarea
+                    className="objective-row-input ease-title-textarea"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Objective"
+                    autoFocus
+                    disabled={isSaving}
+                  />
                 ) : (
                   <h3>{objective.title}</h3>
                 )}

@@ -272,7 +272,14 @@ export default function DashboardEaseKpiCard({
         <div className="ease-kpi-title-block">
           <div className="ease-code-badge">{codeValue}</div>
           {isEditing ? (
-            <input className="objective-row-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="KPI" autoFocus disabled={isSaving} />
+            <textarea
+              className="objective-row-input ease-title-textarea"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="KPI"
+              autoFocus
+              disabled={isSaving}
+            />
           ) : (
             <h5>{kpi.title}</h5>
           )}
