@@ -204,8 +204,6 @@ export default function DashboardEaseKrCard({
       return;
     }
 
-    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
-
     setIsSaving(true);
     setError("");
 
@@ -224,7 +222,6 @@ export default function DashboardEaseKrCard({
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
-        progressPct: resolvedProgress,
         status,
         dueDate,
         checkInFrequency,

@@ -199,8 +199,6 @@ export default function DashboardEaseKpiCard({
       return;
     }
 
-    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
-
     setIsSaving(true);
     setError("");
 
@@ -219,7 +217,6 @@ export default function DashboardEaseKpiCard({
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
-        progressPct: resolvedProgress,
         status,
         dueDate,
         checkInFrequency,
