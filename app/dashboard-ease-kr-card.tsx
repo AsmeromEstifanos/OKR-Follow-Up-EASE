@@ -252,8 +252,20 @@ export default function DashboardEaseKrCard({
 
   return (
     <article className="ease-kr-card">
-      <div className="ease-kr-head">
-        <button type="button" className={`ease-toggle ${isExpanded ? "is-open" : ""}`} aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)}>
+      <div
+        className="ease-kr-head"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setIsExpanded((current) => !current);
+          }
+        }}
+      >
+        <button type="button" className={`ease-toggle ${isExpanded ? "is-open" : ""}`} aria-hidden="true" tabIndex={-1}>
           <span aria-hidden="true">{isExpanded ? "⌄" : "›"}</span>
         </button>
         <div className="ease-kr-main">
@@ -315,7 +327,7 @@ export default function DashboardEaseKrCard({
               <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
             </>
           ) : (
-            <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit Key Result</button>
+            <button className="tab-btn" type="button" onClick={(event) => { event.stopPropagation(); setIsEditing(true); }} disabled={isSaving}>Edit Key Result</button>
           )}
         </div>
       ) : null}
