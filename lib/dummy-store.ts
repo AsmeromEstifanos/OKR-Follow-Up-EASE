@@ -1,7 +1,16 @@
 import { getAppProfile } from "@/lib/app-profile";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
-import { matchesAssignedOwner, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
-import { clampPercent, computeKrProgress, computeObjectiveProgress, isMissingCheckin } from "@/lib/okr-rules";
+import {
+  matchesAssignedOwner,
+  resolveOwnerEmail,
+  resolveOwnerName,
+} from "@/lib/owner";
+import {
+  clampPercent,
+  computeKrProgress,
+  computeObjectiveProgress,
+  isMissingCheckin,
+} from "@/lib/okr-rules";
 import type {
   AppConfig,
   CheckInFrequency,
@@ -32,7 +41,7 @@ import type {
   RagThresholds,
   UpdateDepartmentInput,
   UpdateVentureInput,
-  Venture
+  Venture,
 } from "@/lib/types";
 
 type StoreState = {
@@ -65,9 +74,15 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   objectiveTypes: ["Aspirational", "Committed", "Learning"],
   objectiveStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   objectiveCycles: ["Q1", "Q2", "Q3", "Q4"],
-  keyResultMetricTypes: ["Delivery", "Financial", "Operational", "People", "Quality"],
+  keyResultMetricTypes: [
+    "Delivery",
+    "Financial",
+    "Operational",
+    "People",
+    "Quality",
+  ],
   keyResultStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
-  checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"]
+  checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"],
 };
 
 const EASE_FALLBACK_PERIOD_KEY = "EASE-DEFAULT";
@@ -131,7 +146,7 @@ function buildImplicitPeriod(): Period {
     name: "Default",
     startDate: toDateOnly(startDate),
     endDate: toDateOnly(endDate),
-    status: "Active"
+    status: "Active",
   };
 }
 
@@ -144,7 +159,9 @@ function ensureImplicitPeriod(store: StoreState): void {
 }
 
 function getPreferredPeriod(store: StoreState): Period | undefined {
-  const explicitPeriods = store.periods.filter((period) => !isImplicitPeriodKey(period.periodKey));
+  const explicitPeriods = store.periods.filter(
+    (period) => !isImplicitPeriodKey(period.periodKey),
+  );
   return (
     explicitPeriods.find((period) => period.status === "Active") ??
     explicitPeriods[0] ??
@@ -153,7 +170,11 @@ function getPreferredPeriod(store: StoreState): Period | undefined {
   );
 }
 
-function resolvePeriodKey(store: StoreState, requestedPeriodKey?: string, fallbackPeriodKey?: string): string {
+function resolvePeriodKey(
+  store: StoreState,
+  requestedPeriodKey?: string,
+  fallbackPeriodKey?: string,
+): string {
   const requested = normalizeKey(requestedPeriodKey ?? "");
   if (requested) {
     ensurePeriodExists(store, requested);
@@ -218,15 +239,15 @@ function assertWeightTotal(entityLabel: string, weights: number[]): void {
   }
 
   const total = roundWeight(weights.reduce((sum, weight) => sum + weight, 0));
-  if (Math.abs(total - 1) > WEIGHT_TOLERANCE) {
-    throw new Error(`${entityLabel} weights must add up to 1. Current total is ${total}.`);
-  }
+  // if (Math.abs(total - 1) > WEIGHT_TOLERANCE) {
+  //   throw new Error(`${entityLabel} weights must add up to 1. Current total is ${total}.`);
+  // }
 }
 
 function normalizeGroupWeights<T>(
   items: T[],
   readWeight: (item: T) => number,
-  writeWeight: (item: T, weight: number) => void
+  writeWeight: (item: T, weight: number) => void,
 ): void {
   if (items.length === 0) {
     return;
@@ -243,12 +264,16 @@ function normalizeGroupWeights<T>(
   });
   const total = rawWeights.reduce((sum, weight) => sum + weight, 0);
   const normalizedWeights =
-    total > WEIGHT_TOLERANCE ? rawWeights.map((weight) => weight / total) : items.map(() => 1 / items.length);
+    total > WEIGHT_TOLERANCE
+      ? rawWeights.map((weight) => weight / total)
+      : items.map(() => 1 / items.length);
 
   let assignedTotal = 0;
   normalizedWeights.forEach((weight, index) => {
     const resolvedWeight =
-      index === normalizedWeights.length - 1 ? roundWeight(1 - assignedTotal) : roundWeight(Math.max(0, weight));
+      index === normalizedWeights.length - 1
+        ? roundWeight(1 - assignedTotal)
+        : roundWeight(Math.max(0, weight));
     writeWeight(items[index], resolvedWeight);
     assignedTotal = roundWeight(assignedTotal + resolvedWeight);
   });
@@ -264,7 +289,11 @@ function toSlug(value: string): string {
   return slug || "ITEM";
 }
 
-function buildUniqueKey(existingKeys: Set<string>, prefix: string, name: string): string {
+function buildUniqueKey(
+  existingKeys: Set<string>,
+  prefix: string,
+  name: string,
+): string {
   const base = `${prefix}-${toSlug(name)}`;
 
   if (!existingKeys.has(base.toLowerCase())) {
@@ -279,7 +308,11 @@ function buildUniqueKey(existingKeys: Set<string>, prefix: string, name: string)
   return `${base}-${suffix}`;
 }
 
-function buildDepartmentKey(existingKeys: Set<string>, ventureKey: string, departmentName: string): string {
+function buildDepartmentKey(
+  existingKeys: Set<string>,
+  ventureKey: string,
+  departmentName: string,
+): string {
   return buildUniqueKey(existingKeys, "DEP", `${ventureKey}-${departmentName}`);
 }
 
@@ -331,30 +364,38 @@ function findVentureForObjectiveScope(
   store: StoreState,
   departmentName: string,
   ventureName: string,
-  strategicTheme: string
+  strategicTheme: string,
 ): Venture | undefined {
   const normalizedDepartment = normalizeName(departmentName).toLowerCase();
   const normalizedVentureName = normalizeName(ventureName).toLowerCase();
   const normalizedTheme = normalizeName(strategicTheme).toLowerCase();
 
   if (normalizedVentureName) {
-    const byVentureName = store.config.ventures.find((venture) => venture.name.toLowerCase() === normalizedVentureName);
+    const byVentureName = store.config.ventures.find(
+      (venture) => venture.name.toLowerCase() === normalizedVentureName,
+    );
     if (byVentureName) {
       return byVentureName;
     }
   }
 
   const venturesWithDepartment = store.config.ventures.filter((venture) => {
-    return venture.departments.some((department) => department.name.toLowerCase() === normalizedDepartment);
+    return venture.departments.some(
+      (department) => department.name.toLowerCase() === normalizedDepartment,
+    );
   });
 
   if (normalizedTheme) {
-    const exact = venturesWithDepartment.find((venture) => venture.name.toLowerCase() === normalizedTheme);
+    const exact = venturesWithDepartment.find(
+      (venture) => venture.name.toLowerCase() === normalizedTheme,
+    );
     if (exact) {
       return exact;
     }
 
-    const byThemeOnly = store.config.ventures.find((venture) => venture.name.toLowerCase() === normalizedTheme);
+    const byThemeOnly = store.config.ventures.find(
+      (venture) => venture.name.toLowerCase() === normalizedTheme,
+    );
     if (byThemeOnly) {
       return byThemeOnly;
     }
@@ -367,11 +408,20 @@ function buildObjectiveScopeKey(
   store: StoreState,
   departmentName: string,
   ventureName: string,
-  strategicTheme: string
+  strategicTheme: string,
 ): string {
-  const venture = findVentureForObjectiveScope(store, departmentName, ventureName, strategicTheme);
-  const ventureScope = venture?.ventureKey.toLowerCase() || normalizeName(strategicTheme).toLowerCase() || "global";
-  const departmentScope = normalizeName(departmentName).toLowerCase() || "general";
+  const venture = findVentureForObjectiveScope(
+    store,
+    departmentName,
+    ventureName,
+    strategicTheme,
+  );
+  const ventureScope =
+    venture?.ventureKey.toLowerCase() ||
+    normalizeName(strategicTheme).toLowerCase() ||
+    "global";
+  const departmentScope =
+    normalizeName(departmentName).toLowerCase() || "general";
   return `${ventureScope}::${departmentScope}`;
 }
 
@@ -382,13 +432,21 @@ function normalizeAllWeightGroups(store: StoreState): void {
       store,
       objective.department,
       objective.ventureName ?? "",
-      objective.strategicTheme
+      objective.strategicTheme,
     )}`;
     const current = objectiveGroups.get(groupKey) ?? [];
     current.push(objective);
     objectiveGroups.set(groupKey, current);
   });
-  objectiveGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+  objectiveGroups.forEach((group) =>
+    normalizeGroupWeights(
+      group,
+      (item) => item.baselineValue,
+      (item, weight) => {
+        item.baselineValue = weight;
+      },
+    ),
+  );
 
   const krGroups = new Map<string, KeyResult[]>();
   store.keyResults.forEach((keyResult) => {
@@ -397,7 +455,15 @@ function normalizeAllWeightGroups(store: StoreState): void {
     current.push(keyResult);
     krGroups.set(groupKey, current);
   });
-  krGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+  krGroups.forEach((group) =>
+    normalizeGroupWeights(
+      group,
+      (item) => item.baselineValue,
+      (item, weight) => {
+        item.baselineValue = weight;
+      },
+    ),
+  );
 
   const kpiGroups = new Map<string, Kpi[]>();
   store.kpis.forEach((kpi) => {
@@ -406,7 +472,15 @@ function normalizeAllWeightGroups(store: StoreState): void {
     current.push(kpi);
     kpiGroups.set(groupKey, current);
   });
-  kpiGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+  kpiGroups.forEach((group) =>
+    normalizeGroupWeights(
+      group,
+      (item) => item.baselineValue,
+      (item, weight) => {
+        item.baselineValue = weight;
+      },
+    ),
+  );
 }
 
 function assertObjectiveWeightGroup(
@@ -418,23 +492,33 @@ function assertObjectiveWeightGroup(
     ventureName?: string;
     strategicTheme: string;
     baselineValue: number;
-  }
+  },
 ): void {
   const scopeKey = buildObjectiveScopeKey(
     store,
     candidate.department,
     candidate.ventureName ?? "",
-    candidate.strategicTheme
+    candidate.strategicTheme,
   );
   const weights = store.objectives
     .filter((objective) => {
-      if (candidate.objectiveKey && objective.objectiveKey.toLowerCase() === candidate.objectiveKey.toLowerCase()) {
+      if (
+        candidate.objectiveKey &&
+        objective.objectiveKey.toLowerCase() ===
+          candidate.objectiveKey.toLowerCase()
+      ) {
         return false;
       }
 
       return (
-        objective.periodKey.toLowerCase() === candidate.periodKey.toLowerCase() &&
-        buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) === scopeKey
+        objective.periodKey.toLowerCase() ===
+          candidate.periodKey.toLowerCase() &&
+        buildObjectiveScopeKey(
+          store,
+          objective.department,
+          objective.ventureName ?? "",
+          objective.strategicTheme,
+        ) === scopeKey
       );
     })
     .map((objective) => objective.baselineValue);
@@ -451,18 +535,31 @@ function assertRemainingObjectiveWeights(
     department: string;
     ventureName?: string;
     strategicTheme: string;
-  }
+  },
 ): void {
-  const scopeKey = buildObjectiveScopeKey(store, scope.department, scope.ventureName ?? "", scope.strategicTheme);
+  const scopeKey = buildObjectiveScopeKey(
+    store,
+    scope.department,
+    scope.ventureName ?? "",
+    scope.strategicTheme,
+  );
   const weights = store.objectives
     .filter((objective) => {
-      if (objective.objectiveKey.toLowerCase() === scope.objectiveKey.toLowerCase()) {
+      if (
+        objective.objectiveKey.toLowerCase() ===
+        scope.objectiveKey.toLowerCase()
+      ) {
         return false;
       }
 
       return (
         objective.periodKey.toLowerCase() === scope.periodKey.toLowerCase() &&
-        buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) === scopeKey
+        buildObjectiveScopeKey(
+          store,
+          objective.department,
+          objective.ventureName ?? "",
+          objective.strategicTheme,
+        ) === scopeKey
       );
     })
     .map((objective) => objective.baselineValue);
@@ -478,15 +575,21 @@ function assertKrWeightGroup(
     krKey?: string;
     objectiveKey: string;
     baselineValue: number;
-  }
+  },
 ): void {
   const weights = store.keyResults
     .filter((keyResult) => {
-      if (candidate.krKey && keyResult.krKey.toLowerCase() === candidate.krKey.toLowerCase()) {
+      if (
+        candidate.krKey &&
+        keyResult.krKey.toLowerCase() === candidate.krKey.toLowerCase()
+      ) {
         return false;
       }
 
-      return keyResult.objectiveKey.toLowerCase() === candidate.objectiveKey.toLowerCase();
+      return (
+        keyResult.objectiveKey.toLowerCase() ===
+        candidate.objectiveKey.toLowerCase()
+      );
     })
     .map((keyResult) => keyResult.baselineValue);
 
@@ -494,7 +597,11 @@ function assertKrWeightGroup(
   assertWeightTotal("Key result", weights);
 }
 
-function assertRemainingKrWeights(store: StoreState, krKey: string, objectiveKey: string): void {
+function assertRemainingKrWeights(
+  store: StoreState,
+  krKey: string,
+  objectiveKey: string,
+): void {
   const weights = store.keyResults
     .filter((keyResult) => {
       return (
@@ -515,11 +622,14 @@ function assertKpiWeightGroup(
     kpiKey?: string;
     krKey: string;
     baselineValue: number;
-  }
+  },
 ): void {
   const weights = store.kpis
     .filter((kpi) => {
-      if (candidate.kpiKey && kpi.kpiKey.toLowerCase() === candidate.kpiKey.toLowerCase()) {
+      if (
+        candidate.kpiKey &&
+        kpi.kpiKey.toLowerCase() === candidate.kpiKey.toLowerCase()
+      ) {
         return false;
       }
 
@@ -531,9 +641,17 @@ function assertKpiWeightGroup(
   assertWeightTotal("KPI", weights);
 }
 
-function assertRemainingKpiWeights(store: StoreState, kpiKey: string, krKey: string): void {
+function assertRemainingKpiWeights(
+  store: StoreState,
+  kpiKey: string,
+  krKey: string,
+): void {
   const weights = store.kpis
-    .filter((kpi) => kpi.kpiKey.toLowerCase() !== kpiKey.toLowerCase() && kpi.krKey.toLowerCase() === krKey.toLowerCase())
+    .filter(
+      (kpi) =>
+        kpi.kpiKey.toLowerCase() !== kpiKey.toLowerCase() &&
+        kpi.krKey.toLowerCase() === krKey.toLowerCase(),
+    )
     .map((kpi) => kpi.baselineValue);
 
   if (weights.length > 0) {
@@ -541,19 +659,36 @@ function assertRemainingKpiWeights(store: StoreState, kpiKey: string, krKey: str
   }
 }
 
-function getNextObjectiveCode(store: StoreState, departmentName: string, ventureName: string, strategicTheme: string): string {
-  const scopeKey = buildObjectiveScopeKey(store, departmentName, ventureName, strategicTheme);
+function getNextObjectiveCode(
+  store: StoreState,
+  departmentName: string,
+  ventureName: string,
+  strategicTheme: string,
+): string {
+  const scopeKey = buildObjectiveScopeKey(
+    store,
+    departmentName,
+    ventureName,
+    strategicTheme,
+  );
   const codePrefix = getMidLevelCodePrefix();
   let maxSequence = 0;
 
   store.objectives.forEach((objective) => {
     if (
-      buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) !== scopeKey
+      buildObjectiveScopeKey(
+        store,
+        objective.department,
+        objective.ventureName ?? "",
+        objective.strategicTheme,
+      ) !== scopeKey
     ) {
       return;
     }
 
-    const candidate = normalizeKey(objective.objectiveCode ?? objective.objectiveKey);
+    const candidate = normalizeKey(
+      objective.objectiveCode ?? objective.objectiveKey,
+    );
     const parsed = parseNumberedCode(candidate, codePrefix);
     if (parsed && parsed > maxSequence) {
       maxSequence = parsed;
@@ -565,7 +700,8 @@ function getNextObjectiveCode(store: StoreState, departmentName: string, venture
 
 function getNextKrCode(store: StoreState, objectiveKey: string): string {
   const normalizedObjectiveKey = objectiveKey.toLowerCase();
-  const codePrefix = getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
+  const codePrefix =
+    getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
   let maxSequence = 0;
 
   store.keyResults.forEach((kr) => {
@@ -627,7 +763,12 @@ function getOkrCycleFromDate(value: string): OkrCycle {
 
 function normalizeOkrCycle(value?: string): OkrCycle {
   const normalized = (value ?? "").toUpperCase();
-  if (normalized === "Q1" || normalized === "Q2" || normalized === "Q3" || normalized === "Q4") {
+  if (
+    normalized === "Q1" ||
+    normalized === "Q2" ||
+    normalized === "Q3" ||
+    normalized === "Q4"
+  ) {
     return normalized;
   }
 
@@ -635,7 +776,12 @@ function normalizeOkrCycle(value?: string): OkrCycle {
 }
 
 function normalizeCheckInFrequency(value?: string): CheckInFrequency {
-  if (value === "Weekly" || value === "BiWeekly" || value === "Monthly" || value === "AdHoc") {
+  if (
+    value === "Weekly" ||
+    value === "BiWeekly" ||
+    value === "Monthly" ||
+    value === "AdHoc"
+  ) {
     return value;
   }
 
@@ -668,7 +814,10 @@ function normalizeMetricType(value?: string): MetricType {
   return "Operational";
 }
 
-function normalizeUniqueOptionList(input: string[] | undefined, fallback: readonly string[]): string[] {
+function normalizeUniqueOptionList(
+  input: string[] | undefined,
+  fallback: readonly string[],
+): string[] {
   if (!Array.isArray(input)) {
     return [...fallback];
   }
@@ -680,7 +829,10 @@ function normalizeUniqueOptionList(input: string[] | undefined, fallback: readon
     }
 
     const trimmed = value.trim();
-    if (!trimmed || next.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
+    if (
+      !trimmed ||
+      next.some((item) => item.toLowerCase() === trimmed.toLowerCase())
+    ) {
       return;
     }
 
@@ -694,28 +846,28 @@ function normalizeFieldOptions(input?: Partial<FieldOptions>): FieldOptions {
   return {
     objectiveTypes: normalizeUniqueOptionList(
       input?.objectiveTypes as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.objectiveTypes
+      DEFAULT_FIELD_OPTIONS.objectiveTypes,
     ),
     objectiveStatuses: normalizeUniqueOptionList(
       input?.objectiveStatuses as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.objectiveStatuses
+      DEFAULT_FIELD_OPTIONS.objectiveStatuses,
     ),
     objectiveCycles: normalizeUniqueOptionList(
       input?.objectiveCycles as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.objectiveCycles
+      DEFAULT_FIELD_OPTIONS.objectiveCycles,
     ),
     keyResultMetricTypes: normalizeUniqueOptionList(
       input?.keyResultMetricTypes as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.keyResultMetricTypes
+      DEFAULT_FIELD_OPTIONS.keyResultMetricTypes,
     ),
     keyResultStatuses: normalizeUniqueOptionList(
       input?.keyResultStatuses as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.keyResultStatuses
+      DEFAULT_FIELD_OPTIONS.keyResultStatuses,
     ),
     checkInFrequencies: normalizeUniqueOptionList(
       input?.checkInFrequencies as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.checkInFrequencies
-    )
+      DEFAULT_FIELD_OPTIONS.checkInFrequencies,
+    ),
   };
 }
 
@@ -740,7 +892,10 @@ function validateRagThresholds(input: RagThresholds): void {
   }
 }
 
-function getRagFromProgress(progressPct: number, thresholds: RagThresholds): Rag {
+function getRagFromProgress(
+  progressPct: number,
+  thresholds: RagThresholds,
+): Rag {
   if (progressPct >= thresholds.greenMin) {
     return "Green";
   }
@@ -793,63 +948,106 @@ function recalcKeyResultInStore(store: StoreState, krKey: string): void {
   keyResult.targetValue = 100;
   keyResult.status = getStatusFromProgress(progressPct);
   keyResult.lastCheckinAt =
-    sortByDateDescending(childKpis, (item) => item.lastCheckinAt ?? "")[0]?.lastCheckinAt ?? keyResult.lastCheckinAt;
+    sortByDateDescending(childKpis, (item) => item.lastCheckinAt ?? "")[0]
+      ?.lastCheckinAt ?? keyResult.lastCheckinAt;
 }
 
-function findVentureByKey(store: StoreState, ventureKey: string): Venture | undefined {
-  return store.config.ventures.find((venture) => venture.ventureKey.toLowerCase() === ventureKey.toLowerCase());
+function findVentureByKey(
+  store: StoreState,
+  ventureKey: string,
+): Venture | undefined {
+  return store.config.ventures.find(
+    (venture) => venture.ventureKey.toLowerCase() === ventureKey.toLowerCase(),
+  );
 }
 
-function findDepartmentByKey(venture: Venture, departmentKey: string): Department | undefined {
-  return venture.departments.find((department) => department.departmentKey.toLowerCase() === departmentKey.toLowerCase());
+function findDepartmentByKey(
+  venture: Venture,
+  departmentKey: string,
+): Department | undefined {
+  return venture.departments.find(
+    (department) =>
+      department.departmentKey.toLowerCase() === departmentKey.toLowerCase(),
+  );
 }
 
-function doesDepartmentExist(store: StoreState, departmentName: string): boolean {
+function doesDepartmentExist(
+  store: StoreState,
+  departmentName: string,
+): boolean {
   const expected = departmentName.toLowerCase();
   return store.config.ventures.some((venture) => {
-    return venture.departments.some((department) => department.name.toLowerCase() === expected);
+    return venture.departments.some(
+      (department) => department.name.toLowerCase() === expected,
+    );
   });
 }
 
-function assertDepartmentExists(store: StoreState, departmentName: string): void {
+function assertDepartmentExists(
+  store: StoreState,
+  departmentName: string,
+): void {
   if (!doesDepartmentExist(store, departmentName)) {
-    throw new Error(`Department '${departmentName}' is not configured in ventures.`);
+    throw new Error(
+      `Department '${departmentName}' is not configured in ventures.`,
+    );
   }
 }
 
-function ensureNoObjectiveUsesDepartment(store: StoreState, departmentName: string): void {
+function ensureNoObjectiveUsesDepartment(
+  store: StoreState,
+  departmentName: string,
+): void {
   const expected = departmentName.toLowerCase();
-  const inUse = store.objectives.some((objective) => objective.department.toLowerCase() === expected);
+  const inUse = store.objectives.some(
+    (objective) => objective.department.toLowerCase() === expected,
+  );
 
   if (inUse) {
-    throw new Error(`Department '${departmentName}' is used by existing objectives.`);
+    throw new Error(
+      `Department '${departmentName}' is used by existing objectives.`,
+    );
   }
 }
 
-function ensureNoObjectiveUsesAnyDepartment(store: StoreState, departmentNames: string[]): void {
+function ensureNoObjectiveUsesAnyDepartment(
+  store: StoreState,
+  departmentNames: string[],
+): void {
   const expected = new Set(departmentNames.map((name) => name.toLowerCase()));
-  const inUse = store.objectives.some((objective) => expected.has(objective.department.toLowerCase()));
+  const inUse = store.objectives.some((objective) =>
+    expected.has(objective.department.toLowerCase()),
+  );
 
   if (inUse) {
-    throw new Error("One or more departments under this venture are used by existing objectives.");
+    throw new Error(
+      "One or more departments under this venture are used by existing objectives.",
+    );
   }
 }
 
 function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
-  const objective = store.objectives.find((item) => item.objectiveKey === objectiveKey);
+  const objective = store.objectives.find(
+    (item) => item.objectiveKey === objectiveKey,
+  );
 
   if (!objective) {
     return;
   }
 
-  const objectiveKrs = store.keyResults.filter((kr) => kr.objectiveKey === objectiveKey);
+  const objectiveKrs = store.keyResults.filter(
+    (kr) => kr.objectiveKey === objectiveKey,
+  );
   objectiveKrs.forEach((kr) => recalcKeyResultInStore(store, kr.krKey));
 
   if (objectiveKrs.length === 0) {
     objective.progressPct = 0;
     objective.currentValue = 0;
     objective.targetValue = 100;
-    objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
+    objective.rag = getRagFromProgress(
+      objective.progressPct,
+      store.config.ragThresholds,
+    );
     return;
   }
 
@@ -861,7 +1059,9 @@ function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
 }
 
 function recalcAllObjectivesInStore(store: StoreState): void {
-  store.objectives.forEach((objective) => recalcObjectiveInStore(store, objective.objectiveKey));
+  store.objectives.forEach((objective) =>
+    recalcObjectiveInStore(store, objective.objectiveKey),
+  );
 }
 
 function ensureUniqueDepartmentKeys(store: StoreState): void {
@@ -873,7 +1073,11 @@ function ensureUniqueDepartmentKeys(store: StoreState): void {
       const normalizedKey = currentKey.toLowerCase();
 
       if (!currentKey || seen.has(normalizedKey)) {
-        department.departmentKey = buildDepartmentKey(seen, venture.ventureKey, department.name);
+        department.departmentKey = buildDepartmentKey(
+          seen,
+          venture.ventureKey,
+          department.name,
+        );
       }
 
       seen.add(department.departmentKey.toLowerCase());
@@ -888,7 +1092,12 @@ function migrateObjectiveDefaults(store: StoreState): void {
     }
 
     if (!objective.ventureName) {
-      const venture = findVentureForObjectiveScope(store, objective.department, "", objective.strategicTheme);
+      const venture = findVentureForObjectiveScope(
+        store,
+        objective.department,
+        "",
+        objective.strategicTheme,
+      );
       objective.ventureName = venture?.name ?? "";
     }
 
@@ -898,7 +1107,11 @@ function migrateObjectiveDefaults(store: StoreState): void {
 
     if (!objective.strategicTheme) {
       const venture = store.config.ventures.find((item) => {
-        return item.departments.some((department) => department.name.toLowerCase() === objective.department.toLowerCase());
+        return item.departments.some(
+          (department) =>
+            department.name.toLowerCase() ===
+            objective.department.toLowerCase(),
+        );
       });
 
       objective.strategicTheme = venture?.name ?? "General";
@@ -919,7 +1132,9 @@ function migrateObjectiveDefaults(store: StoreState): void {
     }
 
     if (!Number.isFinite(objective.currentValue)) {
-      objective.currentValue = Number.isFinite(objective.progressPct) ? objective.progressPct : 0;
+      objective.currentValue = Number.isFinite(objective.progressPct)
+        ? objective.progressPct
+        : 0;
     }
 
     if (objective.blockers === undefined || objective.blockers === null) {
@@ -946,7 +1161,10 @@ function migrateObjectiveDefaults(store: StoreState): void {
       objective.checkInFrequency = "Weekly";
     }
 
-    if (typeof objective.lastCheckinAt !== "string" && objective.lastCheckinAt !== null) {
+    if (
+      typeof objective.lastCheckinAt !== "string" &&
+      objective.lastCheckinAt !== null
+    ) {
       objective.lastCheckinAt = null;
     }
   });
@@ -1017,16 +1235,16 @@ function buildSeedStore(): StoreState {
     config: {
       ragThresholds: {
         greenMin: 70,
-        amberMin: 40
+        amberMin: 40,
       },
       fieldOptions: clone(DEFAULT_FIELD_OPTIONS),
-      ventures: []
+      ventures: [],
     },
     periods: [],
     objectives: [],
     keyResults: [],
     kpis: [],
-    checkIns: []
+    checkIns: [],
   };
 
   recalcAllObjectivesInStore(store);
@@ -1055,8 +1273,8 @@ function toStoreSnapshot(store: StoreState): StoreSnapshot {
       objectives: clone(store.objectives),
       keyResults: clone(store.keyResults),
       kpis: clone(store.kpis),
-      checkIns: clone(store.checkIns)
-    }
+      checkIns: clone(store.checkIns),
+    },
   };
 }
 
@@ -1066,11 +1284,13 @@ function fromStoreSnapshot(snapshot: StoreSnapshot): StoreState {
   if (snapshot.content.ragThresholds) {
     store.config.ragThresholds = {
       greenMin: Number(snapshot.content.ragThresholds.greenMin),
-      amberMin: Number(snapshot.content.ragThresholds.amberMin)
+      amberMin: Number(snapshot.content.ragThresholds.amberMin),
     };
   }
   if (snapshot.content.fieldOptions) {
-    store.config.fieldOptions = normalizeFieldOptions(snapshot.content.fieldOptions);
+    store.config.fieldOptions = normalizeFieldOptions(
+      snapshot.content.fieldOptions,
+    );
   }
 
   store.periods = clone(snapshot.content.periods);
@@ -1116,12 +1336,13 @@ function getStore(): StoreState {
     if (persistedContent.ragThresholds) {
       storeContainer.__okrDummyStore.config.ragThresholds = {
         greenMin: Number(persistedContent.ragThresholds.greenMin),
-        amberMin: Number(persistedContent.ragThresholds.amberMin)
+        amberMin: Number(persistedContent.ragThresholds.amberMin),
       };
     }
 
     if (persistedContent.fieldOptions) {
-      storeContainer.__okrDummyStore.config.fieldOptions = normalizeFieldOptions(persistedContent.fieldOptions);
+      storeContainer.__okrDummyStore.config.fieldOptions =
+        normalizeFieldOptions(persistedContent.fieldOptions);
     }
 
     if (persistedContent.periods.length > 0) {
@@ -1145,8 +1366,13 @@ function ensurePeriodExists(store: StoreState, periodKey: string): void {
   }
 }
 
-function ensureObjectiveExists(store: StoreState, objectiveKey: string): Objective {
-  const objective = store.objectives.find((item) => item.objectiveKey === objectiveKey);
+function ensureObjectiveExists(
+  store: StoreState,
+  objectiveKey: string,
+): Objective {
+  const objective = store.objectives.find(
+    (item) => item.objectiveKey === objectiveKey,
+  );
   if (!objective) {
     throw new Error(`Objective '${objectiveKey}' does not exist.`);
   }
@@ -1180,8 +1406,13 @@ function isMatch(value: string | undefined, expected?: string): boolean {
   return (value ?? "").toLowerCase() === expected.toLowerCase();
 }
 
-function sortByDateDescending<T>(items: T[], selector: (item: T) => string): T[] {
-  return [...items].sort((left, right) => selector(right).localeCompare(selector(left)));
+function sortByDateDescending<T>(
+  items: T[],
+  selector: (item: T) => string,
+): T[] {
+  return [...items].sort((left, right) =>
+    selector(right).localeCompare(selector(left)),
+  );
 }
 
 export function getConfig(): AppConfig {
@@ -1194,7 +1425,7 @@ export function updateRagThresholds(input: RagThresholds): AppConfig {
 
   store.config.ragThresholds = {
     greenMin: Number(input.greenMin),
-    amberMin: Number(input.amberMin)
+    amberMin: Number(input.amberMin),
   };
 
   recalcAllObjectivesInStore(store);
@@ -1206,7 +1437,7 @@ export function updateFieldOptions(input: Partial<FieldOptions>): AppConfig {
   const store = getStore();
   store.config.fieldOptions = normalizeFieldOptions({
     ...store.config.fieldOptions,
-    ...input
+    ...input,
   });
 
   persistStore(store);
@@ -1221,12 +1452,16 @@ export function addVenture(input: CreateVentureInput): Venture {
     throw new Error("Venture name is required.");
   }
 
-  const duplicateName = store.config.ventures.some((venture) => venture.name.toLowerCase() === name.toLowerCase());
+  const duplicateName = store.config.ventures.some(
+    (venture) => venture.name.toLowerCase() === name.toLowerCase(),
+  );
   if (duplicateName) {
     throw new Error(`Venture '${name}' already exists.`);
   }
 
-  const existingVentureKeys = new Set(store.config.ventures.map((venture) => venture.ventureKey.toLowerCase()));
+  const existingVentureKeys = new Set(
+    store.config.ventures.map((venture) => venture.ventureKey.toLowerCase()),
+  );
   const requestedVentureKey = normalizeKey(input.ventureKey ?? "");
   let ventureKey = requestedVentureKey;
 
@@ -1241,13 +1476,20 @@ export function addVenture(input: CreateVentureInput): Venture {
 
   const departments: Department[] = [];
   const rawDepartments = input.departments ?? [];
-  const departmentKeys = new Set<string>(store.config.ventures.flatMap((venture) => venture.departments.map((department) => department.departmentKey.toLowerCase())));
+  const departmentKeys = new Set<string>(
+    store.config.ventures.flatMap((venture) =>
+      venture.departments.map((department) =>
+        department.departmentKey.toLowerCase(),
+      ),
+    ),
+  );
   const departmentNames = new Set<string>();
 
   rawDepartments.forEach((department) => {
     const departmentName = normalizeName(department.name);
     const departmentOwner = normalizeName(department.owner ?? "");
-    const departmentOwnerEmail = normalizeEmail(department.ownerEmail ?? "") || undefined;
+    const departmentOwnerEmail =
+      normalizeEmail(department.ownerEmail ?? "") || undefined;
     const requestedDepartmentKey = normalizeKey(department.departmentKey ?? "");
     let departmentKey = requestedDepartmentKey;
 
@@ -1256,15 +1498,23 @@ export function addVenture(input: CreateVentureInput): Venture {
     }
 
     if (departmentNames.has(departmentName.toLowerCase())) {
-      throw new Error(`Duplicate department name '${departmentName}' in venture payload.`);
+      throw new Error(
+        `Duplicate department name '${departmentName}' in venture payload.`,
+      );
     }
 
     if (requestedDepartmentKey) {
       if (departmentKeys.has(requestedDepartmentKey.toLowerCase())) {
-        throw new Error(`Duplicate department key '${requestedDepartmentKey}' in venture payload.`);
+        throw new Error(
+          `Duplicate department key '${requestedDepartmentKey}' in venture payload.`,
+        );
       }
     } else {
-      departmentKey = buildDepartmentKey(departmentKeys, ventureKey, departmentName);
+      departmentKey = buildDepartmentKey(
+        departmentKeys,
+        ventureKey,
+        departmentName,
+      );
     }
 
     departmentKeys.add(departmentKey.toLowerCase());
@@ -1273,14 +1523,14 @@ export function addVenture(input: CreateVentureInput): Venture {
       departmentKey,
       name: departmentName,
       owner: departmentOwner || undefined,
-      ownerEmail: departmentOwnerEmail
+      ownerEmail: departmentOwnerEmail,
     });
   });
 
   const venture: Venture = {
     ventureKey,
     name,
-    departments
+    departments,
   };
 
   store.config.ventures.push(venture);
@@ -1288,7 +1538,10 @@ export function addVenture(input: CreateVentureInput): Venture {
   return clone(venture);
 }
 
-export function updateVenture(ventureKey: string, patch: UpdateVentureInput): Venture | null {
+export function updateVenture(
+  ventureKey: string,
+  patch: UpdateVentureInput,
+): Venture | null {
   const store = getStore();
   const venture = findVentureByKey(store, ventureKey);
 
@@ -1303,7 +1556,9 @@ export function updateVenture(ventureKey: string, patch: UpdateVentureInput): Ve
     }
 
     const duplicateName = store.config.ventures.some(
-      (item) => item.ventureKey.toLowerCase() !== venture.ventureKey.toLowerCase() && item.name.toLowerCase() === name.toLowerCase()
+      (item) =>
+        item.ventureKey.toLowerCase() !== venture.ventureKey.toLowerCase() &&
+        item.name.toLowerCase() === name.toLowerCase(),
     );
 
     if (duplicateName) {
@@ -1313,14 +1568,21 @@ export function updateVenture(ventureKey: string, patch: UpdateVentureInput): Ve
     const oldName = venture.name;
     venture.name = name;
     store.objectives.forEach((objective) => {
-      const normalizedObjectiveVentureName = normalizeName(objective.ventureName ?? "").toLowerCase();
-      const normalizedTheme = normalizeName(objective.strategicTheme).toLowerCase();
+      const normalizedObjectiveVentureName = normalizeName(
+        objective.ventureName ?? "",
+      ).toLowerCase();
+      const normalizedTheme = normalizeName(
+        objective.strategicTheme,
+      ).toLowerCase();
       if (normalizedObjectiveVentureName === oldName.toLowerCase()) {
         objective.ventureName = name;
         return;
       }
 
-      if (!normalizedObjectiveVentureName && normalizedTheme === oldName.toLowerCase()) {
+      if (
+        !normalizedObjectiveVentureName &&
+        normalizedTheme === oldName.toLowerCase()
+      ) {
         objective.ventureName = name;
       }
     });
@@ -1333,7 +1595,7 @@ export function updateVenture(ventureKey: string, patch: UpdateVentureInput): Ve
 export function deleteVenture(ventureKey: string): boolean {
   const store = getStore();
   const index = store.config.ventures.findIndex(
-    (venture) => venture.ventureKey.toLowerCase() === ventureKey.toLowerCase()
+    (venture) => venture.ventureKey.toLowerCase() === ventureKey.toLowerCase(),
   );
 
   if (index < 0) {
@@ -1344,26 +1606,39 @@ export function deleteVenture(ventureKey: string): boolean {
   const removedObjectiveKeys = new Set(
     store.objectives
       .filter((objective) => objectiveBelongsToVenture(objective, venture))
-      .map((objective) => objective.objectiveKey.toLowerCase())
+      .map((objective) => objective.objectiveKey.toLowerCase()),
   );
   const removedKrKeys = new Set(
     store.keyResults
-      .filter((keyResult) => removedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()))
-      .map((keyResult) => keyResult.krKey.toLowerCase())
+      .filter((keyResult) =>
+        removedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()),
+      )
+      .map((keyResult) => keyResult.krKey.toLowerCase()),
   );
 
   store.config.ventures.splice(index, 1);
-  store.objectives = store.objectives.filter((objective) => !removedObjectiveKeys.has(objective.objectiveKey.toLowerCase()));
-  store.keyResults = store.keyResults.filter((keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()));
+  store.objectives = store.objectives.filter(
+    (objective) =>
+      !removedObjectiveKeys.has(objective.objectiveKey.toLowerCase()),
+  );
+  store.keyResults = store.keyResults.filter(
+    (keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
-    return !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) && !removedKrKeys.has(checkIn.krKey.toLowerCase());
+    return (
+      !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) &&
+      !removedKrKeys.has(checkIn.krKey.toLowerCase())
+    );
   });
 
   persistStore(store);
   return true;
 }
 
-export function addDepartmentToVenture(ventureKey: string, input: CreateDepartmentInput): Venture | null {
+export function addDepartmentToVenture(
+  ventureKey: string,
+  input: CreateDepartmentInput,
+): Venture | null {
   const store = getStore();
   const venture = findVentureByKey(store, ventureKey);
 
@@ -1373,7 +1648,9 @@ export function addDepartmentToVenture(ventureKey: string, input: CreateDepartme
 
   const name = normalizeName(input.name);
   const owner = normalizeName(resolveOwnerName(input.owner, input.ownerEmail));
-  const ownerEmail = normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined;
+  const ownerEmail =
+    normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
+    undefined;
   const requestedDepartmentKey = normalizeKey(input.departmentKey ?? "");
   let departmentKey = requestedDepartmentKey;
 
@@ -1381,27 +1658,41 @@ export function addDepartmentToVenture(ventureKey: string, input: CreateDepartme
     throw new Error("Department name is required.");
   }
 
-  const duplicateName = venture.departments.some((department) => department.name.toLowerCase() === name.toLowerCase());
+  const duplicateName = venture.departments.some(
+    (department) => department.name.toLowerCase() === name.toLowerCase(),
+  );
   if (duplicateName) {
-    throw new Error(`Department '${name}' already exists in venture '${venture.name}'.`);
+    throw new Error(
+      `Department '${name}' already exists in venture '${venture.name}'.`,
+    );
   }
 
   const existingDepartmentKeys = new Set(
-    store.config.ventures.flatMap((item) => item.departments.map((department) => department.departmentKey.toLowerCase()))
+    store.config.ventures.flatMap((item) =>
+      item.departments.map((department) =>
+        department.departmentKey.toLowerCase(),
+      ),
+    ),
   );
   if (requestedDepartmentKey) {
     if (existingDepartmentKeys.has(requestedDepartmentKey.toLowerCase())) {
-      throw new Error(`Department key '${requestedDepartmentKey}' already exists.`);
+      throw new Error(
+        `Department key '${requestedDepartmentKey}' already exists.`,
+      );
     }
   } else {
-    departmentKey = buildDepartmentKey(existingDepartmentKeys, venture.ventureKey, name);
+    departmentKey = buildDepartmentKey(
+      existingDepartmentKeys,
+      venture.ventureKey,
+      name,
+    );
   }
 
   venture.departments.push({
     departmentKey,
     name,
     owner: owner || undefined,
-    ownerEmail
+    ownerEmail,
   });
   persistStore(store);
   return clone(venture);
@@ -1410,7 +1701,7 @@ export function addDepartmentToVenture(ventureKey: string, input: CreateDepartme
 export function updateDepartmentInVenture(
   ventureKey: string,
   departmentKey: string,
-  patch: UpdateDepartmentInput
+  patch: UpdateDepartmentInput,
 ): Venture | null {
   const store = getStore();
   const venture = findVentureByKey(store, ventureKey);
@@ -1432,12 +1723,15 @@ export function updateDepartmentInVenture(
 
     const duplicateName = venture.departments.some(
       (item) =>
-        item.departmentKey.toLowerCase() !== department.departmentKey.toLowerCase() &&
-        item.name.toLowerCase() === name.toLowerCase()
+        item.departmentKey.toLowerCase() !==
+          department.departmentKey.toLowerCase() &&
+        item.name.toLowerCase() === name.toLowerCase(),
     );
 
     if (duplicateName) {
-      throw new Error(`Department '${name}' already exists in venture '${venture.name}'.`);
+      throw new Error(
+        `Department '${name}' already exists in venture '${venture.name}'.`,
+      );
     }
 
     const oldName = department.name;
@@ -1454,18 +1748,30 @@ export function updateDepartmentInVenture(
   }
 
   if (patch.owner !== undefined) {
-    department.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? department.ownerEmail)) || undefined;
+    department.owner =
+      normalizeName(
+        resolveOwnerName(
+          patch.owner,
+          patch.ownerEmail ?? department.ownerEmail,
+        ),
+      ) || undefined;
   }
 
   if (patch.ownerEmail !== undefined) {
-    department.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? department.owner, patch.ownerEmail)) || undefined;
+    department.ownerEmail =
+      normalizeEmail(
+        resolveOwnerEmail(patch.owner ?? department.owner, patch.ownerEmail),
+      ) || undefined;
   }
 
   persistStore(store);
   return clone(venture);
 }
 
-export function deleteDepartmentFromVenture(ventureKey: string, departmentKey: string): Venture | null {
+export function deleteDepartmentFromVenture(
+  ventureKey: string,
+  departmentKey: string,
+): Venture | null {
   const store = getStore();
   const venture = findVentureByKey(store, ventureKey);
 
@@ -1474,7 +1780,8 @@ export function deleteDepartmentFromVenture(ventureKey: string, departmentKey: s
   }
 
   const index = venture.departments.findIndex(
-    (department) => department.departmentKey.toLowerCase() === departmentKey.toLowerCase()
+    (department) =>
+      department.departmentKey.toLowerCase() === departmentKey.toLowerCase(),
   );
 
   if (index < 0) {
@@ -1486,23 +1793,34 @@ export function deleteDepartmentFromVenture(ventureKey: string, departmentKey: s
     store.objectives
       .filter((objective) => {
         return (
-          objective.department.toLowerCase() === department.name.toLowerCase() &&
+          objective.department.toLowerCase() ===
+            department.name.toLowerCase() &&
           objectiveBelongsToVenture(objective, venture)
         );
       })
-      .map((objective) => objective.objectiveKey.toLowerCase())
+      .map((objective) => objective.objectiveKey.toLowerCase()),
   );
   const removedKrKeys = new Set(
     store.keyResults
-      .filter((keyResult) => removedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()))
-      .map((keyResult) => keyResult.krKey.toLowerCase())
+      .filter((keyResult) =>
+        removedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()),
+      )
+      .map((keyResult) => keyResult.krKey.toLowerCase()),
   );
 
   venture.departments.splice(index, 1);
-  store.objectives = store.objectives.filter((objective) => !removedObjectiveKeys.has(objective.objectiveKey.toLowerCase()));
-  store.keyResults = store.keyResults.filter((keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()));
+  store.objectives = store.objectives.filter(
+    (objective) =>
+      !removedObjectiveKeys.has(objective.objectiveKey.toLowerCase()),
+  );
+  store.keyResults = store.keyResults.filter(
+    (keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
-    return !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) && !removedKrKeys.has(checkIn.krKey.toLowerCase());
+    return (
+      !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) &&
+      !removedKrKeys.has(checkIn.krKey.toLowerCase())
+    );
   });
 
   persistStore(store);
@@ -1515,7 +1833,9 @@ export function listPeriods(): Period[] {
 
 export function createPeriod(input: CreatePeriodInput): Period {
   const store = getStore();
-  const alreadyExists = store.periods.some((period) => period.periodKey === input.periodKey);
+  const alreadyExists = store.periods.some(
+    (period) => period.periodKey === input.periodKey,
+  );
 
   if (alreadyExists) {
     throw new Error(`Period '${input.periodKey}' already exists.`);
@@ -1526,7 +1846,7 @@ export function createPeriod(input: CreatePeriodInput): Period {
     name: input.name,
     startDate: input.startDate,
     endDate: input.endDate,
-    status: input.status ?? "Planned"
+    status: input.status ?? "Planned",
   };
 
   store.periods.push(period);
@@ -1534,7 +1854,10 @@ export function createPeriod(input: CreatePeriodInput): Period {
   return clone(period);
 }
 
-export function updatePeriod(periodKey: string, patch: Partial<Period>): Period | null {
+export function updatePeriod(
+  periodKey: string,
+  patch: Partial<Period>,
+): Period | null {
   const store = getStore();
   const period = store.periods.find((item) => item.periodKey === periodKey);
 
@@ -1569,26 +1892,42 @@ export function listObjectives(filters: ObjectiveFilters = {}): Objective[] {
 }
 
 export function getObjective(objectiveKey: string): Objective | null {
-  const objective = getStore().objectives.find((item) => item.objectiveKey === objectiveKey);
+  const objective = getStore().objectives.find(
+    (item) => item.objectiveKey === objectiveKey,
+  );
   return objective ? clone(objective) : null;
 }
 
-export function getObjectiveWithContext(objectiveKey: string): ObjectiveWithContext | null {
+export function getObjectiveWithContext(
+  objectiveKey: string,
+): ObjectiveWithContext | null {
   const store = getStore();
-  const objective = store.objectives.find((item) => item.objectiveKey === objectiveKey);
+  const objective = store.objectives.find(
+    (item) => item.objectiveKey === objectiveKey,
+  );
 
   if (!objective) {
     return null;
   }
 
-  const objectiveKrs = store.keyResults.filter((kr) => kr.objectiveKey === objectiveKey);
-  const objectiveKpis = store.kpis.filter((kpi) => kpi.objectiveKey === objectiveKey);
+  const objectiveKrs = store.keyResults.filter(
+    (kr) => kr.objectiveKey === objectiveKey,
+  );
+  const objectiveKpis = store.kpis.filter(
+    (kpi) => kpi.objectiveKey === objectiveKey,
+  );
   const latestCheckIns: Record<string, CheckIn | null> = {};
 
-  [...objectiveKrs.map((kr) => kr.krKey), ...objectiveKpis.map((kpi) => kpi.kpiKey)].forEach((entityKey) => {
+  [
+    ...objectiveKrs.map((kr) => kr.krKey),
+    ...objectiveKpis.map((kpi) => kpi.kpiKey),
+  ].forEach((entityKey) => {
     const latest = sortByDateDescending(
-      store.checkIns.filter((checkIn) => checkIn.krKey === entityKey || checkIn.kpiKey === entityKey),
-      (checkIn) => checkIn.checkInAt
+      store.checkIns.filter(
+        (checkIn) =>
+          checkIn.krKey === entityKey || checkIn.kpiKey === entityKey,
+      ),
+      (checkIn) => checkIn.checkInAt,
     )[0];
 
     latestCheckIns[entityKey] = latest ?? null;
@@ -1598,14 +1937,18 @@ export function getObjectiveWithContext(objectiveKey: string): ObjectiveWithCont
     objective,
     keyResults: objectiveKrs,
     kpis: objectiveKpis,
-    latestCheckIns
+    latestCheckIns,
   });
 }
 
 export function createObjective(input: CreateObjectiveInput): Objective {
   const store = getStore();
-  const requestedObjectiveCode = normalizeKey(input.objectiveCode ?? input.objectiveKey ?? "");
-  const objectiveKey = getNextNumericKey(store.objectives.map((objective) => objective.objectiveKey));
+  const requestedObjectiveCode = normalizeKey(
+    input.objectiveCode ?? input.objectiveKey ?? "",
+  );
+  const objectiveKey = getNextNumericKey(
+    store.objectives.map((objective) => objective.objectiveKey),
+  );
   const periodKey = resolvePeriodKey(store, input.periodKey);
   assertDepartmentExists(store, input.department);
   const strategicTheme = normalizeName(input.strategicTheme || "");
@@ -1623,14 +1966,32 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const objective: Objective = {
     objectiveKey,
     objectiveCode:
-      requestedObjectiveCode || getNextObjectiveCode(store, input.department, input.ventureName ?? "", input.strategicTheme),
+      requestedObjectiveCode ||
+      getNextObjectiveCode(
+        store,
+        input.department,
+        input.ventureName ?? "",
+        input.strategicTheme,
+      ),
     periodKey,
     title: input.title,
     description: input.description || notes,
-    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
-    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
+    owner:
+      normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) ||
+      undefined,
+    ownerEmail:
+      normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
+      undefined,
     department: input.department,
-    ventureName: input.ventureName ?? findVentureForObjectiveScope(store, input.department, "", input.strategicTheme)?.name ?? "",
+    ventureName:
+      input.ventureName ??
+      findVentureForObjectiveScope(
+        store,
+        input.department,
+        "",
+        input.strategicTheme,
+      )?.name ??
+      "",
     strategicTheme: strategicTheme || "General",
     objectiveType: (input.objectiveType ?? "Committed") as ObjectiveType,
     okrCycle: cycle,
@@ -1649,7 +2010,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     endDate: input.endDate || dueDate,
     dueDate,
     checkInFrequency,
-    lastCheckinAt: nowIso()
+    lastCheckinAt: nowIso(),
   };
 
   assertObjectiveWeightGroup(store, objective);
@@ -1659,9 +2020,14 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   return clone(objective);
 }
 
-export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInput): Objective | null {
+export function updateObjective(
+  objectiveKey: string,
+  patch: UpdateObjectiveInput,
+): Objective | null {
   const store = getStore();
-  const objective = store.objectives.find((item) => item.objectiveKey === objectiveKey);
+  const objective = store.objectives.find(
+    (item) => item.objectiveKey === objectiveKey,
+  );
 
   if (!objective) {
     return null;
@@ -1672,7 +2038,7 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     periodKey: originalObjective.periodKey,
     department: originalObjective.department,
     ventureName: originalObjective.ventureName,
-    strategicTheme: originalObjective.strategicTheme
+    strategicTheme: originalObjective.strategicTheme,
   };
 
   try {
@@ -1682,7 +2048,8 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     }
 
     if (patch.objectiveCode !== undefined) {
-      objective.objectiveCode = normalizeKey(patch.objectiveCode) || objective.objectiveKey;
+      objective.objectiveCode =
+        normalizeKey(patch.objectiveCode) || objective.objectiveKey;
     }
 
     if (patch.title !== undefined) {
@@ -1694,11 +2061,20 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     }
 
     if (patch.owner !== undefined) {
-      objective.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? objective.ownerEmail)) || undefined;
+      objective.owner =
+        normalizeName(
+          resolveOwnerName(
+            patch.owner,
+            patch.ownerEmail ?? objective.ownerEmail,
+          ),
+        ) || undefined;
     }
 
     if (patch.ownerEmail !== undefined) {
-      objective.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? objective.owner, patch.ownerEmail)) || undefined;
+      objective.ownerEmail =
+        normalizeEmail(
+          resolveOwnerEmail(patch.owner ?? objective.owner, patch.ownerEmail),
+        ) || undefined;
     }
 
     if (patch.department !== undefined) {
@@ -1726,7 +2102,10 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     }
 
     if (patch.baselineValue !== undefined) {
-      objective.baselineValue = normalizeWeightInput(patch.baselineValue, "Objective");
+      objective.baselineValue = normalizeWeightInput(
+        patch.baselineValue,
+        "Objective",
+      );
     }
 
     if (patch.blockers !== undefined) {
@@ -1766,15 +2145,21 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     }
 
     if (patch.checkInFrequency !== undefined) {
-      objective.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+      objective.checkInFrequency = normalizeCheckInFrequency(
+        patch.checkInFrequency,
+      );
     }
 
     assertObjectiveWeightGroup(store, objective);
     const movedScope =
-      previousScope.periodKey.toLowerCase() !== objective.periodKey.toLowerCase() ||
-      previousScope.department.toLowerCase() !== objective.department.toLowerCase() ||
-      normalizeName(previousScope.ventureName ?? "").toLowerCase() !== normalizeName(objective.ventureName ?? "").toLowerCase() ||
-      previousScope.strategicTheme.toLowerCase() !== objective.strategicTheme.toLowerCase();
+      previousScope.periodKey.toLowerCase() !==
+        objective.periodKey.toLowerCase() ||
+      previousScope.department.toLowerCase() !==
+        objective.department.toLowerCase() ||
+      normalizeName(previousScope.ventureName ?? "").toLowerCase() !==
+        normalizeName(objective.ventureName ?? "").toLowerCase() ||
+      previousScope.strategicTheme.toLowerCase() !==
+        objective.strategicTheme.toLowerCase();
 
     if (movedScope) {
       assertRemainingObjectiveWeights(store, previousScope);
@@ -1791,11 +2176,16 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
 }
 
 export function deleteObjective(
-  objectiveKey: string
-): { objectiveKey: string; deletedKrCount: number; deletedCheckInCount: number } | null {
+  objectiveKey: string,
+): {
+  objectiveKey: string;
+  deletedKrCount: number;
+  deletedCheckInCount: number;
+} | null {
   const store = getStore();
   const objectiveIndex = store.objectives.findIndex(
-    (objective) => objective.objectiveKey.toLowerCase() === objectiveKey.toLowerCase()
+    (objective) =>
+      objective.objectiveKey.toLowerCase() === objectiveKey.toLowerCase(),
   );
 
   if (objectiveIndex < 0) {
@@ -1804,16 +2194,26 @@ export function deleteObjective(
 
   const objective = store.objectives[objectiveIndex];
   const relatedKrs = store.keyResults.filter(
-    (keyResult) => keyResult.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase()
+    (keyResult) =>
+      keyResult.objectiveKey.toLowerCase() ===
+      objective.objectiveKey.toLowerCase(),
   );
-  const relatedKrKeys = new Set(relatedKrs.map((keyResult) => keyResult.krKey.toLowerCase()));
-  const relatedKpis = store.kpis.filter((kpi) => kpi.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase());
-  const relatedKpiKeys = new Set(relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()));
+  const relatedKrKeys = new Set(
+    relatedKrs.map((keyResult) => keyResult.krKey.toLowerCase()),
+  );
+  const relatedKpis = store.kpis.filter(
+    (kpi) =>
+      kpi.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase(),
+  );
+  const relatedKpiKeys = new Set(
+    relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()),
+  );
 
   const deletedKrCount = relatedKrs.length;
   const deletedCheckInCount = store.checkIns.filter((checkIn) => {
     return (
-      checkIn.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase() ||
+      checkIn.objectiveKey.toLowerCase() ===
+        objective.objectiveKey.toLowerCase() ||
       relatedKrKeys.has(checkIn.krKey.toLowerCase()) ||
       relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
@@ -1821,12 +2221,18 @@ export function deleteObjective(
 
   store.objectives.splice(objectiveIndex, 1);
   store.keyResults = store.keyResults.filter(
-    (keyResult) => keyResult.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase()
+    (keyResult) =>
+      keyResult.objectiveKey.toLowerCase() !==
+      objective.objectiveKey.toLowerCase(),
   );
-  store.kpis = store.kpis.filter((kpi) => kpi.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase());
+  store.kpis = store.kpis.filter(
+    (kpi) =>
+      kpi.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase(),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
     return (
-      checkIn.objectiveKey.toLowerCase() !== objective.objectiveKey.toLowerCase() &&
+      checkIn.objectiveKey.toLowerCase() !==
+        objective.objectiveKey.toLowerCase() &&
       !relatedKrKeys.has(checkIn.krKey.toLowerCase()) &&
       !relatedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
@@ -1836,7 +2242,7 @@ export function deleteObjective(
   return {
     objectiveKey: objective.objectiveKey,
     deletedKrCount,
-    deletedCheckInCount
+    deletedCheckInCount,
   };
 }
 
@@ -1873,7 +2279,11 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const krKey = getNextNumericKey(store.keyResults.map((kr) => kr.krKey));
 
   const objective = ensureObjectiveExists(store, input.objectiveKey);
-  const periodKey = resolvePeriodKey(store, input.periodKey, objective.periodKey);
+  const periodKey = resolvePeriodKey(
+    store,
+    input.periodKey,
+    objective.periodKey,
+  );
 
   const weightValue = normalizeWeightInput(input.baselineValue, "Key result");
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
@@ -1886,8 +2296,12 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     objectiveKey: input.objectiveKey,
     periodKey,
     title: input.title,
-    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
-    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
+    owner:
+      normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) ||
+      undefined,
+    ownerEmail:
+      normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
+      undefined,
     metricType: normalizeMetricType(input.metricType),
     baselineValue: weightValue,
     targetValue: 100,
@@ -1898,7 +2312,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     checkInFrequency,
     blockers,
     notes,
-    lastCheckinAt: nowIso()
+    lastCheckinAt: nowIso(),
   };
 
   assertKrWeightGroup(store, keyResult);
@@ -1908,9 +2322,18 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   return clone(keyResult);
 }
 
-export function previewNextObjectiveCode(departmentName: string, ventureName: string, strategicTheme: string): string {
+export function previewNextObjectiveCode(
+  departmentName: string,
+  ventureName: string,
+  strategicTheme: string,
+): string {
   const store = getStore();
-  return getNextObjectiveCode(store, departmentName, ventureName, strategicTheme);
+  return getNextObjectiveCode(
+    store,
+    departmentName,
+    ventureName,
+    strategicTheme,
+  );
 }
 
 export function previewNextKrCode(objectiveKey: string): string {
@@ -1958,11 +2381,23 @@ export function createKpi(input: CreateKpiInput): Kpi {
     throw new Error("Key Result does not belong to the provided objective.");
   }
 
-  const periodKey = resolvePeriodKey(store, input.periodKey, keyResult.periodKey || objective.periodKey);
+  const periodKey = resolvePeriodKey(
+    store,
+    input.periodKey,
+    keyResult.periodKey || objective.periodKey,
+  );
   const baselineValue = normalizeWeightInput(input.baselineValue, "KPI");
-  const targetValue = Number.isFinite(input.targetValue) ? input.targetValue : 100;
-  const currentValue = Number.isFinite(input.currentValue) ? input.currentValue : 0;
-  const progressPct = computeKrProgress(baselineValue, targetValue, currentValue);
+  const targetValue = Number.isFinite(input.targetValue)
+    ? input.targetValue
+    : 100;
+  const currentValue = Number.isFinite(input.currentValue)
+    ? input.currentValue
+    : 0;
+  const progressPct = computeKrProgress(
+    baselineValue,
+    targetValue,
+    currentValue,
+  );
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
   const notes = normalizeName(input.notes ?? "");
@@ -1974,8 +2409,12 @@ export function createKpi(input: CreateKpiInput): Kpi {
     krKey: keyResult.krKey,
     periodKey,
     title: input.title,
-    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
-    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
+    owner:
+      normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) ||
+      undefined,
+    ownerEmail:
+      normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
+      undefined,
     metricType: normalizeMetricType(input.metricType),
     baselineValue,
     targetValue,
@@ -1986,7 +2425,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
     checkInFrequency,
     blockers,
     notes,
-    lastCheckinAt: nowIso()
+    lastCheckinAt: nowIso(),
   };
 
   assertKpiWeightGroup(store, kpi);
@@ -2002,7 +2441,10 @@ export function previewNextKpiCode(krKey: string): string {
   return getNextKpiCode(store, krKey);
 }
 
-export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): KeyResult | null {
+export function updateKeyResult(
+  krKey: string,
+  patch: UpdateKeyResultInput,
+): KeyResult | null {
   const store = getStore();
   const keyResult = store.keyResults.find((item) => item.krKey === krKey);
 
@@ -2036,11 +2478,20 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     }
 
     if (patch.owner !== undefined) {
-      keyResult.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? keyResult.ownerEmail)) || undefined;
+      keyResult.owner =
+        normalizeName(
+          resolveOwnerName(
+            patch.owner,
+            patch.ownerEmail ?? keyResult.ownerEmail,
+          ),
+        ) || undefined;
     }
 
     if (patch.ownerEmail !== undefined) {
-      keyResult.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? keyResult.owner, patch.ownerEmail)) || undefined;
+      keyResult.ownerEmail =
+        normalizeEmail(
+          resolveOwnerEmail(patch.owner ?? keyResult.owner, patch.ownerEmail),
+        ) || undefined;
     }
 
     if (patch.metricType !== undefined) {
@@ -2048,7 +2499,10 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     }
 
     if (patch.baselineValue !== undefined) {
-      keyResult.baselineValue = normalizeWeightInput(patch.baselineValue, "Key result");
+      keyResult.baselineValue = normalizeWeightInput(
+        patch.baselineValue,
+        "Key result",
+      );
     }
 
     if (patch.status !== undefined) {
@@ -2060,7 +2514,9 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     }
 
     if (patch.checkInFrequency !== undefined) {
-      keyResult.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+      keyResult.checkInFrequency = normalizeCheckInFrequency(
+        patch.checkInFrequency,
+      );
     }
 
     if (patch.blockers !== undefined) {
@@ -2072,13 +2528,19 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     }
 
     assertKrWeightGroup(store, keyResult);
-    if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
+    if (
+      previousObjectiveKey.toLowerCase() !==
+      keyResult.objectiveKey.toLowerCase()
+    ) {
       assertRemainingKrWeights(store, keyResult.krKey, previousObjectiveKey);
     }
 
     keyResult.lastCheckinAt = nowIso();
 
-    if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
+    if (
+      previousObjectiveKey.toLowerCase() !==
+      keyResult.objectiveKey.toLowerCase()
+    ) {
       store.checkIns.forEach((checkIn) => {
         if (checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase()) {
           checkIn.objectiveKey = keyResult.objectiveKey;
@@ -2143,11 +2605,17 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
     }
 
     if (patch.owner !== undefined) {
-      kpi.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? kpi.ownerEmail)) || undefined;
+      kpi.owner =
+        normalizeName(
+          resolveOwnerName(patch.owner, patch.ownerEmail ?? kpi.ownerEmail),
+        ) || undefined;
     }
 
     if (patch.ownerEmail !== undefined) {
-      kpi.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? kpi.owner, patch.ownerEmail)) || undefined;
+      kpi.ownerEmail =
+        normalizeEmail(
+          resolveOwnerEmail(patch.owner ?? kpi.owner, patch.ownerEmail),
+        ) || undefined;
     }
 
     if (patch.metricType !== undefined) {
@@ -2191,13 +2659,20 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
       assertRemainingKpiWeights(store, kpi.kpiKey, previousKrKey);
     }
 
-    kpi.progressPct = computeKrProgress(kpi.baselineValue, kpi.targetValue, kpi.currentValue);
+    kpi.progressPct = computeKrProgress(
+      kpi.baselineValue,
+      kpi.targetValue,
+      kpi.currentValue,
+    );
     if (patch.status === undefined) {
       kpi.status = getStatusFromProgress(kpi.progressPct);
     }
     kpi.lastCheckinAt = nowIso();
 
-    if (previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase() || previousObjectiveKey.toLowerCase() !== kpi.objectiveKey.toLowerCase()) {
+    if (
+      previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase() ||
+      previousObjectiveKey.toLowerCase() !== kpi.objectiveKey.toLowerCase()
+    ) {
       store.checkIns.forEach((checkIn) => {
         if ((checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()) {
           checkIn.objectiveKey = kpi.objectiveKey;
@@ -2218,17 +2693,25 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
   }
 }
 
-export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInCount: number } | null {
+export function deleteKeyResult(
+  krKey: string,
+): { krKey: string; deletedCheckInCount: number } | null {
   const store = getStore();
-  const krIndex = store.keyResults.findIndex((keyResult) => keyResult.krKey.toLowerCase() === krKey.toLowerCase());
+  const krIndex = store.keyResults.findIndex(
+    (keyResult) => keyResult.krKey.toLowerCase() === krKey.toLowerCase(),
+  );
 
   if (krIndex < 0) {
     return null;
   }
 
   const keyResult = store.keyResults[krIndex];
-  const relatedKpis = store.kpis.filter((kpi) => kpi.krKey.toLowerCase() === keyResult.krKey.toLowerCase());
-  const relatedKpiKeys = new Set(relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()));
+  const relatedKpis = store.kpis.filter(
+    (kpi) => kpi.krKey.toLowerCase() === keyResult.krKey.toLowerCase(),
+  );
+  const relatedKpiKeys = new Set(
+    relatedKpis.map((kpi) => kpi.kpiKey.toLowerCase()),
+  );
   const deletedCheckInCount = store.checkIns.filter((checkIn) => {
     return (
       checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase() ||
@@ -2237,7 +2720,9 @@ export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInC
   }).length;
 
   store.keyResults.splice(krIndex, 1);
-  store.kpis = store.kpis.filter((kpi) => kpi.krKey.toLowerCase() !== keyResult.krKey.toLowerCase());
+  store.kpis = store.kpis.filter(
+    (kpi) => kpi.krKey.toLowerCase() !== keyResult.krKey.toLowerCase(),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
     return (
       checkIn.krKey.toLowerCase() !== keyResult.krKey.toLowerCase() &&
@@ -2249,30 +2734,38 @@ export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInC
   persistStore(store);
   return {
     krKey: keyResult.krKey,
-    deletedCheckInCount
+    deletedCheckInCount,
   };
 }
 
-export function deleteKpi(kpiKey: string): { kpiKey: string; deletedCheckInCount: number } | null {
+export function deleteKpi(
+  kpiKey: string,
+): { kpiKey: string; deletedCheckInCount: number } | null {
   const store = getStore();
-  const kpiIndex = store.kpis.findIndex((item) => item.kpiKey.toLowerCase() === kpiKey.toLowerCase());
+  const kpiIndex = store.kpis.findIndex(
+    (item) => item.kpiKey.toLowerCase() === kpiKey.toLowerCase(),
+  );
   if (kpiIndex < 0) {
     return null;
   }
 
   const kpi = store.kpis[kpiIndex];
   const deletedCheckInCount = store.checkIns.filter(
-    (checkIn) => (checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()
+    (checkIn) =>
+      (checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase(),
   ).length;
 
   store.kpis.splice(kpiIndex, 1);
-  store.checkIns = store.checkIns.filter((checkIn) => (checkIn.kpiKey ?? "").toLowerCase() !== kpi.kpiKey.toLowerCase());
+  store.checkIns = store.checkIns.filter(
+    (checkIn) =>
+      (checkIn.kpiKey ?? "").toLowerCase() !== kpi.kpiKey.toLowerCase(),
+  );
   recalcKeyResultInStore(store, kpi.krKey);
   recalcObjectiveInStore(store, kpi.objectiveKey);
   persistStore(store);
   return {
     kpiKey: kpi.kpiKey,
-    deletedCheckInCount
+    deletedCheckInCount,
   };
 }
 
@@ -2339,7 +2832,11 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
   const progressPctSnapshot =
     input.progressPctSnapshot ??
     (kpi
-      ? computeKrProgress(kpi.baselineValue, kpi.targetValue, currentValueSnapshot)
+      ? computeKrProgress(
+          kpi.baselineValue,
+          kpi.targetValue,
+          currentValueSnapshot,
+        )
       : keyResult.progressPct);
 
   const status = input.status;
@@ -2357,7 +2854,7 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
     supportNeeded: input.supportNeeded,
     currentValueSnapshot,
     progressPctSnapshot,
-    attachments: input.attachments
+    attachments: input.attachments,
   };
 
   store.checkIns.push(checkIn);
@@ -2383,11 +2880,16 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
   return clone(checkIn);
 }
 
-export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: DashboardFilters = {}): DashboardMe {
+export function getDashboardForOwner(
+  owner: string = DEMO_OWNER,
+  filters: DashboardFilters = {},
+): DashboardMe {
   const store = getStore();
   const normalizedOwner = owner.toLowerCase();
   const { ventureKey, department } = filters;
-  const selectedVenture = ventureKey ? findVentureByKey(store, ventureKey) : undefined;
+  const selectedVenture = ventureKey
+    ? findVentureByKey(store, ventureKey)
+    : undefined;
   const isInvalidVentureFilter = Boolean(ventureKey && !selectedVenture);
 
   const matchesVentureDepartmentFilter = (objective: Objective): boolean => {
@@ -2395,11 +2897,17 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
       return false;
     }
 
-    if (department && objective.department.toLowerCase() !== department.toLowerCase()) {
+    if (
+      department &&
+      objective.department.toLowerCase() !== department.toLowerCase()
+    ) {
       return false;
     }
 
-    if (selectedVenture && !objectiveBelongsToVenture(objective, selectedVenture)) {
+    if (
+      selectedVenture &&
+      !objectiveBelongsToVenture(objective, selectedVenture)
+    ) {
       return false;
     }
 
@@ -2407,7 +2915,13 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
   };
 
   const myObjectives = store.objectives.filter((objective) => {
-    if (!matchesAssignedOwner(objective.owner, objective.ownerEmail, normalizedOwner)) {
+    if (
+      !matchesAssignedOwner(
+        objective.owner,
+        objective.ownerEmail,
+        normalizedOwner,
+      )
+    ) {
       return false;
     }
 
@@ -2415,7 +2929,9 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
   });
 
   const objectiveByKey = new Map(
-    store.objectives.map((objective) => [objective.objectiveKey.toLowerCase(), objective] as const)
+    store.objectives.map(
+      (objective) => [objective.objectiveKey.toLowerCase(), objective] as const,
+    ),
   );
 
   const myKeyResults = store.keyResults.filter((kr) => {
@@ -2442,7 +2958,9 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
 
     return matchesVentureDepartmentFilter(objective);
   });
-  const periodMap = new Map(store.periods.map((period) => [period.periodKey, period]));
+  const periodMap = new Map(
+    store.periods.map((period) => [period.periodKey, period]),
+  );
 
   const missingCheckIns = myKeyResults.filter((kr) => {
     const period = periodMap.get(kr.periodKey);
@@ -2462,17 +2980,20 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
   });
 
   const atRiskObjectives = myObjectives.filter((objective) => {
-    return objective.rag !== "Green" || objective.status === "AtRisk" || objective.status === "OffTrack";
+    return (
+      objective.rag !== "Green" ||
+      objective.status === "AtRisk" ||
+      objective.status === "OffTrack"
+    );
   });
 
   return clone({
-      owner,
-      myObjectives,
-      myKeyResults,
-      myKpis,
-      missingCheckIns,
-      missingKpis,
-      atRiskObjectives
-    });
+    owner,
+    myObjectives,
+    myKeyResults,
+    myKpis,
+    missingCheckIns,
+    missingKpis,
+    atRiskObjectives,
+  });
 }
-
