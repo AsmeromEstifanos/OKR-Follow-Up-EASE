@@ -313,7 +313,11 @@ export default function DashboardEaseObjectiveCard({
                   <h3>{objective.title}</h3>
                 )}
                 {!isEditing ? (
-                  <EaseCardDetailBlocks note={notes} blockers={blockers} />
+                  <EaseCardDetailBlocks
+                    note={notes}
+                    blockers={blockers}
+                    keyRisksDependency={keyRisksDependency}
+                  />
                 ) : null}
               </div>
               <div className="ease-card-head-side">

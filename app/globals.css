@@ -1101,10 +1101,11 @@ a {
 }
 
 .ease-objective-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 1rem;
+  width: 100%;
 }
 
 .ease-objective-heading-copy,
@@ -1112,6 +1113,12 @@ a {
 .ease-kpi-title-block {
   display: grid;
   gap: 0.95rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.ease-objective-heading-copy {
+  flex: 1 1 auto;
 }
 
 .ease-objective-heading-copy h3,
@@ -1152,14 +1159,17 @@ a {
   display: grid;
   gap: 0.6rem;
   margin-top: 0.2rem;
+  width: 100%;
 }
 
 .ease-card-detail {
   display: grid;
   gap: 0.45rem;
+  width: 100%;
   padding: 0.65rem 0.8rem;
   border: 1px solid #e2e7eb;
   border-radius: 12px;
+  box-sizing: border-box;
 }
 
 .ease-card-detail-note {
@@ -1170,6 +1180,11 @@ a {
 .ease-card-detail-blockers {
   background: #fff1f1;
   border-color: #f0b9b9;
+}
+
+.ease-card-detail-risks {
+  background: #fff4f5;
+  border-color: #efc2cc;
 }
 
 .ease-card-detail-tag {
@@ -1191,6 +1206,11 @@ a {
 .ease-card-detail-tag-blockers {
   background: #ffd6d6;
   color: #922b2b;
+}
+
+.ease-card-detail-tag-risks {
+  background: #ffdfe5;
+  color: #96394e;
 }
 
 .ease-card-detail-body {
@@ -1483,6 +1503,9 @@ a {
 }
 
 .ease-title-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 96px;
   resize: vertical;
   line-height: 1.5;
@@ -1512,7 +1535,7 @@ a {
   }
 
   .ease-objective-heading {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.55rem;
   }
 

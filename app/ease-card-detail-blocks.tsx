@@ -3,6 +3,7 @@
 type Props = {
   note?: string | null;
   blockers?: string | null;
+  keyRisksDependency?: string | null;
 };
 
 function normalizeText(value: string | null | undefined): string {
@@ -12,11 +13,13 @@ function normalizeText(value: string | null | undefined): string {
 export default function EaseCardDetailBlocks({
   note,
   blockers,
+  keyRisksDependency,
 }: Props): JSX.Element | null {
   const noteText = normalizeText(note);
   const blockerText = normalizeText(blockers);
+  const keyRisksDependencyText = normalizeText(keyRisksDependency);
 
-  if (!noteText && !blockerText) {
+  if (!noteText && !blockerText && !keyRisksDependencyText) {
     return null;
   }
 
@@ -36,6 +39,14 @@ export default function EaseCardDetailBlocks({
             Blockers
           </span>
           <div className="ease-card-detail-body">{blockerText}</div>
+        </div>
+      ) : null}
+      {keyRisksDependencyText ? (
+        <div className="ease-card-detail ease-card-detail-risks">
+          <span className="ease-card-detail-tag ease-card-detail-tag-risks">
+            Key Risks/Dependency
+          </span>
+          <div className="ease-card-detail-body">{keyRisksDependencyText}</div>
         </div>
       ) : null}
     </div>
