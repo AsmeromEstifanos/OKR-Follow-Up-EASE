@@ -546,14 +546,17 @@ function recalcKeyResultInStore(store: StoreState, krKey: string): void {
 
   const childKpis = store.kpis.filter((kpi) => kpi.krKey === krKey);
   if (childKpis.length === 0) {
-    keyResult.progressPct = computeKrProgress(keyResult.baselineValue, keyResult.targetValue, keyResult.currentValue);
+    keyResult.progressPct = 0;
+    keyResult.currentValue = 0;
+    keyResult.targetValue = 100;
     keyResult.status = getStatusFromProgress(keyResult.progressPct);
     return;
   }
 
   const progressPct = computeObjectiveProgress(childKpis);
   keyResult.progressPct = progressPct;
-  keyResult.currentValue = childKpis.reduce((sum, item) => sum + item.currentValue, 0);
+  keyResult.currentValue = progressPct;
+  keyResult.targetValue = 100;
   keyResult.status = getStatusFromProgress(progressPct);
   keyResult.lastCheckinAt =
     sortByDateDescending(childKpis, (item) => item.lastCheckinAt ?? "")[0]?.lastCheckinAt ?? keyResult.lastCheckinAt;
@@ -609,13 +612,17 @@ function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
   objectiveKrs.forEach((kr) => recalcKeyResultInStore(store, kr.krKey));
 
   if (objectiveKrs.length === 0) {
-    objective.progressPct = computeKrProgress(objective.baselineValue, objective.targetValue, objective.currentValue);
+    objective.progressPct = 0;
+    objective.currentValue = 0;
+    objective.targetValue = 100;
     objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
     return;
   }
 
   const progressPct = computeObjectiveProgress(objectiveKrs);
   objective.progressPct = progressPct;
+  objective.currentValue = progressPct;
+  objective.targetValue = 100;
   objective.rag = getRagFromProgress(progressPct, store.config.ragThresholds);
 }
 
@@ -669,8 +676,8 @@ function migrateObjectiveDefaults(store: StoreState): void {
 
     objective.metricType = normalizeMetricType(objective.metricType);
 
-    if (!Number.isFinite(objective.baselineValue)) {
-      objective.baselineValue = 0;
+    if (!Number.isFinite(objective.baselineValue) || objective.baselineValue <= 0) {
+      objective.baselineValue = 1;
     }
 
     if (!Number.isFinite(objective.targetValue)) {
@@ -723,6 +730,10 @@ function migrateKrDefaults(store: StoreState): void {
 
     kr.metricType = normalizeMetricType(kr.metricType);
 
+    if (!Number.isFinite(kr.baselineValue) || kr.baselineValue <= 0) {
+      kr.baselineValue = 1;
+    }
+
     if (kr.blockers === undefined || kr.blockers === null) {
       kr.blockers = "";
     }
@@ -748,6 +759,10 @@ function migrateKpiDefaults(store: StoreState): void {
     }
 
     kpi.metricType = normalizeMetricType(kpi.metricType);
+
+    if (!Number.isFinite(kpi.baselineValue) || kpi.baselineValue <= 0) {
+      kpi.baselineValue = 1;
+    }
 
     if (kpi.blockers === undefined || kpi.blockers === null) {
       kpi.blockers = "";
@@ -791,6 +806,7 @@ function applyStoreMigrations(store: StoreState): void {
   migrateObjectiveDefaults(store);
   migrateKrDefaults(store);
   migrateKpiDefaults(store);
+  recalcAllObjectivesInStore(store);
   persistStore(store);
 }
 
@@ -1362,12 +1378,12 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const notes = normalizeName(input.notes || input.description || "");
   const cycle = normalizeOkrCycle(input.okrCycle);
   const metricType = normalizeMetricType(input.metricType);
-  const baselineValue = Number.isFinite(input.baselineValue) ? input.baselineValue : 0;
-  const targetValue = Number.isFinite(input.targetValue) ? input.targetValue : 100;
-  const currentValue = Number.isFinite(input.currentValue) ? input.currentValue : 0;
+  const baselineValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
+  const targetValue = 100;
+  const currentValue = 0;
   const dueDate = normalizeName(input.dueDate || input.endDate || "");
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
-  const progressPct = input.progressPct ?? computeKrProgress(baselineValue, targetValue, currentValue);
+  const progressPct = 0;
 
   const objective: Objective = {
     objectiveKey,
@@ -1465,15 +1481,7 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
   }
 
   if (patch.baselineValue !== undefined) {
-    objective.baselineValue = patch.baselineValue;
-  }
-
-  if (patch.targetValue !== undefined) {
-    objective.targetValue = patch.targetValue;
-  }
-
-  if (patch.currentValue !== undefined) {
-    objective.currentValue = patch.currentValue;
+    objective.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
   }
 
   if (patch.blockers !== undefined) {
@@ -1496,11 +1504,6 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     objective.confidence = patch.confidence;
   }
 
-  if (patch.progressPct !== undefined) {
-    objective.progressPct = clampPercent(patch.progressPct);
-    objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
-  }
-
   if (patch.startDate !== undefined) {
     objective.startDate = normalizeName(patch.startDate);
   }
@@ -1521,15 +1524,7 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
     objective.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
   }
 
-  const objectiveMetricsChanged =
-    patch.baselineValue !== undefined || patch.targetValue !== undefined || patch.currentValue !== undefined;
-
-  if (patch.progressPct === undefined && objectiveMetricsChanged) {
-    objective.progressPct = computeKrProgress(objective.baselineValue, objective.targetValue, objective.currentValue);
-    objective.rag = getRagFromProgress(objective.progressPct, store.config.ragThresholds);
-  } else if (patch.progressPct === undefined) {
-    recalcObjectiveInStore(store, objective.objectiveKey);
-  }
+  recalcObjectiveInStore(store, objective.objectiveKey);
 
   objective.lastCheckinAt = nowIso();
 
@@ -1622,8 +1617,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const objective = ensureObjectiveExists(store, input.objectiveKey);
   const periodKey = resolvePeriodKey(store, input.periodKey, objective.periodKey);
 
-  const progressPct =
-    input.progressPct ?? computeKrProgress(input.baselineValue, input.targetValue, input.currentValue);
+  const weightValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
   const notes = normalizeName(input.notes ?? "");
@@ -1637,10 +1631,10 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
     ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
     metricType: normalizeMetricType(input.metricType),
-    baselineValue: input.baselineValue,
-    targetValue: input.targetValue,
-    currentValue: input.currentValue,
-    progressPct,
+    baselineValue: weightValue,
+    targetValue: 100,
+    currentValue: 0,
+    progressPct: 0,
     status: input.status,
     dueDate: input.dueDate,
     checkInFrequency,
@@ -1706,7 +1700,10 @@ export function createKpi(input: CreateKpiInput): Kpi {
   }
 
   const periodKey = resolvePeriodKey(store, input.periodKey, keyResult.periodKey || objective.periodKey);
-  const progressPct = input.progressPct ?? computeKrProgress(input.baselineValue, input.targetValue, input.currentValue);
+  const baselineValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
+  const targetValue = Number.isFinite(input.targetValue) ? input.targetValue : 100;
+  const currentValue = Number.isFinite(input.currentValue) ? input.currentValue : 0;
+  const progressPct = computeKrProgress(baselineValue, targetValue, currentValue);
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
   const notes = normalizeName(input.notes ?? "");
@@ -1721,9 +1718,9 @@ export function createKpi(input: CreateKpiInput): Kpi {
     owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
     ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
     metricType: normalizeMetricType(input.metricType),
-    baselineValue: input.baselineValue,
-    targetValue: input.targetValue,
-    currentValue: input.currentValue,
+    baselineValue,
+    targetValue,
+    currentValue,
     progressPct,
     status: input.status,
     dueDate: input.dueDate,
@@ -1789,15 +1786,7 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
   }
 
   if (patch.baselineValue !== undefined) {
-    keyResult.baselineValue = patch.baselineValue;
-  }
-
-  if (patch.targetValue !== undefined) {
-    keyResult.targetValue = patch.targetValue;
-  }
-
-  if (patch.currentValue !== undefined) {
-    keyResult.currentValue = patch.currentValue;
+    keyResult.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
   }
 
   if (patch.status !== undefined) {
@@ -1820,12 +1809,6 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     keyResult.notes = normalizeName(patch.notes);
   }
 
-  keyResult.progressPct = computeKrProgress(keyResult.baselineValue, keyResult.targetValue, keyResult.currentValue);
-
-  if (patch.status === undefined) {
-    keyResult.status = getStatusFromProgress(keyResult.progressPct);
-  }
-
   keyResult.lastCheckinAt = nowIso();
 
   if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
@@ -1838,6 +1821,7 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     recalcObjectiveInStore(store, previousObjectiveKey);
   }
 
+  recalcKeyResultInStore(store, keyResult.krKey);
   recalcObjectiveInStore(store, keyResult.objectiveKey);
   persistStore(store);
   return clone(keyResult);
@@ -1898,7 +1882,7 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
   }
 
   if (patch.baselineValue !== undefined) {
-    kpi.baselineValue = patch.baselineValue;
+    kpi.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
   }
 
   if (patch.targetValue !== undefined) {
@@ -2072,11 +2056,9 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
   const currentValueSnapshot = input.currentValueSnapshot;
   const progressPctSnapshot =
     input.progressPctSnapshot ??
-    computeKrProgress(
-      (kpi ?? keyResult).baselineValue,
-      (kpi ?? keyResult).targetValue,
-      currentValueSnapshot
-    );
+    (kpi
+      ? computeKrProgress(kpi.baselineValue, kpi.targetValue, currentValueSnapshot)
+      : keyResult.progressPct);
 
   const status = input.status;
   const checkIn: CheckIn = {
@@ -2107,12 +2089,11 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
     kpi.lastCheckinAt = checkInAt;
     recalcKeyResultInStore(store, keyResult.krKey);
   } else {
-    keyResult.currentValue = currentValueSnapshot;
-    keyResult.progressPct = progressPctSnapshot;
     keyResult.status = status;
     keyResult.blockers = normalizeName(input.blockers);
     keyResult.notes = normalizeName(input.updateNotes);
     keyResult.lastCheckinAt = checkInAt;
+    recalcKeyResultInStore(store, keyResult.krKey);
   }
 
   recalcObjectiveInStore(store, keyResult.objectiveKey);

@@ -28,8 +28,6 @@ type PendingKr = {
   ownerEmail: string;
   metricType: MetricType;
   baselineValue: number;
-  targetValue: number;
-  currentValue: number;
   status: KrStatus;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
@@ -94,9 +92,7 @@ export default function DashboardKrControls({
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
   const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
-  const [baselineValue, setBaselineValue] = useState("0");
-  const [targetValue, setTargetValue] = useState("100");
-  const [currentValue, setCurrentValue] = useState("0");
+  const [baselineValue, setBaselineValue] = useState("1");
   const [status, setStatus] = useState<KrStatus>(keyResultStatusOptions[0] ?? "NotStarted");
   const [dueDate, setDueDate] = useState(toDateInput(defaultDueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
@@ -136,9 +132,7 @@ export default function DashboardKrControls({
     setOwner("");
     setOwnerEmail("");
     setMetricType(metricTypeOptions[0] ?? "Operational");
-    setBaselineValue("0");
-    setTargetValue("100");
-    setCurrentValue("0");
+    setBaselineValue("1");
     setStatus(keyResultStatusOptions[0] ?? "NotStarted");
     setDueDate(toDateInput(defaultDueDate));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
@@ -164,10 +158,12 @@ export default function DashboardKrControls({
       return null;
     }
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
-    const current = Number(currentValue);
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current values must be numbers.");
+    if (!Number.isFinite(baseline)) {
+      setError("Weight must be a valid number.");
+      return null;
+    }
+    if (baseline <= 0) {
+      setError("Weight must be greater than 0.");
       return null;
     }
     if (!dueDate) {
@@ -181,8 +177,6 @@ export default function DashboardKrControls({
       ownerEmail: ownerEmail.trim(),
       metricType,
       baselineValue: baseline,
-      targetValue: target,
-      currentValue: current,
       status,
       dueDate,
       checkInFrequency,
@@ -292,9 +286,8 @@ export default function DashboardKrControls({
                 {metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
-            <div className="field"><label>Baseline Value</label><input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-            <div className="field"><label>Target Value</label><input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-            <div className="field"><label>Current Value</label><input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
+            <div className="field"><label>Weight</label><input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
+            <div className="field"><label>Progress %</label><input value="0" readOnly disabled /></div>
             <div className="field">
               <label>{itemLabel} Status</label>
               <select value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>

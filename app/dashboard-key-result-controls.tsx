@@ -97,7 +97,7 @@ export default function DashboardKeyResultControls({
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
   const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
-  const [baselineValue, setBaselineValue] = useState("0");
+  const [baselineValue, setBaselineValue] = useState("1");
   const [targetValue, setTargetValue] = useState("100");
   const [currentValue, setCurrentValue] = useState("0");
   const [status, setStatus] = useState<KrStatus>(keyResultStatusOptions[0] ?? "NotStarted");
@@ -107,6 +107,15 @@ export default function DashboardKeyResultControls({
   const [notes, setNotes] = useState("");
   const [pendingItems, setPendingItems] = useState<PendingKpi[]>([]);
   const [error, setError] = useState("");
+  const progressPreview = (() => {
+    const target = Number(targetValue);
+    const current = Number(currentValue);
+    if (!Number.isFinite(target) || target <= 0 || !Number.isFinite(current)) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(100, (current / target) * 100));
+  })();
 
   const loadCodePreview = async (): Promise<void> => {
     const response = await fetch(apiPath(`/api/codes/kpi?krKey=${encodeURIComponent(krKey)}`), { cache: "no-store" });
@@ -124,7 +133,7 @@ export default function DashboardKeyResultControls({
     setOwner("");
     setOwnerEmail("");
     setMetricType(metricTypeOptions[0] ?? "Operational");
-    setBaselineValue("0");
+    setBaselineValue("1");
     setTargetValue("100");
     setCurrentValue("0");
     setStatus(keyResultStatusOptions[0] ?? "NotStarted");
@@ -168,7 +177,17 @@ export default function DashboardKeyResultControls({
     const target = Number(targetValue);
     const current = Number(currentValue);
     if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current values must be numbers.");
+      setError("Weight, target, and current values must be numbers.");
+      return null;
+    }
+
+    if (baseline <= 0) {
+      setError("Weight must be greater than 0.");
+      return null;
+    }
+
+    if (target <= 0) {
+      setError("Target value must be greater than 0.");
       return null;
     }
 
@@ -306,7 +325,7 @@ export default function DashboardKeyResultControls({
               </select>
             </div>
             <div className="field">
-              <label>Baseline Value</label>
+              <label>Weight</label>
               <input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
             </div>
             <div className="field">
@@ -316,6 +335,10 @@ export default function DashboardKeyResultControls({
             <div className="field">
               <label>Current Value</label>
               <input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
+            </div>
+            <div className="field">
+              <label>Progress %</label>
+              <input value={String(Math.round(progressPreview * 100) / 100)} readOnly disabled />
             </div>
             <div className="field">
               <label>{itemLabel} Status</label>

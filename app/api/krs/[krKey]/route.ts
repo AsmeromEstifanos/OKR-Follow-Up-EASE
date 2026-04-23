@@ -108,14 +108,6 @@ function parseKrPatch(body: unknown): UpdateKeyResultInput {
     patch.baselineValue = expectNumber(raw, "baselineValue");
   }
 
-  if (raw.targetValue !== undefined) {
-    patch.targetValue = expectNumber(raw, "targetValue");
-  }
-
-  if (raw.currentValue !== undefined) {
-    patch.currentValue = expectNumber(raw, "currentValue");
-  }
-
   if (raw.status !== undefined) {
     patch.status = expectString(raw, "status");
   }

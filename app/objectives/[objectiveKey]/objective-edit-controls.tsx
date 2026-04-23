@@ -30,15 +30,11 @@ type ObjectiveDraft = {
   okrCycle: OkrCycle;
   metricType: MetricType;
   baselineValue: string;
-  targetValue: string;
-  currentValue: string;
   blockers: string;
   keyRisksDependency: string;
   notes: string;
   status: ObjectiveStatus;
   confidence: Confidence;
-  progressValue: string;
-  progressPct: string;
   startDate: string;
   endDate: string;
   dueDate: string;
@@ -59,6 +55,14 @@ function toDateInput(value: string): string {
   return value.slice(0, 10);
 }
 
+function normalizeWeightValue(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "1";
+  }
+
+  return String(value);
+}
+
 function toDraft(objective: Objective): ObjectiveDraft {
   return {
     objectiveCode: objective.objectiveCode ?? objective.objectiveKey,
@@ -71,16 +75,12 @@ function toDraft(objective: Objective): ObjectiveDraft {
     objectiveType: objective.objectiveType,
     okrCycle: objective.okrCycle,
     metricType: objective.metricType,
-    baselineValue: String(objective.baselineValue),
-    targetValue: String(objective.targetValue),
-    currentValue: String(objective.currentValue),
+    baselineValue: normalizeWeightValue(objective.baselineValue),
     blockers: objective.blockers ?? "",
     keyRisksDependency: objective.keyRisksDependency,
     notes: objective.notes,
     status: objective.status,
     confidence: objective.confidence,
-    progressValue: String(Math.round(objective.progressPct)),
-    progressPct: String(objective.progressPct),
     startDate: toDateInput(objective.startDate),
     endDate: toDateInput(objective.endDate),
     dueDate: toDateInput(objective.dueDate),
@@ -114,22 +114,15 @@ export default function ObjectiveEditControls({
     setMessage("");
     setError("");
 
-    const parsedProgressValue = Number(draft.progressValue);
-    const parsedProgressPct = Number(draft.progressPct);
     const baselineValue = Number(draft.baselineValue);
-    const targetValue = Number(draft.targetValue);
-    const currentValue = Number(draft.currentValue);
-    const hasProgressPct = Number.isFinite(parsedProgressPct);
-    const hasProgressValue = Number.isFinite(parsedProgressValue);
-
-    if (!hasProgressPct && !hasProgressValue) {
-      setError("Provide Progress or Progress % as a valid number.");
+    if (!Number.isFinite(baselineValue)) {
+      setError("Weight must be a valid number.");
       setIsSaving(false);
       return;
     }
 
-    if (!Number.isFinite(baselineValue) || !Number.isFinite(targetValue) || !Number.isFinite(currentValue)) {
-      setError("Baseline, target, and current values must be valid numbers.");
+    if (baselineValue <= 0) {
+      setError("Weight must be greater than 0.");
       setIsSaving(false);
       return;
     }
@@ -139,9 +132,6 @@ export default function ObjectiveEditControls({
       setIsSaving(false);
       return;
     }
-
-    const resolvedProgressPct = hasProgressPct ? parsedProgressPct : parsedProgressValue;
-
     const response = await fetch(apiPath(`/api/objectives/${encodeURIComponent(objective.objectiveKey)}`), {
       method: "PATCH",
       headers: {
@@ -160,14 +150,11 @@ export default function ObjectiveEditControls({
         okrCycle: draft.okrCycle,
         metricType: draft.metricType,
         baselineValue,
-        targetValue,
-        currentValue,
         blockers: draft.blockers.trim(),
         keyRisksDependency: draft.keyRisksDependency.trim(),
         notes: draft.notes.trim(),
         status: draft.status,
         confidence: draft.confidence,
-        progressPct: resolvedProgressPct,
         startDate: draft.startDate,
         endDate: draft.dueDate,
         dueDate: draft.dueDate,
@@ -309,7 +296,7 @@ export default function ObjectiveEditControls({
             </div>
 
             <div className="field">
-              <label htmlFor="objective-baseline-edit">Baseline Value</label>
+              <label htmlFor="objective-baseline-edit">Weight</label>
               <input
                 id="objective-baseline-edit"
                 type="number"
@@ -320,24 +307,13 @@ export default function ObjectiveEditControls({
             </div>
 
             <div className="field">
-              <label htmlFor="objective-target-edit">Target Value</label>
+              <label htmlFor="objective-progress-pct-edit">Progress %</label>
               <input
-                id="objective-target-edit"
+                id="objective-progress-pct-edit"
                 type="number"
                 step="any"
-                value={draft.targetValue}
-                onChange={(event) => setDraft((current) => ({ ...current, targetValue: event.target.value }))}
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="objective-current-edit">Current Value</label>
-              <input
-                id="objective-current-edit"
-                type="number"
-                step="any"
-                value={draft.currentValue}
-                onChange={(event) => setDraft((current) => ({ ...current, currentValue: event.target.value }))}
+                value={String(Math.round(objective.progressPct * 100) / 100)}
+                readOnly
               />
             </div>
 
@@ -369,28 +345,6 @@ export default function ObjectiveEditControls({
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="field">
-              <label htmlFor="objective-progress-edit">Progress</label>
-              <input
-                id="objective-progress-edit"
-                type="number"
-                step="any"
-                value={draft.progressValue}
-                onChange={(event) => setDraft((current) => ({ ...current, progressValue: event.target.value }))}
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="objective-progress-pct-edit">Progress %</label>
-              <input
-                id="objective-progress-pct-edit"
-                type="number"
-                step="any"
-                value={draft.progressPct}
-                onChange={(event) => setDraft((current) => ({ ...current, progressPct: event.target.value }))}
-              />
             </div>
 
             <div className="field">

@@ -18,21 +18,43 @@ export function clampPercent(value: number): number {
   return Number(value.toFixed(2));
 }
 
-export function computeKrProgress(baselineValue: number, targetValue: number, currentValue: number): number {
-  if (targetValue === baselineValue) {
-    return currentValue >= targetValue ? 100 : 0;
+export function computeKrProgress(_baselineValue: number, targetValue: number, currentValue: number): number {
+  if (!Number.isFinite(targetValue) || targetValue <= 0) {
+    return 0;
   }
 
-  return clampPercent(((currentValue - baselineValue) / (targetValue - baselineValue)) * 100);
+  return clampPercent((currentValue / targetValue) * 100);
 }
 
-export function computeObjectiveProgress(keyResults: Pick<KeyResult, "progressPct">[]): number {
+function resolveWeight(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
+  }
+
+  return value;
+}
+
+export function computeObjectiveProgress(
+  keyResults: Array<Pick<KeyResult, "progressPct" | "baselineValue">>,
+): number {
   if (keyResults.length === 0) {
     return 0;
   }
 
-  const total = keyResults.reduce((sum, kr) => sum + kr.progressPct, 0);
-  return clampPercent(total / keyResults.length);
+  const totalWeight = keyResults.reduce(
+    (sum, kr) => sum + resolveWeight(kr.baselineValue),
+    0,
+  );
+  const total = keyResults.reduce(
+    (sum, kr) => sum + clampPercent(kr.progressPct) * resolveWeight(kr.baselineValue),
+    0,
+  );
+
+  if (totalWeight <= 0) {
+    return 0;
+  }
+
+  return clampPercent(total / totalWeight);
 }
 
 export function isMissingCheckin(

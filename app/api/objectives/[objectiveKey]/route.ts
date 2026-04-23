@@ -144,14 +144,6 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
     patch.baselineValue = expectNumber(raw, "baselineValue");
   }
 
-  if (raw.targetValue !== undefined) {
-    patch.targetValue = expectNumber(raw, "targetValue");
-  }
-
-  if (raw.currentValue !== undefined) {
-    patch.currentValue = expectNumber(raw, "currentValue");
-  }
-
   if (raw.blockers !== undefined) {
     patch.blockers = expectString(raw, "blockers", true);
   }
@@ -170,10 +162,6 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
 
   if (raw.confidence !== undefined) {
     patch.confidence = expectEnum(raw, "confidence", CONFIDENCE_VALUES);
-  }
-
-  if (raw.progressPct !== undefined) {
-    patch.progressPct = expectNumber(raw, "progressPct");
   }
 
   if (raw.startDate !== undefined) {

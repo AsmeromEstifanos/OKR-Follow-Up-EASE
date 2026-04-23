@@ -6,7 +6,7 @@ import { apiPath } from "@/lib/base-path";
 import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type { CheckInFrequency, KeyResult, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type ObjectiveOption = {
   objectiveKey: string;
@@ -30,10 +30,6 @@ type KeyResultDraft = {
   ownerEmail: string;
   metricType: MetricType;
   baselineValue: string;
-  targetValue: string;
-  currentValue: string;
-  krProgress: string;
-  krProgressPct: string;
   status: KrStatus;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
@@ -53,6 +49,14 @@ function toDateInput(value: string | null): string {
   return value.slice(0, 10);
 }
 
+function normalizeWeightValue(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "1";
+  }
+
+  return String(value);
+}
+
 function toDraft(keyResult: KeyResult): KeyResultDraft {
   return {
     krCode: keyResult.krCode ?? keyResult.krKey,
@@ -61,36 +65,13 @@ function toDraft(keyResult: KeyResult): KeyResultDraft {
     owner: resolveOwnerName(keyResult.owner, keyResult.ownerEmail),
     ownerEmail: resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail),
     metricType: keyResult.metricType,
-    baselineValue: String(keyResult.baselineValue),
-    targetValue: String(keyResult.targetValue),
-    currentValue: String(keyResult.currentValue),
-    krProgress: `${keyResult.currentValue} / ${keyResult.targetValue}`,
-    krProgressPct: String(keyResult.progressPct),
+    baselineValue: normalizeWeightValue(keyResult.baselineValue),
     status: keyResult.status,
     dueDate: toDateInput(keyResult.dueDate),
     checkInFrequency: keyResult.checkInFrequency,
     blockers: keyResult.blockers ?? "",
     notes: keyResult.notes
   };
-}
-
-function parseProgressValue(value: string): { current: number; target: number } | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parts = trimmed.split("/").map((part) => Number(part.trim()));
-  if (parts.length !== 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) {
-    return null;
-  }
-
-  const [current, target] = parts;
-  if (!Number.isFinite(current) || !Number.isFinite(target) || target === 0) {
-    return null;
-  }
-
-  return { current, target };
 }
 
 export default function KeyResultEditControls({
@@ -106,7 +87,6 @@ export default function KeyResultEditControls({
   const [draft, setDraft] = useState<KeyResultDraft>(() => toDraft(keyResult));
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const initialDraft = useMemo(() => toDraft(keyResult), [keyResult]);
 
   useEffect(() => {
     setDraft(toDraft(keyResult));
@@ -118,37 +98,16 @@ export default function KeyResultEditControls({
     setError("");
 
     const baselineValue = Number(draft.baselineValue);
-    let targetValue = Number(draft.targetValue);
-    let currentValue = Number(draft.currentValue);
-
-    if (!Number.isFinite(baselineValue) || !Number.isFinite(targetValue) || !Number.isFinite(currentValue)) {
-      setError("Baseline, target, and current values must be valid numbers.");
+    if (!Number.isFinite(baselineValue)) {
+      setError("Weight must be a valid number.");
       setIsSaving(false);
       return;
     }
 
-    const progressChanged = draft.krProgress.trim() !== initialDraft.krProgress.trim();
-    const progressPctChanged = draft.krProgressPct.trim() !== initialDraft.krProgressPct.trim();
-
-    if (progressChanged) {
-      const parsedProgress = parseProgressValue(draft.krProgress);
-      if (!parsedProgress) {
-        setError("KR Progress must use the format 'current / target' with valid numbers.");
-        setIsSaving(false);
-        return;
-      }
-
-      targetValue = parsedProgress.target;
-      currentValue = parsedProgress.current;
-    } else if (progressPctChanged) {
-      const progressPctValue = Number(draft.krProgressPct);
-      if (!Number.isFinite(progressPctValue)) {
-        setError("KR Progress % must be a valid number.");
-        setIsSaving(false);
-        return;
-      }
-
-      currentValue = baselineValue + ((targetValue - baselineValue) * progressPctValue) / 100;
+    if (baselineValue <= 0) {
+      setError("Weight must be greater than 0.");
+      setIsSaving(false);
+      return;
     }
 
     const response = await fetch(apiPath(`/api/krs/${encodeURIComponent(keyResult.krKey)}`), {
@@ -165,8 +124,6 @@ export default function KeyResultEditControls({
         ownerEmail: draft.ownerEmail.trim(),
         metricType: draft.metricType,
         baselineValue,
-        targetValue,
-        currentValue,
         status: draft.status,
         dueDate: draft.dueDate,
         checkInFrequency: draft.checkInFrequency,
@@ -265,7 +222,7 @@ export default function KeyResultEditControls({
           </div>
 
           <div className="field">
-            <label htmlFor={`kr-baseline-${keyResult.krKey}`}>Baseline Value</label>
+            <label htmlFor={`kr-baseline-${keyResult.krKey}`}>Weight</label>
             <input
               id={`kr-baseline-${keyResult.krKey}`}
               type="number"
@@ -276,24 +233,13 @@ export default function KeyResultEditControls({
           </div>
 
           <div className="field">
-            <label htmlFor={`kr-target-${keyResult.krKey}`}>Target Value</label>
+            <label htmlFor={`kr-progress-pct-${keyResult.krKey}`}>KR Progress %</label>
             <input
-              id={`kr-target-${keyResult.krKey}`}
+              id={`kr-progress-pct-${keyResult.krKey}`}
               type="number"
               step="any"
-              value={draft.targetValue}
-              onChange={(event) => setDraft((current) => ({ ...current, targetValue: event.target.value }))}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor={`kr-current-${keyResult.krKey}`}>Current Value</label>
-            <input
-              id={`kr-current-${keyResult.krKey}`}
-              type="number"
-              step="any"
-              value={draft.currentValue}
-              onChange={(event) => setDraft((current) => ({ ...current, currentValue: event.target.value }))}
+              value={String(Math.round(keyResult.progressPct * 100) / 100)}
+              readOnly
             />
           </div>
 
@@ -310,26 +256,6 @@ export default function KeyResultEditControls({
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor={`kr-progress-${keyResult.krKey}`}>KR Progress</label>
-            <input
-              id={`kr-progress-${keyResult.krKey}`}
-              value={draft.krProgress}
-              onChange={(event) => setDraft((current) => ({ ...current, krProgress: event.target.value }))}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor={`kr-progress-pct-${keyResult.krKey}`}>KR Progress %</label>
-            <input
-              id={`kr-progress-pct-${keyResult.krKey}`}
-              type="number"
-              step="any"
-              value={draft.krProgressPct}
-              onChange={(event) => setDraft((current) => ({ ...current, krProgressPct: event.target.value }))}
-            />
           </div>
 
           <div className="field">

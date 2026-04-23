@@ -16,7 +16,7 @@ import {
 } from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type KpiRowData = {
   kpi: Kpi;
@@ -84,12 +84,12 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
-  if (!Number.isFinite(target) || Math.abs(target) < 0.000001) {
-    return clampPercent(fallback);
+function normalizeWeightValue(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
   }
 
-  return clampPercent((current / target) * 100);
+  return value;
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -136,10 +136,7 @@ export default function DashboardEaseKrCard({
   const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(keyResult.metricType);
-  const [baselineValue, setBaselineValue] = useState(String(keyResult.baselineValue));
-  const [targetValue, setTargetValue] = useState(String(keyResult.targetValue));
-  const [currentValue, setCurrentValue] = useState(String(keyResult.currentValue));
-  const [progressPct, setProgressPct] = useState(String(keyResult.progressPct));
+  const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(keyResult.baselineValue)));
   const [status, setStatus] = useState<KrStatus>(keyResult.status);
   const [dueDate, setDueDate] = useState(toDateInput(keyResult.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(keyResult.checkInFrequency);
@@ -152,10 +149,7 @@ export default function DashboardEaseKrCard({
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
-    setBaselineValue(String(keyResult.baselineValue));
-    setTargetValue(String(keyResult.targetValue));
-    setCurrentValue(String(keyResult.currentValue));
-    setProgressPct(String(keyResult.progressPct));
+    setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
     setStatus(keyResult.status);
     setDueDate(toDateInput(keyResult.dueDate));
     setCheckInFrequency(keyResult.checkInFrequency);
@@ -163,10 +157,8 @@ export default function DashboardEaseKrCard({
     setNotes(keyResult.notes ?? "");
   }, [keyResult, codeValue]);
 
-  const progressValue = useMemo(
-    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
-    [baselineValue, currentValue, progressPct, targetValue]
-  );
+  const progressValue = clampPercent(keyResult.progressPct);
+  const displayWeight = normalizeWeightValue(keyResult.baselineValue);
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -176,10 +168,7 @@ export default function DashboardEaseKrCard({
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
-    setBaselineValue(String(keyResult.baselineValue));
-    setTargetValue(String(keyResult.targetValue));
-    setCurrentValue(String(keyResult.currentValue));
-    setProgressPct(String(keyResult.progressPct));
+    setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
     setStatus(keyResult.status);
     setDueDate(toDateInput(keyResult.dueDate));
     setCheckInFrequency(keyResult.checkInFrequency);
@@ -195,11 +184,13 @@ export default function DashboardEaseKrCard({
     }
 
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
-    const current = Number(currentValue);
+    if (!Number.isFinite(baseline)) {
+      setError("Weight must be numeric.");
+      return;
+    }
 
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Metric values must be numeric.");
+    if (baseline <= 0) {
+      setError("Weight must be greater than 0.");
       return;
     }
 
@@ -224,8 +215,6 @@ export default function DashboardEaseKrCard({
         ownerEmail: ownerEmail.trim(),
         metricType,
         baselineValue: baseline,
-        targetValue: target,
-        currentValue: current,
         status,
         dueDate,
         checkInFrequency,
@@ -327,7 +316,7 @@ export default function DashboardEaseKrCard({
             <span style={{ width: `${progressValue}%` }} />
           </div>
           <div className="ease-footer-line">
-            <span>Progress: {keyResult.currentValue} / {keyResult.targetValue}</span>
+            <span>Weight: {displayWeight}</span>
             <span>Due Date: {formatDate(keyResult.dueDate)}</span>
             <span>Last Updated: {formatDate(latestUpdatedAt ?? keyResult.lastCheckinAt)}</span>
           </div>
@@ -338,9 +327,7 @@ export default function DashboardEaseKrCard({
           <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
           <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
           <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-          <div className="field"><label>Baseline Value</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-          <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-          <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
+          <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
           <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
           <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>

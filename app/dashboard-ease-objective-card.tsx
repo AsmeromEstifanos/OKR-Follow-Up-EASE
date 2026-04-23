@@ -16,7 +16,7 @@ import {
 } from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type KeyResultRowData = {
   keyResult: KeyResult;
@@ -83,12 +83,12 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
-  if (!Number.isFinite(target) || Math.abs(target) < 0.000001) {
-    return clampPercent(fallback);
+function normalizeWeightValue(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
   }
 
-  return clampPercent((current / target) * 100);
+  return value;
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -139,10 +139,7 @@ export default function DashboardEaseObjectiveCard({
   const [status, setStatus] = useState<ObjectiveStatus>(objective.status);
   const [okrCycle, setOkrCycle] = useState<OkrCycle>(objective.okrCycle);
   const [metricType, setMetricType] = useState<MetricType>(objective.metricType);
-  const [baselineValue, setBaselineValue] = useState(String(objective.baselineValue));
-  const [targetValue, setTargetValue] = useState(String(objective.targetValue));
-  const [currentValue, setCurrentValue] = useState(String(objective.currentValue));
-  const [progressPct, setProgressPct] = useState(String(objective.progressPct));
+  const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(objective.baselineValue)));
   const [dueDate, setDueDate] = useState(toDateInput(objective.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(objective.checkInFrequency);
   const [blockers, setBlockers] = useState(objective.blockers ?? "");
@@ -158,10 +155,7 @@ export default function DashboardEaseObjectiveCard({
     setStatus(objective.status);
     setOkrCycle(objective.okrCycle);
     setMetricType(objective.metricType);
-    setBaselineValue(String(objective.baselineValue));
-    setTargetValue(String(objective.targetValue));
-    setCurrentValue(String(objective.currentValue));
-    setProgressPct(String(objective.progressPct));
+    setBaselineValue(String(normalizeWeightValue(objective.baselineValue)));
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
@@ -169,10 +163,8 @@ export default function DashboardEaseObjectiveCard({
     setNotes(objective.notes ?? objective.description ?? "");
   }, [objective, objectiveCode]);
 
-  const progressValue = useMemo(
-    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
-    [baselineValue, currentValue, progressPct, targetValue]
-  );
+  const progressValue = clampPercent(objective.progressPct);
+  const displayWeight = normalizeWeightValue(objective.baselineValue);
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -185,10 +177,7 @@ export default function DashboardEaseObjectiveCard({
     setStatus(objective.status);
     setOkrCycle(objective.okrCycle);
     setMetricType(objective.metricType);
-    setBaselineValue(String(objective.baselineValue));
-    setTargetValue(String(objective.targetValue));
-    setCurrentValue(String(objective.currentValue));
-    setProgressPct(String(objective.progressPct));
+    setBaselineValue(String(normalizeWeightValue(objective.baselineValue)));
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
@@ -204,11 +193,13 @@ export default function DashboardEaseObjectiveCard({
     }
 
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
-    const current = Number(currentValue);
+    if (!Number.isFinite(baseline)) {
+      setError("Weight must be numeric.");
+      return;
+    }
 
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current must be numeric.");
+    if (baseline <= 0) {
+      setError("Weight must be greater than 0.");
       return;
     }
 
@@ -216,8 +207,6 @@ export default function DashboardEaseObjectiveCard({
       setError("Due date is required.");
       return;
     }
-
-    const resolvedProgress = deriveProgressPct(baseline, target, current, Number(progressPct));
 
     setIsSaving(true);
     setError("");
@@ -237,10 +226,7 @@ export default function DashboardEaseObjectiveCard({
         okrCycle,
         metricType,
         baselineValue: baseline,
-        targetValue: target,
-        currentValue: current,
         status,
-        progressPct: resolvedProgress,
         dueDate,
         endDate: dueDate,
         checkInFrequency,
@@ -340,7 +326,7 @@ export default function DashboardEaseObjectiveCard({
                   <span style={{ width: `${progressValue}%` }} />
                 </div>
                 <div className="ease-footer-line">
-                  <span>Progress: {objective.currentValue} / {objective.targetValue}</span>
+                  <span>Weight: {displayWeight}</span>
                   <span>Due Date: {formatDate(objective.dueDate)}</span>
                   <span>Last Updated: {formatDate(objective.lastCheckinAt)}</span>
                 </div>
@@ -354,9 +340,7 @@ export default function DashboardEaseObjectiveCard({
                 <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(event) => setOkrCycle(event.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>Baseline Value</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>

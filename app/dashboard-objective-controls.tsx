@@ -39,8 +39,6 @@ type PendingObjective = {
   okrCycle: OkrCycle;
   metricType: MetricType;
   baselineValue: number;
-  targetValue: number;
-  currentValue: number;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
   blockers: string;
@@ -120,9 +118,7 @@ export default function DashboardObjectiveControls({
   const [status, setStatus] = useState<ObjectiveStatus>(objectiveStatusOptions[0] ?? "NotStarted");
   const [okrCycle, setOkrCycle] = useState<OkrCycle>(objectiveCycleOptions[0] ?? defaultCycle);
   const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
-  const [baselineValue, setBaselineValue] = useState<string>("0");
-  const [targetValue, setTargetValue] = useState<string>("100");
-  const [currentValue, setCurrentValue] = useState<string>("0");
+  const [baselineValue, setBaselineValue] = useState<string>("1");
   const [dueDate, setDueDate] = useState<string>(defaultEndDate ?? todayPlus(90));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
   const [blockers, setBlockers] = useState<string>("");
@@ -158,9 +154,7 @@ export default function DashboardObjectiveControls({
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
     setMetricType(metricTypeOptions[0] ?? "Operational");
-    setBaselineValue("0");
-    setTargetValue("100");
-    setCurrentValue("0");
+    setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
@@ -178,9 +172,7 @@ export default function DashboardObjectiveControls({
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
     setMetricType(metricTypeOptions[0] ?? "Operational");
-    setBaselineValue("0");
-    setTargetValue("100");
-    setCurrentValue("0");
+    setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
@@ -202,9 +194,7 @@ export default function DashboardObjectiveControls({
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
     setMetricType(metricTypeOptions[0] ?? "Operational");
-    setBaselineValue("0");
-    setTargetValue("100");
-    setCurrentValue("0");
+    setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
@@ -233,15 +223,14 @@ export default function DashboardObjectiveControls({
     const startDate = defaultStartDate ?? todayPlus(0);
     const resolvedDueDate = dueDate || defaultEndDate || todayPlus(90);
     const resolvedBaselineValue = Number(baselineValue);
-    const resolvedTargetValue = Number(targetValue);
-    const resolvedCurrentValue = Number(currentValue);
 
-    if (
-      !Number.isFinite(resolvedBaselineValue) ||
-      !Number.isFinite(resolvedTargetValue) ||
-      !Number.isFinite(resolvedCurrentValue)
-    ) {
-      setError("Baseline, target, and current values must be numbers.");
+    if (!Number.isFinite(resolvedBaselineValue)) {
+      setError("Weight must be a valid number.");
+      return null;
+    }
+
+    if (resolvedBaselineValue <= 0) {
+      setError("Weight must be greater than 0.");
       return null;
     }
 
@@ -259,8 +248,6 @@ export default function DashboardObjectiveControls({
       okrCycle,
       metricType,
       baselineValue: resolvedBaselineValue,
-      targetValue: resolvedTargetValue,
-      currentValue: resolvedCurrentValue,
       dueDate: resolvedDueDate,
       checkInFrequency,
       blockers: blockers.trim(),
@@ -332,8 +319,6 @@ export default function DashboardObjectiveControls({
             okrCycle: item.okrCycle,
             metricType: item.metricType,
             baselineValue: item.baselineValue,
-            targetValue: item.targetValue,
-            currentValue: item.currentValue,
             blockers: item.blockers,
             keyRisksDependency: item.keyRisksDependency,
             notes: item.notes,
@@ -474,7 +459,7 @@ export default function DashboardObjectiveControls({
               </select>
             </div>
             <div className="field">
-              <label>Baseline Value</label>
+              <label>Weight</label>
               <input
                 name="objectiveBaselineValue"
                 type="number"
@@ -485,26 +470,8 @@ export default function DashboardObjectiveControls({
               />
             </div>
             <div className="field">
-              <label>Target Value</label>
-              <input
-                name="objectiveTargetValue"
-                type="number"
-                step="any"
-                value={targetValue}
-                onChange={(event) => setTargetValue(event.target.value)}
-                disabled={isSaving}
-              />
-            </div>
-            <div className="field">
-              <label>Current Value</label>
-              <input
-                name="objectiveCurrentValue"
-                type="number"
-                step="any"
-                value={currentValue}
-                onChange={(event) => setCurrentValue(event.target.value)}
-                disabled={isSaving}
-              />
+              <label>Progress %</label>
+              <input value="0" readOnly disabled />
             </div>
             <div className="field">
               <label>Due Date</label>

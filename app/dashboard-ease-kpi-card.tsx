@@ -14,7 +14,7 @@ import {
 } from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   kpi: Kpi;
@@ -80,12 +80,20 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-function deriveProgressPct(baseline: number, target: number, current: number, fallback: number): number {
+function deriveProgressPct(target: number, current: number, fallback: number): number {
   if (!Number.isFinite(target) || Math.abs(target) < 0.000001) {
     return clampPercent(fallback);
   }
 
   return clampPercent((current / target) * 100);
+}
+
+function normalizeWeightValue(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
+  }
+
+  return value;
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -131,10 +139,9 @@ export default function DashboardEaseKpiCard({
   const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
-  const [baselineValue, setBaselineValue] = useState(String(kpi.baselineValue));
+  const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(kpi.baselineValue)));
   const [targetValue, setTargetValue] = useState(String(kpi.targetValue));
   const [currentValue, setCurrentValue] = useState(String(kpi.currentValue));
-  const [progressPct, setProgressPct] = useState(String(kpi.progressPct));
   const [status, setStatus] = useState<KrStatus>(kpi.status);
   const [dueDate, setDueDate] = useState(toDateInput(kpi.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(kpi.checkInFrequency);
@@ -147,10 +154,9 @@ export default function DashboardEaseKpiCard({
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
-    setBaselineValue(String(kpi.baselineValue));
+    setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
     setTargetValue(String(kpi.targetValue));
     setCurrentValue(String(kpi.currentValue));
-    setProgressPct(String(kpi.progressPct));
     setStatus(kpi.status);
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
@@ -158,10 +164,8 @@ export default function DashboardEaseKpiCard({
     setNotes(effectiveNotes);
   }, [kpi, codeValue, effectiveNotes]);
 
-  const progressValue = useMemo(
-    () => deriveProgressPct(Number(baselineValue), Number(targetValue), Number(currentValue), Number(progressPct)),
-    [baselineValue, currentValue, progressPct, targetValue]
-  );
+  const progressValue = deriveProgressPct(Number(targetValue), Number(currentValue), kpi.progressPct);
+  const displayWeight = normalizeWeightValue(kpi.baselineValue);
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -171,10 +175,9 @@ export default function DashboardEaseKpiCard({
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
-    setBaselineValue(String(kpi.baselineValue));
+    setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
     setTargetValue(String(kpi.targetValue));
     setCurrentValue(String(kpi.currentValue));
-    setProgressPct(String(kpi.progressPct));
     setStatus(kpi.status);
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
@@ -194,7 +197,17 @@ export default function DashboardEaseKpiCard({
     const current = Number(currentValue);
 
     if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current must be numeric.");
+      setError("Weight, target, and current must be numeric.");
+      return;
+    }
+
+    if (baseline <= 0) {
+      setError("Weight must be greater than 0.");
+      return;
+    }
+
+    if (target <= 0) {
+      setError("Target value must be greater than 0.");
       return;
     }
 
@@ -337,7 +350,7 @@ export default function DashboardEaseKpiCard({
             </select>
           </div>
           <div className="field">
-            <label>Baseline Value</label>
+            <label>Weight</label>
             <input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
           </div>
           <div className="field">
@@ -388,6 +401,7 @@ export default function DashboardEaseKpiCard({
       ) : (
         <div className="ease-footer-line">
           <span>Progress: {readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
+          <span>Weight: {readMetricValue(displayWeight)}</span>
           <span>Due Date: {formatDate(kpi.dueDate)}</span>
           <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
         </div>
