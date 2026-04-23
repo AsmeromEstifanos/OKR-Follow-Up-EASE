@@ -1,7 +1,8 @@
 "use client";
 
 import { apiPath } from "@/lib/base-path";
-import { useEffect, useState } from "react";
+import { parseAssignedOwners, serializeAssignedOwners } from "@/lib/owner";
+import { useEffect, useMemo, useState } from "react";
 
 type UserSuggestion = {
   displayName: string;
@@ -20,8 +21,11 @@ type Props = {
   showLabel?: boolean;
   value: string;
   onChange: (next: string) => void;
+  emailValue?: string;
+  onEmailChange?: (next: string) => void;
   onSelectUser?: (user: UserSuggestion | null) => void;
   selectValue?: "displayName" | "email";
+  multiple?: boolean;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
@@ -94,8 +98,11 @@ export default function OwnerInput({
   showLabel = true,
   value,
   onChange,
+  emailValue = "",
+  onEmailChange,
   onSelectUser,
   selectValue = "displayName",
+  multiple = false,
   disabled = false,
   placeholder = "Type a user name",
   className = "",
@@ -104,9 +111,66 @@ export default function OwnerInput({
   const [allUsers, setAllUsers] = useState<UserSuggestion[]>([]);
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [searchValue, setSearchValue] = useState<string>("");
   const [inputName] = useState<string>(() => {
     return `owner-${id}-${Math.random().toString(36).slice(2, 8)}`;
   });
+  const selectedOwners = useMemo(() => {
+    return multiple ? parseAssignedOwners(value, emailValue) : [];
+  }, [emailValue, multiple, value]);
+  const queryValue = multiple ? searchValue : value;
+
+  const commitAssignedOwners = (nextOwners: Array<{ name: string; email: string }>): void => {
+    const serialized = serializeAssignedOwners(nextOwners);
+    onChange(serialized.owner);
+    onEmailChange?.(serialized.ownerEmail);
+  };
+
+  const addOwner = (nextOwner: { name: string; email: string }, user: UserSuggestion | null = null): void => {
+    if (!multiple) {
+      return;
+    }
+
+    const nextName = nextOwner.name.trim() || nextOwner.email.trim();
+    const nextEmail = nextOwner.email.trim();
+    if (!nextName) {
+      return;
+    }
+
+    commitAssignedOwners([
+      ...selectedOwners,
+      {
+        name: nextName,
+        email: nextEmail
+      }
+    ]);
+    onSelectUser?.(user);
+    setSearchValue("");
+    setIsOpen(false);
+  };
+
+  const addTypedOwner = (): void => {
+    const trimmed = searchValue.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    addOwner(
+      {
+        name: trimmed,
+        email: trimmed.includes("@") ? trimmed : ""
+      },
+      null
+    );
+  };
+
+  const removeOwner = (index: number): void => {
+    if (!multiple) {
+      return;
+    }
+
+    commitAssignedOwners(selectedOwners.filter((_, itemIndex) => itemIndex !== index));
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -151,7 +215,15 @@ export default function OwnerInput({
   }, []);
 
   useEffect(() => {
-    const query = value.trim().toLowerCase();
+    if (!multiple) {
+      return;
+    }
+
+    setSearchValue("");
+  }, [emailValue, multiple, value]);
+
+  useEffect(() => {
+    const query = queryValue.trim().toLowerCase();
     if (!query) {
       setSuggestions(allUsers.slice(0, MAX_SUGGESTIONS));
       return;
@@ -168,11 +240,11 @@ export default function OwnerInput({
         })
         .slice(0, MAX_SUGGESTIONS)
     );
-  }, [allUsers, value]);
+  }, [allUsers, queryValue]);
 
   useEffect(() => {
     // Keep local typed value visible even when there are no suggestions.
-    if (allUsers.length > 0 || value.trim().length > 0) {
+    if (allUsers.length > 0 || queryValue.trim().length > 0) {
       return;
     }
 
@@ -206,19 +278,43 @@ export default function OwnerInput({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [allUsers.length, value]);
+  }, [allUsers.length, queryValue]);
 
   return (
     <div className={`field ${className}`.trim()}>
       {showLabel ? <label htmlFor={id}>{label}</label> : null}
       <div className="owner-input-wrap">
+        {multiple && selectedOwners.length > 0 ? (
+          <div className="owner-chip-list" aria-label={`${label} selections`}>
+            {selectedOwners.map((user, index) => (
+              <span key={`${user.email || user.name}-${index}`} className="owner-chip">
+                <span className="owner-chip-text">{user.name || user.email}</span>
+                {user.email ? <span className="owner-chip-meta">{user.email}</span> : null}
+                <button
+                  type="button"
+                  className="owner-chip-remove"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => removeOwner(index)}
+                  disabled={disabled}
+                  aria-label={`Remove ${user.name || user.email}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <input
           id={id}
           name={inputName}
-          value={value}
+          value={queryValue}
           onChange={(event) => {
-            onChange(event.target.value);
-            onSelectUser?.(null);
+            if (multiple) {
+              setSearchValue(event.target.value);
+            } else {
+              onChange(event.target.value);
+              onSelectUser?.(null);
+            }
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
@@ -226,9 +322,25 @@ export default function OwnerInput({
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               setIsOpen(false);
+              return;
+            }
+
+            if (!multiple) {
+              return;
+            }
+
+            if (event.key === "Enter" || event.key === "," || event.key === ";") {
+              event.preventDefault();
+              addTypedOwner();
+              return;
+            }
+
+            if (event.key === "Backspace" && !searchValue.trim() && selectedOwners.length > 0) {
+              event.preventDefault();
+              removeOwner(selectedOwners.length - 1);
             }
           }}
-          placeholder={placeholder}
+          placeholder={multiple ? "Type a user name, then press Enter or choose a suggestion" : placeholder}
           autoComplete="new-password"
           autoCorrect="off"
           autoCapitalize="none"
@@ -245,6 +357,17 @@ export default function OwnerInput({
                   className="owner-suggest-item"
                   onMouseDown={(event) => {
                     event.preventDefault();
+                    if (multiple) {
+                      addOwner(
+                        {
+                          name: selectValue === "email" ? user.mail || user.principalName : user.displayName,
+                          email: user.mail || user.principalName
+                        },
+                        user
+                      );
+                      return;
+                    }
+
                     onChange(selectValue === "email" ? user.mail || user.principalName : user.displayName);
                     onSelectUser?.(user);
                     setIsOpen(false);

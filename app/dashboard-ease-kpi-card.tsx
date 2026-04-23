@@ -3,7 +3,14 @@
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import {
+  formatOwnerEmailLabel,
+  formatOwnerLabel,
+  includesAssignedOwnerEmail,
+  includesSerializedOwnerEmail,
+  resolveOwnerEmail,
+  resolveOwnerName
+} from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -21,12 +28,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 function normalizeEmail(value: string | undefined): string {
@@ -108,13 +109,15 @@ export default function DashboardEaseKpiCard({
 }: Props): JSX.Element {
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
-  const normalizedOwnerEmail = normalizeEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const normalizedUserEmail = normalizeEmail(signedInEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
   const canEdit =
     Boolean(normalizedUserEmail) &&
-    (isAdmin || normalizedOwnerEmail === normalizedUserEmail || normalizedPositionOwnerEmail === normalizedUserEmail);
+    (
+      isAdmin ||
+      includesAssignedOwnerEmail(kpi.owner, kpi.ownerEmail, normalizedUserEmail) ||
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
+    );
 
   const codeValue = kpi.kpiCode ?? kpi.kpiKey;
   const effectiveNotes = kpi.notes || latestUpdateNotes || "";
@@ -124,7 +127,7 @@ export default function DashboardEaseKpiCard({
   const [error, setError] = useState("");
   const [code, setCode] = useState(codeValue);
   const [title, setTitle] = useState(kpi.title);
-  const [owner, setOwner] = useState(resolveOwnerName(kpi.owner));
+  const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
   const [baselineValue, setBaselineValue] = useState(String(kpi.baselineValue));
@@ -140,7 +143,7 @@ export default function DashboardEaseKpiCard({
   useEffect(() => {
     setCode(codeValue);
     setTitle(kpi.title);
-    setOwner(resolveOwnerName(kpi.owner));
+    setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
     setBaselineValue(String(kpi.baselineValue));
@@ -164,7 +167,7 @@ export default function DashboardEaseKpiCard({
     setError("");
     setCode(codeValue);
     setTitle(kpi.title);
-    setOwner(resolveOwnerName(kpi.owner));
+    setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
     setBaselineValue(String(kpi.baselineValue));
@@ -293,7 +296,7 @@ export default function DashboardEaseKpiCard({
       </div>
       {!isEditing ? (
         <div className="ease-kpi-meta">
-          <span className="ease-chip ease-chip-neutral">{kpi.owner || "-"}</span>
+          <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"}</span>
           <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
           <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
           <span className="ease-chip ease-chip-neutral">{getQuarterLabel(kpi.dueDate)}</span>
@@ -310,12 +313,14 @@ export default function DashboardEaseKpiCard({
             label="Owner (optional)"
             value={owner}
             onChange={setOwner}
-            onSelectUser={(user: OwnerSuggestion | null) => setOwnerEmail(user ? user.mail || user.principalName : "")}
+            emailValue={ownerEmail}
+            onEmailChange={setOwnerEmail}
+            multiple
             disabled={isSaving}
           />
           <div className="field">
             <label>Owner Email</label>
-            <input className="objective-row-input" value={ownerEmail} readOnly disabled={isSaving} />
+            <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
           </div>
           <div className="field">
             <label>Metric Type</label>

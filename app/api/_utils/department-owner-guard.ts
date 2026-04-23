@@ -1,19 +1,10 @@
 import { appProfile } from "@/lib/app-profile";
+import { includesAssignedOwnerEmail } from "@/lib/owner";
 import { getConfig, getObjective, isAdminEmail } from "@/lib/store";
 import { NextRequest, NextResponse } from "next/server";
 
 function normalize(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
-}
-
-function resolveDepartmentOwnerEmail(owner: string | undefined, ownerEmail: string | undefined): string {
-  const explicit = normalize(ownerEmail);
-  if (explicit) {
-    return explicit;
-  }
-
-  const ownerValue = (owner ?? "").trim();
-  return ownerValue.includes("@") ? normalize(ownerValue) : "";
 }
 
 function getSignedInEmail(request: NextRequest): string {
@@ -43,7 +34,7 @@ function isDepartmentOwner(
           return false;
         }
 
-        return resolveDepartmentOwnerEmail(department.owner, department.ownerEmail) === signedInEmail;
+        return includesAssignedOwnerEmail(department.owner, department.ownerEmail, signedInEmail);
       })
     );
   });

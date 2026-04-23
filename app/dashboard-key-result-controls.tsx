@@ -4,6 +4,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
+import { formatOwnerEmailLabel, includesSerializedOwnerEmail, resolveOwnerEmail } from "@/lib/owner";
 import type { CheckInFrequency, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +14,7 @@ type Props = {
   krKey: string;
   defaultDueDate: string;
   defaultOwner: string;
+  defaultOwnerEmail?: string;
   positionOwnerEmail?: string;
   adminEmails: string[];
   metricTypeOptions: MetricType[];
@@ -21,7 +23,6 @@ type Props = {
 };
 
 type ApiError = { error?: string };
-type OwnerSuggestion = { displayName: string; principalName: string; mail: string };
 type PendingKpi = {
   title: string;
   owner: string;
@@ -73,6 +74,7 @@ export default function DashboardKeyResultControls({
   krKey,
   defaultDueDate,
   defaultOwner,
+  defaultOwnerEmail,
   positionOwnerEmail,
   adminEmails,
   metricTypeOptions,
@@ -84,9 +86,8 @@ export default function DashboardKeyResultControls({
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
-  const canCreate = Boolean(normalizedUserEmail) && (isAdmin || normalizedUserEmail === normalizedPositionOwnerEmail);
+  const canCreate = Boolean(normalizedUserEmail) && (isAdmin || includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail));
   const sanitizedDefaultOwner = sanitizeDefaultOwner(defaultOwner);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -94,7 +95,7 @@ export default function DashboardKeyResultControls({
   const [codePreview, setCodePreview] = useState("");
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
-  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
   const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
   const [baselineValue, setBaselineValue] = useState("0");
   const [targetValue, setTargetValue] = useState("100");
@@ -139,8 +140,9 @@ export default function DashboardKeyResultControls({
     setIsAdding(false);
     setCodePreview("");
     setPendingItems([]);
-    setOwner(sanitizedDefaultOwner);
     resetDraft();
+    setOwner(sanitizedDefaultOwner);
+    setOwnerEmail(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
   };
 
   useEffect(() => {
@@ -151,9 +153,9 @@ export default function DashboardKeyResultControls({
   useEffect(() => {
     if (!isAdding) {
       setOwner(sanitizedDefaultOwner);
-      setOwnerEmail("");
+      setOwnerEmail(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
     }
-  }, [isAdding, sanitizedDefaultOwner]);
+  }, [defaultOwner, defaultOwnerEmail, isAdding, sanitizedDefaultOwner]);
 
   const buildPendingItem = (): PendingKpi | null => {
     const trimmedTitle = title.trim();
@@ -287,13 +289,15 @@ export default function DashboardKeyResultControls({
               label="Owner (optional)"
               value={owner}
               onChange={setOwner}
-              onSelectUser={(user: OwnerSuggestion | null) => setOwnerEmail(user ? user.mail || user.principalName : "")}
+              emailValue={ownerEmail}
+              onEmailChange={setOwnerEmail}
+              multiple
               disabled={isSaving}
               placeholder="Owner (optional)"
             />
             <div className="field">
               <label>Owner Email</label>
-              <input value={ownerEmail} readOnly disabled={isSaving} />
+              <input value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
             </div>
             <div className="field">
               <label>{itemLabel} Metric Type</label>

@@ -6,7 +6,14 @@ import DashboardKrRowEditor from "@/app/dashboard-kr-row-editor";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import {
+  formatOwnerEmailLabel,
+  formatOwnerLabel,
+  includesAssignedOwnerEmail,
+  includesSerializedOwnerEmail,
+  resolveOwnerEmail,
+  resolveOwnerName
+} from "@/lib/owner";
 import type {
   CheckInFrequency,
   Kpi,
@@ -47,12 +54,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 function ragPillClass(rag: string): string {
@@ -170,7 +171,7 @@ export default function DashboardObjectiveRowEditor({
 
   const [code, setCode] = useState<string>(objectiveCode);
   const [title, setTitle] = useState<string>(objective.title);
-  const [owner, setOwner] = useState<string>(resolveOwnerName(objective.owner));
+  const [owner, setOwner] = useState<string>(resolveOwnerName(objective.owner, objective.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState<string>(resolveOwnerEmail(objective.owner, objective.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(objective.metricType);
   const [baselineValue, setBaselineValue] = useState<string>(String(objective.baselineValue));
@@ -183,18 +184,20 @@ export default function DashboardObjectiveRowEditor({
   const [blockers, setBlockers] = useState<string>(objective.blockers ?? "");
   const [keyRisksDependency, setKeyRisksDependency] = useState<string>(objective.keyRisksDependency ?? "");
   const [notes, setNotes] = useState<string>(objective.notes ?? objective.description ?? "");
-  const normalizedOwnerEmail = normalizeEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const normalizedUserEmail = normalizeEmail(signedInEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
   const canEdit =
     Boolean(normalizedUserEmail) &&
-    (isAdmin || normalizedOwnerEmail === normalizedUserEmail || normalizedPositionOwnerEmail === normalizedUserEmail);
+    (
+      isAdmin ||
+      includesAssignedOwnerEmail(objective.owner, objective.ownerEmail, normalizedUserEmail) ||
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
+    );
 
   useEffect(() => {
     setCode(objectiveCode);
     setTitle(objective.title);
-    setOwner(resolveOwnerName(objective.owner));
+    setOwner(resolveOwnerName(objective.owner, objective.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
     setMetricType(objective.metricType);
     setBaselineValue(String(objective.baselineValue));
@@ -212,7 +215,7 @@ export default function DashboardObjectiveRowEditor({
   const resetDraft = (): void => {
     setCode(objectiveCode);
     setTitle(objective.title);
-    setOwner(resolveOwnerName(objective.owner));
+    setOwner(resolveOwnerName(objective.owner, objective.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
     setMetricType(objective.metricType);
     setBaselineValue(String(objective.baselineValue));
@@ -421,16 +424,16 @@ export default function DashboardObjectiveRowEditor({
               id={`objective-owner-inline-${objective.objectiveKey}`}
               value={owner}
               onChange={setOwner}
-              onSelectUser={(user: OwnerSuggestion | null) => {
-                setOwnerEmail(user ? user.mail || user.principalName : "");
-              }}
+              emailValue={ownerEmail}
+              onEmailChange={setOwnerEmail}
+              multiple
               disabled={isSaving}
               showLabel={false}
               inputClassName="objective-row-input"
               placeholder="Owner (optional)"
             />
         ) : (
-          objective.owner || "-"
+          formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"
         )}
       </td>
       <td>
@@ -606,7 +609,8 @@ export default function DashboardObjectiveRowEditor({
                 <DashboardKrControls
                   objectiveKey={objective.objectiveKey}
                   defaultDueDate={objective.endDate}
-                  defaultOwner={objective.owner || ""}
+                  defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)}
+                  defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)}
                   positionOwnerEmail={positionOwnerEmail}
                   adminEmails={adminEmails}
                   metricTypeOptions={metricTypeOptions}

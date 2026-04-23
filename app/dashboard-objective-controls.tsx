@@ -5,6 +5,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
+import { formatOwnerEmailLabel, includesSerializedOwnerEmail, resolveOwnerEmail } from "@/lib/owner";
 import type { CheckInFrequency, MetricType, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -27,12 +28,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 type PendingObjective = {
@@ -113,14 +108,13 @@ export default function DashboardObjectiveControls({
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
-  const canCreate = Boolean(normalizedUserEmail) && (isAdmin || normalizedUserEmail === normalizedPositionOwnerEmail);
+  const canCreate = Boolean(normalizedUserEmail) && (isAdmin || includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail));
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [title, setTitle] = useState<string>("");
   const [owner, setOwner] = useState<string>(defaultOwner);
-  const [ownerEmail, setOwnerEmail] = useState<string>("");
+  const [ownerEmail, setOwnerEmail] = useState<string>(resolveOwnerEmail(defaultOwner, positionOwnerEmail));
   const [objectiveCodePreview, setObjectiveCodePreview] = useState<string>("");
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>(objectiveTypeOptions[0] ?? "Committed");
   const [status, setStatus] = useState<ObjectiveStatus>(objectiveStatusOptions[0] ?? "NotStarted");
@@ -158,7 +152,7 @@ export default function DashboardObjectiveControls({
     setError("");
     setTitle("");
     setOwner(defaultOwner);
-    setOwnerEmail("");
+    setOwnerEmail(resolveOwnerEmail(defaultOwner, positionOwnerEmail));
     void loadObjectiveCodePreview();
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
@@ -202,7 +196,7 @@ export default function DashboardObjectiveControls({
     setError("");
     setTitle("");
     setOwner(defaultOwner);
-    setOwnerEmail("");
+    setOwnerEmail(resolveOwnerEmail(defaultOwner, positionOwnerEmail));
     setObjectiveCodePreview("");
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
@@ -412,15 +406,15 @@ export default function DashboardObjectiveControls({
               label="Owner (optional)"
               value={owner}
               onChange={setOwner}
-              onSelectUser={(user: OwnerSuggestion | null) => {
-                setOwnerEmail(user ? user.mail || user.principalName : "");
-              }}
+              emailValue={ownerEmail}
+              onEmailChange={setOwnerEmail}
+              multiple
               disabled={isSaving}
               placeholder="Owner (optional)"
             />
             <div className="field">
               <label>Owner Email</label>
-              <input name="objectiveOwnerEmail" value={ownerEmail} readOnly disabled={isSaving} />
+              <input name="objectiveOwnerEmail" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
             </div>
             <div className="field objective-field-wide">
               <label>{itemLabel}</label>

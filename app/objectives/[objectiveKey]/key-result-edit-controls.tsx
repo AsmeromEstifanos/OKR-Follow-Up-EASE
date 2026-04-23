@@ -3,7 +3,7 @@
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type { CheckInFrequency, KeyResult, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -45,12 +45,6 @@ type ApiError = {
   error?: string;
 };
 
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
-};
-
 function toDateInput(value: string | null): string {
   if (!value) {
     return "";
@@ -64,7 +58,7 @@ function toDraft(keyResult: KeyResult): KeyResultDraft {
     krCode: keyResult.krCode ?? keyResult.krKey,
     objectiveKey: keyResult.objectiveKey,
     title: keyResult.title,
-    owner: resolveOwnerName(keyResult.owner),
+    owner: resolveOwnerName(keyResult.owner, keyResult.ownerEmail),
     ownerEmail: resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail),
     metricType: keyResult.metricType,
     baselineValue: String(keyResult.baselineValue),
@@ -245,17 +239,14 @@ export default function KeyResultEditControls({
             label="Owner (optional)"
             value={draft.owner}
             onChange={(next) => setDraft((current) => ({ ...current, owner: next }))}
-            onSelectUser={(user: OwnerSuggestion | null) => {
-              setDraft((current) => ({
-                ...current,
-                ownerEmail: user ? user.mail || user.principalName : ""
-              }));
-            }}
+            emailValue={draft.ownerEmail}
+            onEmailChange={(next) => setDraft((current) => ({ ...current, ownerEmail: next }))}
+            multiple
             placeholder="Owner (optional)"
           />
           <div className="field">
             <label htmlFor={`kr-owner-email-${keyResult.krKey}`}>Owner Email</label>
-            <input id={`kr-owner-email-${keyResult.krKey}`} value={draft.ownerEmail} readOnly />
+            <input id={`kr-owner-email-${keyResult.krKey}`} value={formatOwnerEmailLabel(draft.owner, draft.ownerEmail)} readOnly />
           </div>
 
           <div className="field">

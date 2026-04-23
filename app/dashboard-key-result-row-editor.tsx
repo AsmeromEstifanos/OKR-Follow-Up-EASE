@@ -3,7 +3,14 @@
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import {
+  formatOwnerEmailLabel,
+  formatOwnerLabel,
+  includesAssignedOwnerEmail,
+  includesSerializedOwnerEmail,
+  resolveOwnerEmail,
+  resolveOwnerName
+} from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,8 +27,6 @@ type Props = {
 };
 
 type ApiError = { error?: string };
-type OwnerSuggestion = { displayName: string; principalName: string; mail: string };
-
 function formatStatus(value: KrStatus): string {
   if (value === "OnTrack") return "On Track";
   if (value === "AtRisk") return "At Risk";
@@ -82,7 +87,7 @@ export default function DashboardKeyResultRowEditor({
   const [error, setError] = useState("");
   const [code, setCode] = useState(codeValue);
   const [title, setTitle] = useState(kpi.title);
-  const [owner, setOwner] = useState(resolveOwnerName(kpi.owner));
+  const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
   const [baselineValue, setBaselineValue] = useState(String(kpi.baselineValue));
@@ -95,18 +100,20 @@ export default function DashboardKeyResultRowEditor({
   const [blockers, setBlockers] = useState(kpi.blockers ?? "");
   const [notes, setNotes] = useState(kpi.notes || latestUpdateNotes || "");
 
-  const normalizedOwnerEmail = normalizeEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const normalizedUserEmail = normalizeEmail(signedInEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
   const canEdit =
     Boolean(normalizedUserEmail) &&
-    (isAdmin || normalizedOwnerEmail === normalizedUserEmail || normalizedPositionOwnerEmail === normalizedUserEmail);
+    (
+      isAdmin ||
+      includesAssignedOwnerEmail(kpi.owner, kpi.ownerEmail, normalizedUserEmail) ||
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
+    );
 
   useEffect(() => {
     setCode(codeValue);
     setTitle(kpi.title);
-    setOwner(resolveOwnerName(kpi.owner));
+    setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
     setBaselineValue(String(kpi.baselineValue));
@@ -245,11 +252,11 @@ export default function DashboardKeyResultRowEditor({
       <td>
         {isEditing ? (
           <>
-            <OwnerInput id={`kpi-owner-inline-${kpi.kpiKey}`} value={owner} onChange={setOwner} onSelectUser={(user: OwnerSuggestion | null) => setOwnerEmail(user ? user.mail || user.principalName : "")} disabled={isSaving} showLabel={false} inputClassName="objective-row-input" placeholder="Owner (optional)" />
-            <input className="objective-row-input" value={ownerEmail} readOnly disabled={isSaving} aria-label={`Owner email for ${kpi.title}`} />
+            <OwnerInput id={`kpi-owner-inline-${kpi.kpiKey}`} value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} showLabel={false} inputClassName="objective-row-input" placeholder="Owner (optional)" />
+            <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} aria-label={`Owner email for ${kpi.title}`} />
           </>
         ) : (
-          kpi.owner || "-"
+          formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"
         )}
       </td>
       <td>{isEditing ? <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select> : kpi.metricType}</td>

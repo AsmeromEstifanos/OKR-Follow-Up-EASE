@@ -3,7 +3,7 @@
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type { CheckInFrequency, Confidence, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -49,12 +49,6 @@ type ApiError = {
   error?: string;
 };
 
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
-};
-
 const CONFIDENCE_OPTIONS: Confidence[] = ["High", "Medium", "Low"];
 
 function toDateInput(value: string): string {
@@ -70,7 +64,7 @@ function toDraft(objective: Objective): ObjectiveDraft {
     objectiveCode: objective.objectiveCode ?? objective.objectiveKey,
     title: objective.title,
     description: objective.description,
-    owner: resolveOwnerName(objective.owner),
+    owner: resolveOwnerName(objective.owner, objective.ownerEmail),
     ownerEmail: resolveOwnerEmail(objective.owner, objective.ownerEmail),
     department: objective.department,
     strategicTheme: objective.strategicTheme,
@@ -235,17 +229,14 @@ export default function ObjectiveEditControls({
               label="Owner (optional)"
               value={draft.owner}
               onChange={(next) => setDraft((current) => ({ ...current, owner: next }))}
-              onSelectUser={(user: OwnerSuggestion | null) => {
-                setDraft((current) => ({
-                  ...current,
-                  ownerEmail: user ? user.mail || user.principalName : ""
-                }));
-              }}
+              emailValue={draft.ownerEmail}
+              onEmailChange={(next) => setDraft((current) => ({ ...current, ownerEmail: next }))}
+              multiple
               placeholder="Owner (optional)"
             />
             <div className="field">
               <label htmlFor="objective-owner-email-edit">Owner Email</label>
-              <input id="objective-owner-email-edit" value={draft.ownerEmail} readOnly />
+              <input id="objective-owner-email-edit" value={formatOwnerEmailLabel(draft.owner, draft.ownerEmail)} readOnly />
             </div>
 
             <div className="field">

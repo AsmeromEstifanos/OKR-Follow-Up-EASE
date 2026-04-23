@@ -13,17 +13,12 @@ import type {
   KrStatus
 } from "@/lib/types";
 import { apiPath } from "@/lib/base-path";
+import { formatOwnerEmailLabel, formatOwnerLabel } from "@/lib/owner";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 type CreateMode = "none" | "objective" | "kr";
@@ -621,14 +616,14 @@ export default function DashboardCreateControls(): JSX.Element {
               label="Owner (optional)"
               value={objectiveOwner}
               onChange={setObjectiveOwner}
-              onSelectUser={(user: OwnerSuggestion | null) => {
-                setObjectiveOwnerEmail(user ? user.mail || user.principalName : "");
-              }}
+              emailValue={objectiveOwnerEmail}
+              onEmailChange={setObjectiveOwnerEmail}
+              multiple
               placeholder="Owner (optional)"
             />
             <div className="field">
               <label htmlFor="quick-objective-owner-email">Owner Email</label>
-              <input id="quick-objective-owner-email" value={objectiveOwnerEmail} readOnly />
+              <input id="quick-objective-owner-email" value={formatOwnerEmailLabel(objectiveOwner, objectiveOwnerEmail)} readOnly />
             </div>
             <div className="field">
               <label htmlFor="quick-objective-venture">Venture</label>
@@ -854,14 +849,14 @@ export default function DashboardCreateControls(): JSX.Element {
               label="Owner (optional)"
               value={krOwner}
               onChange={setKrOwner}
-              onSelectUser={(user: OwnerSuggestion | null) => {
-                setKrOwnerEmail(user ? user.mail || user.principalName : "");
-              }}
+              emailValue={krOwnerEmail}
+              onEmailChange={setKrOwnerEmail}
+              multiple
               placeholder="Owner (optional)"
             />
             <div className="field">
               <label htmlFor="quick-kr-owner-email">Owner Email</label>
-              <input id="quick-kr-owner-email" value={krOwnerEmail} readOnly />
+              <input id="quick-kr-owner-email" value={formatOwnerEmailLabel(krOwner, krOwnerEmail)} readOnly />
             </div>
             <div className="field">
               <label htmlFor="quick-kr-strategic-theme">Strategic Theme</label>
@@ -984,7 +979,7 @@ export default function DashboardCreateControls(): JSX.Element {
                           {kr.title}
                           <div className="meta">{kr.krCode || kr.krKey}</div>
                         </td>
-                        <td>{kr.owner || "-"}</td>
+                        <td>{formatOwnerLabel(kr.owner, kr.ownerEmail) || "-"}</td>
                         <td>{parentObjective?.strategicTheme || "-"}</td>
                         <td>{parentObjective?.objectiveType || "-"}</td>
                         <td>{parentObjective ? formatStatusLabel(parentObjective.status) : "-"}</td>

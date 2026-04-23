@@ -3,6 +3,7 @@
 import { appProfile } from "@/lib/app-profile";
 import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
+import { formatOwnerEmailLabel, formatOwnerLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import { broadcastOkrRefresh } from "@/lib/tab-sync";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type ReactNode } from "react";
@@ -21,12 +22,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -67,18 +62,18 @@ export default function DashboardPositionRowControls({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [nameDraft, setNameDraft] = useState<string>(positionName);
-  const [ownerDraft, setOwnerDraft] = useState<string>(positionOwner ?? "");
-  const [ownerEmailDraft, setOwnerEmailDraft] = useState<string>(positionOwnerEmail ?? "");
+  const [ownerDraft, setOwnerDraft] = useState<string>(resolveOwnerName(positionOwner, positionOwnerEmail));
+  const [ownerEmailDraft, setOwnerEmailDraft] = useState<string>(resolveOwnerEmail(positionOwner, positionOwnerEmail));
   const [displayName, setDisplayName] = useState<string>(positionName);
-  const [displayOwner, setDisplayOwner] = useState<string>(positionOwner ?? "");
+  const [displayOwner, setDisplayOwner] = useState<string>(formatOwnerLabel(positionOwner, positionOwnerEmail));
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     setNameDraft(positionName);
-    setOwnerDraft(positionOwner ?? "");
-    setOwnerEmailDraft(positionOwnerEmail ?? "");
+    setOwnerDraft(resolveOwnerName(positionOwner, positionOwnerEmail));
+    setOwnerEmailDraft(resolveOwnerEmail(positionOwner, positionOwnerEmail));
     setDisplayName(positionName);
-    setDisplayOwner(positionOwner ?? "");
+    setDisplayOwner(formatOwnerLabel(positionOwner, positionOwnerEmail));
   }, [positionName, positionOwner, positionOwnerEmail, selectedVentureKey, departmentKey]);
 
   const canManage = isAdmin && Boolean(selectedVentureKey && departmentKey);
@@ -111,8 +106,8 @@ export default function DashboardPositionRowControls({
 
     setIsEditing(false);
     setNameDraft(positionName);
-    setOwnerDraft(positionOwner ?? "");
-    setOwnerEmailDraft(positionOwnerEmail ?? "");
+    setOwnerDraft(resolveOwnerName(positionOwner, positionOwnerEmail));
+    setOwnerEmailDraft(resolveOwnerEmail(positionOwner, positionOwnerEmail));
     setError("");
   };
 
@@ -134,8 +129,8 @@ export default function DashboardPositionRowControls({
 
     if (
       name.toLowerCase() === positionName.toLowerCase() &&
-      ownerDraft.trim() === (positionOwner ?? "").trim() &&
-      ownerEmailDraft.trim() === (positionOwnerEmail ?? "").trim()
+      ownerDraft.trim() === resolveOwnerName(positionOwner, positionOwnerEmail).trim() &&
+      ownerEmailDraft.trim() === resolveOwnerEmail(positionOwner, positionOwnerEmail).trim()
     ) {
       closeEdit();
       return;
@@ -168,7 +163,7 @@ export default function DashboardPositionRowControls({
     }
 
     setDisplayName(name);
-    setDisplayOwner(ownerDraft.trim());
+    setDisplayOwner(formatOwnerLabel(ownerDraft, ownerEmailDraft));
     setIsSaving(false);
     setIsEditing(false);
     broadcastOkrRefresh("position-updated");
@@ -262,9 +257,9 @@ export default function DashboardPositionRowControls({
                   id={`position-owner-inline-${departmentKey ?? positionName}`}
                   value={ownerDraft}
                   onChange={setOwnerDraft}
-                  onSelectUser={(user: OwnerSuggestion | null) => {
-                    setOwnerEmailDraft(user ? user.mail || user.principalName : "");
-                  }}
+                  emailValue={ownerEmailDraft}
+                  onEmailChange={setOwnerEmailDraft}
+                  multiple
                   showLabel={false}
                   placeholder={`${labels.topLevelSingular} owner (optional)`}
                   disabled={isSaving}
@@ -273,9 +268,9 @@ export default function DashboardPositionRowControls({
                 <input
                   className="objective-row-input"
                   name="positionOwnerEmail"
-                  value={ownerEmailDraft}
-                  onChange={(event) => setOwnerEmailDraft(event.target.value)}
-                  placeholder="Owner email (optional)"
+                  value={formatOwnerEmailLabel(ownerDraft, ownerEmailDraft)}
+                  readOnly
+                  placeholder="Owner emails"
                   aria-label={`Owner email for ${labels.topLevelSingular.toLowerCase()} ${positionName}`}
                   disabled={isSaving}
                 />

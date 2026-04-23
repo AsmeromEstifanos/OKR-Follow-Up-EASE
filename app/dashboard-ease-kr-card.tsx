@@ -5,7 +5,14 @@ import DashboardKeyResultControls from "@/app/dashboard-key-result-controls";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
-import { resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
+import {
+  formatOwnerEmailLabel,
+  formatOwnerLabel,
+  includesAssignedOwnerEmail,
+  includesSerializedOwnerEmail,
+  resolveOwnerEmail,
+  resolveOwnerName
+} from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -29,12 +36,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 function normalizeEmail(value: string | undefined): string {
@@ -112,13 +113,15 @@ export default function DashboardEaseKrCard({
 }: Props): JSX.Element {
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
-  const normalizedOwnerEmail = normalizeEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-  const normalizedPositionOwnerEmail = normalizeEmail(positionOwnerEmail);
   const normalizedUserEmail = normalizeEmail(signedInEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
   const canEdit =
     Boolean(normalizedUserEmail) &&
-    (isAdmin || normalizedOwnerEmail === normalizedUserEmail || normalizedPositionOwnerEmail === normalizedUserEmail);
+    (
+      isAdmin ||
+      includesAssignedOwnerEmail(keyResult.owner, keyResult.ownerEmail, normalizedUserEmail) ||
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
+    );
 
   const codeValue = keyResult.krCode ?? keyResult.krKey;
 
@@ -129,7 +132,7 @@ export default function DashboardEaseKrCard({
   const [error, setError] = useState("");
   const [code, setCode] = useState(codeValue);
   const [title, setTitle] = useState(keyResult.title);
-  const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner));
+  const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(keyResult.metricType);
   const [baselineValue, setBaselineValue] = useState(String(keyResult.baselineValue));
@@ -145,7 +148,7 @@ export default function DashboardEaseKrCard({
   useEffect(() => {
     setCode(codeValue);
     setTitle(keyResult.title);
-    setOwner(resolveOwnerName(keyResult.owner));
+    setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
     setBaselineValue(String(keyResult.baselineValue));
@@ -169,7 +172,7 @@ export default function DashboardEaseKrCard({
     setError("");
     setCode(codeValue);
     setTitle(keyResult.title);
-    setOwner(resolveOwnerName(keyResult.owner));
+    setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
     setBaselineValue(String(keyResult.baselineValue));
@@ -312,7 +315,7 @@ export default function DashboardEaseKrCard({
       {!isEditing ? (
         <>
           <div className="ease-kr-meta">
-            <span className="ease-chip ease-chip-neutral">{keyResult.owner || "-"}</span>
+            <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
             <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
             <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
             <span className="ease-chip ease-chip-neutral">{getQuarterLabel(keyResult.dueDate)}</span>
@@ -329,8 +332,8 @@ export default function DashboardEaseKrCard({
       ) : (
         <div className="ease-edit-grid">
           <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
-          <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} onSelectUser={(user: OwnerSuggestion | null) => setOwnerEmail(user ? user.mail || user.principalName : "")} disabled={isSaving} />
-          <div className="field"><label>Owner Email</label><input className="objective-row-input" value={ownerEmail} readOnly disabled={isSaving} /></div>
+          <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} />
+          <div className="field"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
           <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
           <div className="field"><label>Baseline Value</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
@@ -369,7 +372,7 @@ export default function DashboardEaseKrCard({
               <span aria-hidden="true">{isKpiSectionOpen ? "⌄" : "›"}</span>
               <h5>KPIs ({kpis.length})</h5>
             </button>
-            <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={keyResult.owner || ""} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+            <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
           </div>
           {isKpiSectionOpen ? (
             <div className="ease-kpi-list">

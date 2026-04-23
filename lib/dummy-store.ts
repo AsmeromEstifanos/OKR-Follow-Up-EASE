@@ -1,5 +1,6 @@
 import { getAppProfile } from "@/lib/app-profile";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
+import { matchesAssignedOwner, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import { clampPercent, computeKrProgress, computeObjectiveProgress, isMissingCheckin } from "@/lib/okr-rules";
 import type {
   AppConfig,
@@ -1120,8 +1121,8 @@ export function addDepartmentToVenture(ventureKey: string, input: CreateDepartme
   }
 
   const name = normalizeName(input.name);
-  const owner = normalizeName(input.owner ?? "");
-  const ownerEmail = normalizeEmail(input.ownerEmail ?? "") || undefined;
+  const owner = normalizeName(resolveOwnerName(input.owner, input.ownerEmail));
+  const ownerEmail = normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined;
   const requestedDepartmentKey = normalizeKey(input.departmentKey ?? "");
   let departmentKey = requestedDepartmentKey;
 
@@ -1202,11 +1203,11 @@ export function updateDepartmentInVenture(
   }
 
   if (patch.owner !== undefined) {
-    department.owner = normalizeName(patch.owner) || undefined;
+    department.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? department.ownerEmail)) || undefined;
   }
 
   if (patch.ownerEmail !== undefined) {
-    department.ownerEmail = normalizeEmail(patch.ownerEmail) || undefined;
+    department.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? department.owner, patch.ownerEmail)) || undefined;
   }
 
   persistStore(store);
@@ -1308,7 +1309,7 @@ export function listObjectives(filters: ObjectiveFilters = {}): Objective[] {
     return (
       isMatch(objective.periodKey, periodKey) &&
       isMatch(objective.department, department) &&
-      isMatch(objective.owner, owner) &&
+      matchesAssignedOwner(objective.owner, objective.ownerEmail, owner) &&
       isMatch(objective.status, status)
     );
   });
@@ -1375,8 +1376,8 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     periodKey,
     title: input.title,
     description: input.description || notes,
-    owner: normalizeName(input.owner ?? "") || undefined,
-    ownerEmail: normalizeEmail(input.ownerEmail ?? "") || undefined,
+    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
+    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
     department: input.department,
     ventureName: input.ventureName ?? findVentureForObjectiveScope(store, input.department, "", input.strategicTheme)?.name ?? "",
     strategicTheme: strategicTheme || "General",
@@ -1432,11 +1433,11 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
   }
 
   if (patch.owner !== undefined) {
-    objective.owner = normalizeName(patch.owner) || undefined;
+    objective.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? objective.ownerEmail)) || undefined;
   }
 
   if (patch.ownerEmail !== undefined) {
-    objective.ownerEmail = normalizeEmail(patch.ownerEmail) || undefined;
+    objective.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? objective.owner, patch.ownerEmail)) || undefined;
   }
 
   if (patch.department !== undefined) {
@@ -1600,7 +1601,7 @@ export function listKeyResults(filters: KrFilters = {}): KeyResult[] {
     return (
       isMatch(kr.periodKey, periodKey) &&
       isMatch(kr.objectiveKey, objectiveKey) &&
-      isMatch(kr.owner, owner) &&
+      matchesAssignedOwner(kr.owner, kr.ownerEmail, owner) &&
       isMatch(kr.status, status)
     );
   });
@@ -1633,8 +1634,8 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     objectiveKey: input.objectiveKey,
     periodKey,
     title: input.title,
-    owner: normalizeName(input.owner ?? "") || undefined,
-    ownerEmail: normalizeEmail(input.ownerEmail ?? "") || undefined,
+    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
+    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
     metricType: normalizeMetricType(input.metricType),
     baselineValue: input.baselineValue,
     targetValue: input.targetValue,
@@ -1680,7 +1681,7 @@ export function listKpis(filters: KpiFilters = {}): Kpi[] {
       isMatch(kpi.periodKey, periodKey) &&
       isMatch(kpi.objectiveKey, objectiveKey) &&
       isMatch(kpi.krKey, krKey) &&
-      isMatch(kpi.owner, owner) &&
+      matchesAssignedOwner(kpi.owner, kpi.ownerEmail, owner) &&
       isMatch(kpi.status, status)
     );
   });
@@ -1717,8 +1718,8 @@ export function createKpi(input: CreateKpiInput): Kpi {
     krKey: keyResult.krKey,
     periodKey,
     title: input.title,
-    owner: normalizeName(input.owner ?? "") || undefined,
-    ownerEmail: normalizeEmail(input.ownerEmail ?? "") || undefined,
+    owner: normalizeName(resolveOwnerName(input.owner, input.ownerEmail)) || undefined,
+    ownerEmail: normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) || undefined,
     metricType: normalizeMetricType(input.metricType),
     baselineValue: input.baselineValue,
     targetValue: input.targetValue,
@@ -1776,11 +1777,11 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
   }
 
   if (patch.owner !== undefined) {
-    keyResult.owner = normalizeName(patch.owner) || undefined;
+    keyResult.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? keyResult.ownerEmail)) || undefined;
   }
 
   if (patch.ownerEmail !== undefined) {
-    keyResult.ownerEmail = normalizeEmail(patch.ownerEmail) || undefined;
+    keyResult.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? keyResult.owner, patch.ownerEmail)) || undefined;
   }
 
   if (patch.metricType !== undefined) {
@@ -1885,11 +1886,11 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
   }
 
   if (patch.owner !== undefined) {
-    kpi.owner = normalizeName(patch.owner) || undefined;
+    kpi.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? kpi.ownerEmail)) || undefined;
   }
 
   if (patch.ownerEmail !== undefined) {
-    kpi.ownerEmail = normalizeEmail(patch.ownerEmail) || undefined;
+    kpi.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? kpi.owner, patch.ownerEmail)) || undefined;
   }
 
   if (patch.metricType !== undefined) {
@@ -2143,7 +2144,7 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
   };
 
   const myObjectives = store.objectives.filter((objective) => {
-    if ((objective.owner ?? "").toLowerCase() !== normalizedOwner) {
+    if (!matchesAssignedOwner(objective.owner, objective.ownerEmail, normalizedOwner)) {
       return false;
     }
 
@@ -2155,7 +2156,7 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
   );
 
   const myKeyResults = store.keyResults.filter((kr) => {
-    if ((kr.owner ?? "").toLowerCase() !== normalizedOwner) {
+    if (!matchesAssignedOwner(kr.owner, kr.ownerEmail, normalizedOwner)) {
       return false;
     }
 
@@ -2167,7 +2168,7 @@ export function getDashboardForOwner(owner: string = DEMO_OWNER, filters: Dashbo
     return matchesVentureDepartmentFilter(objective);
   });
   const myKpis = store.kpis.filter((kpi) => {
-    if ((kpi.owner ?? "").toLowerCase() !== normalizedOwner) {
+    if (!matchesAssignedOwner(kpi.owner, kpi.ownerEmail, normalizedOwner)) {
       return false;
     }
 

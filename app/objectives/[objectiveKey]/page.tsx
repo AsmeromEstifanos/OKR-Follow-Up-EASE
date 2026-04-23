@@ -1,4 +1,5 @@
 import { getConfig, getObjectiveWithContext, listObjectives } from "@/lib/store";
+import { formatOwnerLabel } from "@/lib/owner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import KeyResultEditControls from "./key-result-edit-controls";
@@ -134,7 +135,7 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
                         {kr.title}
                         <div className="meta">{kr.krCode ?? kr.krKey}</div>
                       </td>
-                      <td>{kr.owner || "-"}</td>
+                      <td>{formatOwnerLabel(kr.owner, kr.ownerEmail) || "-"}</td>
                       <td>
                         {kr.progressPct}% ({kr.currentValue}/{kr.targetValue})
                       </td>

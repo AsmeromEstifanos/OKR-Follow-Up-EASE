@@ -3,6 +3,7 @@
 import { appProfile } from "@/lib/app-profile";
 import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
+import { formatOwnerEmailLabel } from "@/lib/owner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import useCurrentUserEmail from "./use-current-user-email";
@@ -15,12 +16,6 @@ type Props = {
 
 type ApiError = {
   error?: string;
-};
-
-type OwnerSuggestion = {
-  displayName: string;
-  principalName: string;
-  mail: string;
 };
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -163,9 +158,9 @@ export default function DashboardPositionControls({
             id={`position-owner-${selectedVentureKey ?? "default"}`}
             value={positionOwner}
             onChange={setPositionOwner}
-            onSelectUser={(user: OwnerSuggestion | null) => {
-              setPositionOwnerEmail(user ? user.mail || user.principalName : "");
-            }}
+            emailValue={positionOwnerEmail}
+            onEmailChange={setPositionOwnerEmail}
+            multiple
             showLabel={false}
             placeholder={`${itemLabel} owner (optional)`}
             disabled={isSaving}
@@ -173,9 +168,9 @@ export default function DashboardPositionControls({
           />
           <input
             name="positionOwnerEmail"
-            value={positionOwnerEmail}
-            onChange={(event) => setPositionOwnerEmail(event.target.value)}
-            placeholder="Owner email (optional)"
+            value={formatOwnerEmailLabel(positionOwner, positionOwnerEmail)}
+            readOnly
+            placeholder="Owner emails"
             aria-label={`${itemLabel} owner email`}
             disabled={isSaving}
           />
