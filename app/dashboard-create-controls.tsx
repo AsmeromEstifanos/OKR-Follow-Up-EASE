@@ -58,25 +58,6 @@ function getCycleDateRange(cycle: OkrCycle): { startDate: string; endDate: strin
   };
 }
 
-function parseProgressValue(value: string): { current: number; target: number } | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parts = trimmed.split("/").map((part) => Number(part.trim()));
-  if (parts.length !== 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) {
-    return null;
-  }
-
-  const [current, target] = parts;
-  if (!Number.isFinite(current) || !Number.isFinite(target) || target <= 0) {
-    return null;
-  }
-
-  return { current, target };
-}
-
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) {
@@ -152,9 +133,7 @@ export default function DashboardCreateControls(): JSX.Element {
   const [objectiveStatus, setObjectiveStatus] = useState<ObjectiveStatus>("OnTrack");
   const [objectiveCycle, setObjectiveCycle] = useState<OkrCycle>(getCurrentCycle());
   const [objectiveMetricType, setObjectiveMetricType] = useState<MetricType>("Operational");
-  const [objectiveBaselineValue, setObjectiveBaselineValue] = useState<string>("0");
-  const [objectiveTargetValue, setObjectiveTargetValue] = useState<string>("100");
-  const [objectiveCurrentValue, setObjectiveCurrentValue] = useState<string>("0");
+  const [objectiveBaselineValue, setObjectiveBaselineValue] = useState<string>("1");
   const [objectiveDueDate, setObjectiveDueDate] = useState<string>(getCycleDateRange(getCurrentCycle()).endDate);
   const [objectiveCheckInFrequency, setObjectiveCheckInFrequency] = useState<CheckInFrequency>("Weekly");
   const [objectiveBlockers, setObjectiveBlockers] = useState<string>("");
@@ -166,9 +145,8 @@ export default function DashboardCreateControls(): JSX.Element {
   const [krTitle, setKrTitle] = useState<string>("");
   const [krOwner, setKrOwner] = useState<string>("");
   const [krOwnerEmail, setKrOwnerEmail] = useState<string>("");
+  const [krBaselineValue, setKrBaselineValue] = useState<string>("1");
   const [krStatus, setKrStatus] = useState<KrStatus>("OnTrack");
-  const [krProgress, setKrProgress] = useState<string>("0 / 100");
-  const [krProgressPct, setKrProgressPct] = useState<string>("0");
   const [krCheckInFrequency, setKrCheckInFrequency] = useState<CheckInFrequency>("Weekly");
   const [krBlockers, setKrBlockers] = useState<string>("");
   const [krNotes, setKrNotes] = useState<string>("");
@@ -397,11 +375,14 @@ export default function DashboardCreateControls(): JSX.Element {
     }
 
     const baselineValue = Number(objectiveBaselineValue);
-    const targetValue = Number(objectiveTargetValue);
-    const currentValue = Number(objectiveCurrentValue);
 
-    if (!Number.isFinite(baselineValue) || !Number.isFinite(targetValue) || !Number.isFinite(currentValue)) {
-      setError("Baseline, target, and current values must be valid numbers.");
+    if (!Number.isFinite(baselineValue)) {
+      setError("Weight must be a valid number.");
+      return;
+    }
+
+    if (baselineValue < 0 || baselineValue > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
 
@@ -435,8 +416,6 @@ export default function DashboardCreateControls(): JSX.Element {
           okrCycle: objectiveCycle,
           metricType: objectiveMetricType,
           baselineValue,
-          targetValue,
-          currentValue,
           blockers: objectiveBlockers.trim(),
           keyRisksDependency: objectiveKeyRisksDependency.trim(),
           notes: objectiveNotes.trim(),
@@ -462,9 +441,7 @@ export default function DashboardCreateControls(): JSX.Element {
     setObjectiveTitle("");
     setObjectiveStrategicTheme("");
     setObjectiveMetricType("Operational");
-    setObjectiveBaselineValue("0");
-    setObjectiveTargetValue("100");
-    setObjectiveCurrentValue("0");
+    setObjectiveBaselineValue("1");
     setObjectiveDueDate(getCycleDateRange(objectiveCycle).endDate);
     setObjectiveCheckInFrequency("Weekly");
     setObjectiveBlockers("");
@@ -493,25 +470,15 @@ export default function DashboardCreateControls(): JSX.Element {
       return;
     }
 
-    const parsedProgress = parseProgressValue(krProgress);
-    const progressPct = Number(krProgressPct);
-    const hasProgressPct = Number.isFinite(progressPct);
-
-    if (!parsedProgress && !hasProgressPct) {
-      setError("Provide Progress (for example: 45 / 100) or Progress %.");
+    const baselineValue = Number(krBaselineValue);
+    if (!Number.isFinite(baselineValue)) {
+      setError("Weight must be a valid number.");
       return;
     }
 
-    const baselineValue = 0;
-    let targetValue = 100;
-    let currentValue = 0;
-
-    if (parsedProgress) {
-      targetValue = parsedProgress.target;
-      currentValue = parsedProgress.current;
-    } else if (hasProgressPct) {
-      targetValue = 100;
-      currentValue = progressPct;
+    if (baselineValue < 0 || baselineValue > 1) {
+      setError("Weight must be between 0 and 1.");
+      return;
     }
 
     setIsBusy(true);
@@ -532,8 +499,6 @@ export default function DashboardCreateControls(): JSX.Element {
           ownerEmail: krOwnerEmail.trim(),
           metricType: "Operational" as MetricType,
           baselineValue,
-          targetValue,
-          currentValue,
           status: krStatus,
           dueDate: selectedObjective.endDate,
           checkInFrequency: krCheckInFrequency,
@@ -552,8 +517,7 @@ export default function DashboardCreateControls(): JSX.Element {
 
     setKrCodePreview("");
     setKrTitle("");
-    setKrProgress("0 / 100");
-    setKrProgressPct("0");
+    setKrBaselineValue("1");
     setKrCheckInFrequency("Weekly");
     setKrBlockers("");
     setKrNotes("");
@@ -728,33 +692,15 @@ export default function DashboardCreateControls(): JSX.Element {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="quick-objective-baseline">Baseline Value</label>
+              <label htmlFor="quick-objective-baseline">Weight</label>
               <input
                 id="quick-objective-baseline"
                 type="number"
-                step="any"
+                step="0.01"
+                min="0"
+                max="1"
                 value={objectiveBaselineValue}
                 onChange={(event) => setObjectiveBaselineValue(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="quick-objective-target">Target Value</label>
-              <input
-                id="quick-objective-target"
-                type="number"
-                step="any"
-                value={objectiveTargetValue}
-                onChange={(event) => setObjectiveTargetValue(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="quick-objective-current">Current Value</label>
-              <input
-                id="quick-objective-current"
-                type="number"
-                step="any"
-                value={objectiveCurrentValue}
-                onChange={(event) => setObjectiveCurrentValue(event.target.value)}
               />
             </div>
             <div className="field">
@@ -781,10 +727,10 @@ export default function DashboardCreateControls(): JSX.Element {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="quick-objective-progress-pct">Progress</label>
+              <label htmlFor="quick-objective-progress-pct">Progress %</label>
               <input
                 id="quick-objective-progress-pct"
-                value={objectiveCurrentValue && objectiveTargetValue ? `${objectiveCurrentValue} / ${objectiveTargetValue}` : ""}
+                value="0"
                 readOnly
               />
             </div>
@@ -891,12 +837,15 @@ export default function DashboardCreateControls(): JSX.Element {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="quick-kr-progress">Progress</label>
+              <label htmlFor="quick-kr-weight">Weight</label>
               <input
-                id="quick-kr-progress"
-                value={krProgress}
-                onChange={(event) => setKrProgress(event.target.value)}
-                placeholder="45 / 100"
+                id="quick-kr-weight"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={krBaselineValue}
+                onChange={(event) => setKrBaselineValue(event.target.value)}
               />
             </div>
             <div className="field">
@@ -905,8 +854,8 @@ export default function DashboardCreateControls(): JSX.Element {
                 id="quick-kr-progress-pct"
                 type="number"
                 step="any"
-                value={krProgressPct}
-                onChange={(event) => setKrProgressPct(event.target.value)}
+                value="0"
+                readOnly
               />
             </div>
             <div className="field">

@@ -456,7 +456,7 @@ export default async function DashboardPage({
                             <th>{objectiveLabel}</th>
                             <th>Owner</th>
                             <th>{objectiveLabel} Metric Type</th>
-                            <th>Baseline Value</th>
+                            <th>Weight</th>
                             <th>Target Value</th>
                             <th>Current Value</th>
                             <th>Progress %</th>

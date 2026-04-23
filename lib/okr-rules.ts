@@ -27,8 +27,8 @@ export function computeKrProgress(_baselineValue: number, targetValue: number, c
 }
 
 function resolveWeight(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 1;
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
   }
 
   return value;

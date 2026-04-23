@@ -143,7 +143,12 @@ export default function DashboardKeyResultRowEditor({
     const target = Number(targetValue);
     let current = Number(currentValue);
     if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current values must be numbers.");
+      setError("Weight, target, and current values must be numbers.");
+      return;
+    }
+
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
 
@@ -157,7 +162,7 @@ export default function DashboardKeyResultRowEditor({
       setError("Progress % must be numeric.");
       return;
     }
-    current = baseline + ((target - baseline) * progress) / 100;
+    current = (target * progress) / 100;
 
     setIsSaving(true);
     setError("");
@@ -260,7 +265,7 @@ export default function DashboardKeyResultRowEditor({
         )}
       </td>
       <td>{isEditing ? <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select> : kpi.metricType}</td>
-      <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.baselineValue)}</td>
+      <td>{isEditing ? <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.baselineValue)}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.targetValue)}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.currentValue)}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={progressPct} onChange={(event) => setProgressPct(event.target.value)} disabled={isSaving} /> : `${kpi.progressPct}%`}</td>

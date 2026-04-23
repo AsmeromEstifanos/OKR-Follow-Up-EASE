@@ -181,8 +181,8 @@ export default function DashboardKeyResultControls({
       return null;
     }
 
-    if (baseline <= 0) {
-      setError("Weight must be greater than 0.");
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return null;
     }
 
@@ -326,7 +326,7 @@ export default function DashboardKeyResultControls({
             </div>
             <div className="field">
               <label>Weight</label>
-              <input type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
+              <input type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
             </div>
             <div className="field">
               <label>Target Value</label>

@@ -71,6 +71,7 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
 };
 
 const EASE_FALLBACK_PERIOD_KEY = "EASE-DEFAULT";
+const WEIGHT_TOLERANCE = 0.0001;
 
 const storeContainer = globalThis as {
   __okrDummyStore?: StoreState;
@@ -184,6 +185,73 @@ function normalizeName(value: string): string {
 
 function normalizeEmail(value: string): string {
   return value.trim();
+}
+
+function roundWeight(value: number): number {
+  return Number(value.toFixed(6));
+}
+
+function normalizeWeightInput(value: number, entityLabel: string): number {
+  if (!Number.isFinite(value)) {
+    throw new Error(`${entityLabel} weight must be a valid number.`);
+  }
+
+  const normalized = roundWeight(value);
+  if (normalized < -WEIGHT_TOLERANCE || normalized > 1 + WEIGHT_TOLERANCE) {
+    throw new Error(`${entityLabel} weight must be between 0 and 1.`);
+  }
+
+  if (Math.abs(normalized) <= WEIGHT_TOLERANCE) {
+    return 0;
+  }
+
+  if (Math.abs(normalized - 1) <= WEIGHT_TOLERANCE) {
+    return 1;
+  }
+
+  return normalized;
+}
+
+function assertWeightTotal(entityLabel: string, weights: number[]): void {
+  if (weights.length === 0) {
+    return;
+  }
+
+  const total = roundWeight(weights.reduce((sum, weight) => sum + weight, 0));
+  if (Math.abs(total - 1) > WEIGHT_TOLERANCE) {
+    throw new Error(`${entityLabel} weights must add up to 1. Current total is ${total}.`);
+  }
+}
+
+function normalizeGroupWeights<T>(
+  items: T[],
+  readWeight: (item: T) => number,
+  writeWeight: (item: T, weight: number) => void
+): void {
+  if (items.length === 0) {
+    return;
+  }
+
+  if (items.length === 1) {
+    writeWeight(items[0], 1);
+    return;
+  }
+
+  const rawWeights = items.map((item) => {
+    const value = readWeight(item);
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  });
+  const total = rawWeights.reduce((sum, weight) => sum + weight, 0);
+  const normalizedWeights =
+    total > WEIGHT_TOLERANCE ? rawWeights.map((weight) => weight / total) : items.map(() => 1 / items.length);
+
+  let assignedTotal = 0;
+  normalizedWeights.forEach((weight, index) => {
+    const resolvedWeight =
+      index === normalizedWeights.length - 1 ? roundWeight(1 - assignedTotal) : roundWeight(Math.max(0, weight));
+    writeWeight(items[index], resolvedWeight);
+    assignedTotal = roundWeight(assignedTotal + resolvedWeight);
+  });
 }
 
 function toSlug(value: string): string {
@@ -305,6 +373,172 @@ function buildObjectiveScopeKey(
   const ventureScope = venture?.ventureKey.toLowerCase() || normalizeName(strategicTheme).toLowerCase() || "global";
   const departmentScope = normalizeName(departmentName).toLowerCase() || "general";
   return `${ventureScope}::${departmentScope}`;
+}
+
+function normalizeAllWeightGroups(store: StoreState): void {
+  const objectiveGroups = new Map<string, Objective[]>();
+  store.objectives.forEach((objective) => {
+    const groupKey = `${objective.periodKey.toLowerCase()}::${buildObjectiveScopeKey(
+      store,
+      objective.department,
+      objective.ventureName ?? "",
+      objective.strategicTheme
+    )}`;
+    const current = objectiveGroups.get(groupKey) ?? [];
+    current.push(objective);
+    objectiveGroups.set(groupKey, current);
+  });
+  objectiveGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+
+  const krGroups = new Map<string, KeyResult[]>();
+  store.keyResults.forEach((keyResult) => {
+    const groupKey = keyResult.objectiveKey.toLowerCase();
+    const current = krGroups.get(groupKey) ?? [];
+    current.push(keyResult);
+    krGroups.set(groupKey, current);
+  });
+  krGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+
+  const kpiGroups = new Map<string, Kpi[]>();
+  store.kpis.forEach((kpi) => {
+    const groupKey = kpi.krKey.toLowerCase();
+    const current = kpiGroups.get(groupKey) ?? [];
+    current.push(kpi);
+    kpiGroups.set(groupKey, current);
+  });
+  kpiGroups.forEach((group) => normalizeGroupWeights(group, (item) => item.baselineValue, (item, weight) => { item.baselineValue = weight; }));
+}
+
+function assertObjectiveWeightGroup(
+  store: StoreState,
+  candidate: {
+    objectiveKey?: string;
+    periodKey: string;
+    department: string;
+    ventureName?: string;
+    strategicTheme: string;
+    baselineValue: number;
+  }
+): void {
+  const scopeKey = buildObjectiveScopeKey(
+    store,
+    candidate.department,
+    candidate.ventureName ?? "",
+    candidate.strategicTheme
+  );
+  const weights = store.objectives
+    .filter((objective) => {
+      if (candidate.objectiveKey && objective.objectiveKey.toLowerCase() === candidate.objectiveKey.toLowerCase()) {
+        return false;
+      }
+
+      return (
+        objective.periodKey.toLowerCase() === candidate.periodKey.toLowerCase() &&
+        buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) === scopeKey
+      );
+    })
+    .map((objective) => objective.baselineValue);
+
+  weights.push(candidate.baselineValue);
+  assertWeightTotal("Objective", weights);
+}
+
+function assertRemainingObjectiveWeights(
+  store: StoreState,
+  scope: {
+    objectiveKey: string;
+    periodKey: string;
+    department: string;
+    ventureName?: string;
+    strategicTheme: string;
+  }
+): void {
+  const scopeKey = buildObjectiveScopeKey(store, scope.department, scope.ventureName ?? "", scope.strategicTheme);
+  const weights = store.objectives
+    .filter((objective) => {
+      if (objective.objectiveKey.toLowerCase() === scope.objectiveKey.toLowerCase()) {
+        return false;
+      }
+
+      return (
+        objective.periodKey.toLowerCase() === scope.periodKey.toLowerCase() &&
+        buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) === scopeKey
+      );
+    })
+    .map((objective) => objective.baselineValue);
+
+  if (weights.length > 0) {
+    assertWeightTotal("Objective", weights);
+  }
+}
+
+function assertKrWeightGroup(
+  store: StoreState,
+  candidate: {
+    krKey?: string;
+    objectiveKey: string;
+    baselineValue: number;
+  }
+): void {
+  const weights = store.keyResults
+    .filter((keyResult) => {
+      if (candidate.krKey && keyResult.krKey.toLowerCase() === candidate.krKey.toLowerCase()) {
+        return false;
+      }
+
+      return keyResult.objectiveKey.toLowerCase() === candidate.objectiveKey.toLowerCase();
+    })
+    .map((keyResult) => keyResult.baselineValue);
+
+  weights.push(candidate.baselineValue);
+  assertWeightTotal("Key result", weights);
+}
+
+function assertRemainingKrWeights(store: StoreState, krKey: string, objectiveKey: string): void {
+  const weights = store.keyResults
+    .filter((keyResult) => {
+      return (
+        keyResult.krKey.toLowerCase() !== krKey.toLowerCase() &&
+        keyResult.objectiveKey.toLowerCase() === objectiveKey.toLowerCase()
+      );
+    })
+    .map((keyResult) => keyResult.baselineValue);
+
+  if (weights.length > 0) {
+    assertWeightTotal("Key result", weights);
+  }
+}
+
+function assertKpiWeightGroup(
+  store: StoreState,
+  candidate: {
+    kpiKey?: string;
+    krKey: string;
+    baselineValue: number;
+  }
+): void {
+  const weights = store.kpis
+    .filter((kpi) => {
+      if (candidate.kpiKey && kpi.kpiKey.toLowerCase() === candidate.kpiKey.toLowerCase()) {
+        return false;
+      }
+
+      return kpi.krKey.toLowerCase() === candidate.krKey.toLowerCase();
+    })
+    .map((kpi) => kpi.baselineValue);
+
+  weights.push(candidate.baselineValue);
+  assertWeightTotal("KPI", weights);
+}
+
+function assertRemainingKpiWeights(store: StoreState, kpiKey: string, krKey: string): void {
+  const weights = store.kpis
+    .filter((kpi) => kpi.kpiKey.toLowerCase() !== kpiKey.toLowerCase() && kpi.krKey.toLowerCase() === krKey.toLowerCase())
+    .map((kpi) => kpi.baselineValue);
+
+  if (weights.length > 0) {
+    assertWeightTotal("KPI", weights);
+  }
 }
 
 function getNextObjectiveCode(store: StoreState, departmentName: string, ventureName: string, strategicTheme: string): string {
@@ -676,8 +910,8 @@ function migrateObjectiveDefaults(store: StoreState): void {
 
     objective.metricType = normalizeMetricType(objective.metricType);
 
-    if (!Number.isFinite(objective.baselineValue) || objective.baselineValue <= 0) {
-      objective.baselineValue = 1;
+    if (!Number.isFinite(objective.baselineValue)) {
+      objective.baselineValue = 0;
     }
 
     if (!Number.isFinite(objective.targetValue)) {
@@ -730,8 +964,8 @@ function migrateKrDefaults(store: StoreState): void {
 
     kr.metricType = normalizeMetricType(kr.metricType);
 
-    if (!Number.isFinite(kr.baselineValue) || kr.baselineValue <= 0) {
-      kr.baselineValue = 1;
+    if (!Number.isFinite(kr.baselineValue)) {
+      kr.baselineValue = 0;
     }
 
     if (kr.blockers === undefined || kr.blockers === null) {
@@ -760,8 +994,8 @@ function migrateKpiDefaults(store: StoreState): void {
 
     kpi.metricType = normalizeMetricType(kpi.metricType);
 
-    if (!Number.isFinite(kpi.baselineValue) || kpi.baselineValue <= 0) {
-      kpi.baselineValue = 1;
+    if (!Number.isFinite(kpi.baselineValue)) {
+      kpi.baselineValue = 0;
     }
 
     if (kpi.blockers === undefined || kpi.blockers === null) {
@@ -806,6 +1040,7 @@ function applyStoreMigrations(store: StoreState): void {
   migrateObjectiveDefaults(store);
   migrateKrDefaults(store);
   migrateKpiDefaults(store);
+  normalizeAllWeightGroups(store);
   recalcAllObjectivesInStore(store);
   persistStore(store);
 }
@@ -1378,7 +1613,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const notes = normalizeName(input.notes || input.description || "");
   const cycle = normalizeOkrCycle(input.okrCycle);
   const metricType = normalizeMetricType(input.metricType);
-  const baselineValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
+  const baselineValue = normalizeWeightInput(input.baselineValue, "Objective");
   const targetValue = 100;
   const currentValue = 0;
   const dueDate = normalizeName(input.dueDate || input.endDate || "");
@@ -1417,6 +1652,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     lastCheckinAt: nowIso()
   };
 
+  assertObjectiveWeightGroup(store, objective);
   store.objectives.push(objective);
   recalcObjectiveInStore(store, objective.objectiveKey);
   persistStore(store);
@@ -1430,106 +1666,128 @@ export function updateObjective(objectiveKey: string, patch: UpdateObjectiveInpu
   if (!objective) {
     return null;
   }
+  const originalObjective = clone(objective);
+  const previousScope = {
+    objectiveKey: originalObjective.objectiveKey,
+    periodKey: originalObjective.periodKey,
+    department: originalObjective.department,
+    ventureName: originalObjective.ventureName,
+    strategicTheme: originalObjective.strategicTheme
+  };
 
-  if (patch.periodKey !== undefined) {
-    ensurePeriodExists(store, patch.periodKey);
-    objective.periodKey = patch.periodKey;
-  }
-
-  if (patch.objectiveCode !== undefined) {
-    objective.objectiveCode = normalizeKey(patch.objectiveCode) || objective.objectiveKey;
-  }
-
-  if (patch.title !== undefined) {
-    objective.title = normalizeName(patch.title);
-  }
-
-  if (patch.description !== undefined) {
-    objective.description = normalizeName(patch.description);
-  }
-
-  if (patch.owner !== undefined) {
-    objective.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? objective.ownerEmail)) || undefined;
-  }
-
-  if (patch.ownerEmail !== undefined) {
-    objective.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? objective.owner, patch.ownerEmail)) || undefined;
-  }
-
-  if (patch.department !== undefined) {
-    objective.department = normalizeName(patch.department);
-  }
-
-  if (patch.ventureName !== undefined) {
-    objective.ventureName = normalizeName(patch.ventureName);
-  }
-
-  if (patch.strategicTheme !== undefined) {
-    objective.strategicTheme = normalizeName(patch.strategicTheme);
-  }
-
-  if (patch.objectiveType !== undefined) {
-    objective.objectiveType = patch.objectiveType;
-  }
-
-  if (patch.okrCycle !== undefined) {
-    objective.okrCycle = normalizeOkrCycle(patch.okrCycle);
-  }
-
-  if (patch.metricType !== undefined) {
-    objective.metricType = normalizeMetricType(patch.metricType);
-  }
-
-  if (patch.baselineValue !== undefined) {
-    objective.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
-  }
-
-  if (patch.blockers !== undefined) {
-    objective.blockers = normalizeName(patch.blockers);
-  }
-
-  if (patch.keyRisksDependency !== undefined) {
-    objective.keyRisksDependency = normalizeName(patch.keyRisksDependency);
-  }
-
-  if (patch.notes !== undefined) {
-    objective.notes = normalizeName(patch.notes);
-  }
-
-  if (patch.status !== undefined) {
-    objective.status = patch.status;
-  }
-
-  if (patch.confidence !== undefined) {
-    objective.confidence = patch.confidence;
-  }
-
-  if (patch.startDate !== undefined) {
-    objective.startDate = normalizeName(patch.startDate);
-  }
-
-  if (patch.endDate !== undefined) {
-    objective.endDate = normalizeName(patch.endDate);
-    if (patch.dueDate === undefined) {
-      objective.dueDate = objective.endDate;
+  try {
+    if (patch.periodKey !== undefined) {
+      ensurePeriodExists(store, patch.periodKey);
+      objective.periodKey = patch.periodKey;
     }
+
+    if (patch.objectiveCode !== undefined) {
+      objective.objectiveCode = normalizeKey(patch.objectiveCode) || objective.objectiveKey;
+    }
+
+    if (patch.title !== undefined) {
+      objective.title = normalizeName(patch.title);
+    }
+
+    if (patch.description !== undefined) {
+      objective.description = normalizeName(patch.description);
+    }
+
+    if (patch.owner !== undefined) {
+      objective.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? objective.ownerEmail)) || undefined;
+    }
+
+    if (patch.ownerEmail !== undefined) {
+      objective.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? objective.owner, patch.ownerEmail)) || undefined;
+    }
+
+    if (patch.department !== undefined) {
+      objective.department = normalizeName(patch.department);
+    }
+
+    if (patch.ventureName !== undefined) {
+      objective.ventureName = normalizeName(patch.ventureName);
+    }
+
+    if (patch.strategicTheme !== undefined) {
+      objective.strategicTheme = normalizeName(patch.strategicTheme);
+    }
+
+    if (patch.objectiveType !== undefined) {
+      objective.objectiveType = patch.objectiveType;
+    }
+
+    if (patch.okrCycle !== undefined) {
+      objective.okrCycle = normalizeOkrCycle(patch.okrCycle);
+    }
+
+    if (patch.metricType !== undefined) {
+      objective.metricType = normalizeMetricType(patch.metricType);
+    }
+
+    if (patch.baselineValue !== undefined) {
+      objective.baselineValue = normalizeWeightInput(patch.baselineValue, "Objective");
+    }
+
+    if (patch.blockers !== undefined) {
+      objective.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.keyRisksDependency !== undefined) {
+      objective.keyRisksDependency = normalizeName(patch.keyRisksDependency);
+    }
+
+    if (patch.notes !== undefined) {
+      objective.notes = normalizeName(patch.notes);
+    }
+
+    if (patch.status !== undefined) {
+      objective.status = patch.status;
+    }
+
+    if (patch.confidence !== undefined) {
+      objective.confidence = patch.confidence;
+    }
+
+    if (patch.startDate !== undefined) {
+      objective.startDate = normalizeName(patch.startDate);
+    }
+
+    if (patch.endDate !== undefined) {
+      objective.endDate = normalizeName(patch.endDate);
+      if (patch.dueDate === undefined) {
+        objective.dueDate = objective.endDate;
+      }
+    }
+
+    if (patch.dueDate !== undefined) {
+      objective.dueDate = normalizeName(patch.dueDate);
+      objective.endDate = objective.dueDate;
+    }
+
+    if (patch.checkInFrequency !== undefined) {
+      objective.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+    }
+
+    assertObjectiveWeightGroup(store, objective);
+    const movedScope =
+      previousScope.periodKey.toLowerCase() !== objective.periodKey.toLowerCase() ||
+      previousScope.department.toLowerCase() !== objective.department.toLowerCase() ||
+      normalizeName(previousScope.ventureName ?? "").toLowerCase() !== normalizeName(objective.ventureName ?? "").toLowerCase() ||
+      previousScope.strategicTheme.toLowerCase() !== objective.strategicTheme.toLowerCase();
+
+    if (movedScope) {
+      assertRemainingObjectiveWeights(store, previousScope);
+    }
+
+    recalcObjectiveInStore(store, objective.objectiveKey);
+    objective.lastCheckinAt = nowIso();
+    persistStore(store);
+    return clone(objective);
+  } catch (error) {
+    Object.assign(objective, originalObjective);
+    throw error;
   }
-
-  if (patch.dueDate !== undefined) {
-    objective.dueDate = normalizeName(patch.dueDate);
-    objective.endDate = objective.dueDate;
-  }
-
-  if (patch.checkInFrequency !== undefined) {
-    objective.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
-  }
-
-  recalcObjectiveInStore(store, objective.objectiveKey);
-
-  objective.lastCheckinAt = nowIso();
-
-  persistStore(store);
-  return clone(objective);
 }
 
 export function deleteObjective(
@@ -1617,7 +1875,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const objective = ensureObjectiveExists(store, input.objectiveKey);
   const periodKey = resolvePeriodKey(store, input.periodKey, objective.periodKey);
 
-  const weightValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
+  const weightValue = normalizeWeightInput(input.baselineValue, "Key result");
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
   const notes = normalizeName(input.notes ?? "");
@@ -1643,6 +1901,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     lastCheckinAt: nowIso()
   };
 
+  assertKrWeightGroup(store, keyResult);
   store.keyResults.push(keyResult);
   recalcObjectiveInStore(store, objective.objectiveKey);
   persistStore(store);
@@ -1700,7 +1959,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
   }
 
   const periodKey = resolvePeriodKey(store, input.periodKey, keyResult.periodKey || objective.periodKey);
-  const baselineValue = Number.isFinite(input.baselineValue) && input.baselineValue > 0 ? input.baselineValue : 1;
+  const baselineValue = normalizeWeightInput(input.baselineValue, "KPI");
   const targetValue = Number.isFinite(input.targetValue) ? input.targetValue : 100;
   const currentValue = Number.isFinite(input.currentValue) ? input.currentValue : 0;
   const progressPct = computeKrProgress(baselineValue, targetValue, currentValue);
@@ -1730,6 +1989,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
     lastCheckinAt: nowIso()
   };
 
+  assertKpiWeightGroup(store, kpi);
   store.kpis.push(kpi);
   recalcKeyResultInStore(store, keyResult.krKey);
   recalcObjectiveInStore(store, objective.objectiveKey);
@@ -1750,81 +2010,92 @@ export function updateKeyResult(krKey: string, patch: UpdateKeyResultInput): Key
     return null;
   }
 
+  const originalKeyResult = clone(keyResult);
   const previousObjectiveKey = keyResult.objectiveKey;
 
-  if (patch.periodKey !== undefined) {
-    ensurePeriodExists(store, patch.periodKey);
-    keyResult.periodKey = patch.periodKey;
-  }
-
-  if (patch.objectiveKey !== undefined) {
-    const targetObjective = ensureObjectiveExists(store, patch.objectiveKey);
-    keyResult.objectiveKey = patch.objectiveKey;
-    if (patch.periodKey === undefined) {
-      keyResult.periodKey = targetObjective.periodKey;
+  try {
+    if (patch.periodKey !== undefined) {
+      ensurePeriodExists(store, patch.periodKey);
+      keyResult.periodKey = patch.periodKey;
     }
-  }
 
-  if (patch.krCode !== undefined) {
-    keyResult.krCode = normalizeKey(patch.krCode) || keyResult.krKey;
-  }
-
-  if (patch.title !== undefined) {
-    keyResult.title = normalizeName(patch.title);
-  }
-
-  if (patch.owner !== undefined) {
-    keyResult.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? keyResult.ownerEmail)) || undefined;
-  }
-
-  if (patch.ownerEmail !== undefined) {
-    keyResult.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? keyResult.owner, patch.ownerEmail)) || undefined;
-  }
-
-  if (patch.metricType !== undefined) {
-    keyResult.metricType = normalizeMetricType(patch.metricType);
-  }
-
-  if (patch.baselineValue !== undefined) {
-    keyResult.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
-  }
-
-  if (patch.status !== undefined) {
-    keyResult.status = patch.status;
-  }
-
-  if (patch.dueDate !== undefined) {
-    keyResult.dueDate = normalizeName(patch.dueDate);
-  }
-
-  if (patch.checkInFrequency !== undefined) {
-    keyResult.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
-  }
-
-  if (patch.blockers !== undefined) {
-    keyResult.blockers = normalizeName(patch.blockers);
-  }
-
-  if (patch.notes !== undefined) {
-    keyResult.notes = normalizeName(patch.notes);
-  }
-
-  keyResult.lastCheckinAt = nowIso();
-
-  if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
-    store.checkIns.forEach((checkIn) => {
-      if (checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase()) {
-        checkIn.objectiveKey = keyResult.objectiveKey;
+    if (patch.objectiveKey !== undefined) {
+      const targetObjective = ensureObjectiveExists(store, patch.objectiveKey);
+      keyResult.objectiveKey = patch.objectiveKey;
+      if (patch.periodKey === undefined) {
+        keyResult.periodKey = targetObjective.periodKey;
       }
-    });
+    }
 
-    recalcObjectiveInStore(store, previousObjectiveKey);
+    if (patch.krCode !== undefined) {
+      keyResult.krCode = normalizeKey(patch.krCode) || keyResult.krKey;
+    }
+
+    if (patch.title !== undefined) {
+      keyResult.title = normalizeName(patch.title);
+    }
+
+    if (patch.owner !== undefined) {
+      keyResult.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? keyResult.ownerEmail)) || undefined;
+    }
+
+    if (patch.ownerEmail !== undefined) {
+      keyResult.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? keyResult.owner, patch.ownerEmail)) || undefined;
+    }
+
+    if (patch.metricType !== undefined) {
+      keyResult.metricType = normalizeMetricType(patch.metricType);
+    }
+
+    if (patch.baselineValue !== undefined) {
+      keyResult.baselineValue = normalizeWeightInput(patch.baselineValue, "Key result");
+    }
+
+    if (patch.status !== undefined) {
+      keyResult.status = patch.status;
+    }
+
+    if (patch.dueDate !== undefined) {
+      keyResult.dueDate = normalizeName(patch.dueDate);
+    }
+
+    if (patch.checkInFrequency !== undefined) {
+      keyResult.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+    }
+
+    if (patch.blockers !== undefined) {
+      keyResult.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.notes !== undefined) {
+      keyResult.notes = normalizeName(patch.notes);
+    }
+
+    assertKrWeightGroup(store, keyResult);
+    if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
+      assertRemainingKrWeights(store, keyResult.krKey, previousObjectiveKey);
+    }
+
+    keyResult.lastCheckinAt = nowIso();
+
+    if (previousObjectiveKey.toLowerCase() !== keyResult.objectiveKey.toLowerCase()) {
+      store.checkIns.forEach((checkIn) => {
+        if (checkIn.krKey.toLowerCase() === keyResult.krKey.toLowerCase()) {
+          checkIn.objectiveKey = keyResult.objectiveKey;
+        }
+      });
+
+      recalcObjectiveInStore(store, previousObjectiveKey);
+    }
+
+    recalcKeyResultInStore(store, keyResult.krKey);
+    recalcObjectiveInStore(store, keyResult.objectiveKey);
+    persistStore(store);
+    return clone(keyResult);
+  } catch (error) {
+    Object.assign(keyResult, originalKeyResult);
+    throw error;
   }
-
-  recalcKeyResultInStore(store, keyResult.krKey);
-  recalcObjectiveInStore(store, keyResult.objectiveKey);
-  persistStore(store);
-  return clone(keyResult);
 }
 
 export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
@@ -1834,106 +2105,117 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
     return null;
   }
 
+  const originalKpi = clone(kpi);
   const previousObjectiveKey = kpi.objectiveKey;
   const previousKrKey = kpi.krKey;
 
-  if (patch.objectiveKey !== undefined) {
-    const objective = ensureObjectiveExists(store, patch.objectiveKey);
-    kpi.objectiveKey = objective.objectiveKey;
-    if (patch.periodKey === undefined) {
-      kpi.periodKey = objective.periodKey;
-    }
-  }
-
-  if (patch.krKey !== undefined) {
-    const keyResult = ensureKrExists(store, patch.krKey);
-    if (patch.objectiveKey === undefined) {
-      kpi.objectiveKey = keyResult.objectiveKey;
-    }
-    kpi.krKey = keyResult.krKey;
-    if (patch.periodKey === undefined) {
-      kpi.periodKey = keyResult.periodKey;
-    }
-  }
-
-  if (patch.periodKey !== undefined) {
-    ensurePeriodExists(store, patch.periodKey);
-    kpi.periodKey = patch.periodKey;
-  }
-
-  if (patch.kpiCode !== undefined) {
-    kpi.kpiCode = normalizeKey(patch.kpiCode) || kpi.kpiKey;
-  }
-
-  if (patch.title !== undefined) {
-    kpi.title = normalizeName(patch.title);
-  }
-
-  if (patch.owner !== undefined) {
-    kpi.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? kpi.ownerEmail)) || undefined;
-  }
-
-  if (patch.ownerEmail !== undefined) {
-    kpi.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? kpi.owner, patch.ownerEmail)) || undefined;
-  }
-
-  if (patch.metricType !== undefined) {
-    kpi.metricType = normalizeMetricType(patch.metricType);
-  }
-
-  if (patch.baselineValue !== undefined) {
-    kpi.baselineValue = patch.baselineValue > 0 ? patch.baselineValue : 1;
-  }
-
-  if (patch.targetValue !== undefined) {
-    kpi.targetValue = patch.targetValue;
-  }
-
-  if (patch.currentValue !== undefined) {
-    kpi.currentValue = patch.currentValue;
-  }
-
-  if (patch.status !== undefined) {
-    kpi.status = patch.status;
-  }
-
-  if (patch.dueDate !== undefined) {
-    kpi.dueDate = normalizeName(patch.dueDate);
-  }
-
-  if (patch.checkInFrequency !== undefined) {
-    kpi.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
-  }
-
-  if (patch.blockers !== undefined) {
-    kpi.blockers = normalizeName(patch.blockers);
-  }
-
-  if (patch.notes !== undefined) {
-    kpi.notes = normalizeName(patch.notes);
-  }
-
-  kpi.progressPct = computeKrProgress(kpi.baselineValue, kpi.targetValue, kpi.currentValue);
-  if (patch.status === undefined) {
-    kpi.status = getStatusFromProgress(kpi.progressPct);
-  }
-  kpi.lastCheckinAt = nowIso();
-
-  if (previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase() || previousObjectiveKey.toLowerCase() !== kpi.objectiveKey.toLowerCase()) {
-    store.checkIns.forEach((checkIn) => {
-      if ((checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()) {
-        checkIn.objectiveKey = kpi.objectiveKey;
-        checkIn.krKey = kpi.krKey;
+  try {
+    if (patch.objectiveKey !== undefined) {
+      const objective = ensureObjectiveExists(store, patch.objectiveKey);
+      kpi.objectiveKey = objective.objectiveKey;
+      if (patch.periodKey === undefined) {
+        kpi.periodKey = objective.periodKey;
       }
-    });
-  }
+    }
 
-  recalcKeyResultInStore(store, previousKrKey);
-  recalcKeyResultInStore(store, kpi.krKey);
-  recalcObjectiveInStore(store, previousObjectiveKey);
-  recalcObjectiveInStore(store, kpi.objectiveKey);
-  persistStore(store);
-  return clone(kpi);
+    if (patch.krKey !== undefined) {
+      const keyResult = ensureKrExists(store, patch.krKey);
+      if (patch.objectiveKey === undefined) {
+        kpi.objectiveKey = keyResult.objectiveKey;
+      }
+      kpi.krKey = keyResult.krKey;
+      if (patch.periodKey === undefined) {
+        kpi.periodKey = keyResult.periodKey;
+      }
+    }
+
+    if (patch.periodKey !== undefined) {
+      ensurePeriodExists(store, patch.periodKey);
+      kpi.periodKey = patch.periodKey;
+    }
+
+    if (patch.kpiCode !== undefined) {
+      kpi.kpiCode = normalizeKey(patch.kpiCode) || kpi.kpiKey;
+    }
+
+    if (patch.title !== undefined) {
+      kpi.title = normalizeName(patch.title);
+    }
+
+    if (patch.owner !== undefined) {
+      kpi.owner = normalizeName(resolveOwnerName(patch.owner, patch.ownerEmail ?? kpi.ownerEmail)) || undefined;
+    }
+
+    if (patch.ownerEmail !== undefined) {
+      kpi.ownerEmail = normalizeEmail(resolveOwnerEmail(patch.owner ?? kpi.owner, patch.ownerEmail)) || undefined;
+    }
+
+    if (patch.metricType !== undefined) {
+      kpi.metricType = normalizeMetricType(patch.metricType);
+    }
+
+    if (patch.baselineValue !== undefined) {
+      kpi.baselineValue = normalizeWeightInput(patch.baselineValue, "KPI");
+    }
+
+    if (patch.targetValue !== undefined) {
+      kpi.targetValue = patch.targetValue;
+    }
+
+    if (patch.currentValue !== undefined) {
+      kpi.currentValue = patch.currentValue;
+    }
+
+    if (patch.status !== undefined) {
+      kpi.status = patch.status;
+    }
+
+    if (patch.dueDate !== undefined) {
+      kpi.dueDate = normalizeName(patch.dueDate);
+    }
+
+    if (patch.checkInFrequency !== undefined) {
+      kpi.checkInFrequency = normalizeCheckInFrequency(patch.checkInFrequency);
+    }
+
+    if (patch.blockers !== undefined) {
+      kpi.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.notes !== undefined) {
+      kpi.notes = normalizeName(patch.notes);
+    }
+
+    assertKpiWeightGroup(store, kpi);
+    if (previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase()) {
+      assertRemainingKpiWeights(store, kpi.kpiKey, previousKrKey);
+    }
+
+    kpi.progressPct = computeKrProgress(kpi.baselineValue, kpi.targetValue, kpi.currentValue);
+    if (patch.status === undefined) {
+      kpi.status = getStatusFromProgress(kpi.progressPct);
+    }
+    kpi.lastCheckinAt = nowIso();
+
+    if (previousKrKey.toLowerCase() !== kpi.krKey.toLowerCase() || previousObjectiveKey.toLowerCase() !== kpi.objectiveKey.toLowerCase()) {
+      store.checkIns.forEach((checkIn) => {
+        if ((checkIn.kpiKey ?? "").toLowerCase() === kpi.kpiKey.toLowerCase()) {
+          checkIn.objectiveKey = kpi.objectiveKey;
+          checkIn.krKey = kpi.krKey;
+        }
+      });
+    }
+
+    recalcKeyResultInStore(store, previousKrKey);
+    recalcKeyResultInStore(store, kpi.krKey);
+    recalcObjectiveInStore(store, previousObjectiveKey);
+    recalcObjectiveInStore(store, kpi.objectiveKey);
+    persistStore(store);
+    return clone(kpi);
+  } catch (error) {
+    Object.assign(kpi, originalKpi);
+    throw error;
+  }
 }
 
 export function deleteKeyResult(krKey: string): { krKey: string; deletedCheckInCount: number } | null {

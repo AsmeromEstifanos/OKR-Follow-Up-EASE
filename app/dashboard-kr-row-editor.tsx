@@ -140,11 +140,16 @@ export default function DashboardKrRowEditor({
       return;
     }
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
+    let target = Number(targetValue);
     let current = Number(currentValue);
     const progress = Number(progressPct);
     if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current) || !Number.isFinite(progress)) {
-      setError("Metric values and progress must be numeric.");
+      setError("Weight, metric values, and progress must be numeric.");
+      return;
+    }
+
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
     if (!dueDate) {
@@ -152,7 +157,8 @@ export default function DashboardKrRowEditor({
       return;
     }
 
-    current = baseline + ((target - baseline) * progress) / 100;
+    target = 100;
+    current = Math.max(0, Math.min(100, progress));
     setIsSaving(true);
     setError("");
     const response = await fetch(apiPath(`/api/krs/${encodeURIComponent(keyResult.krKey)}`), {
@@ -255,7 +261,7 @@ export default function DashboardKrRowEditor({
           </>
         ) : (formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-")}</td>
         <td>{isEditing ? <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select> : keyResult.metricType}</td>
-        <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.baselineValue)}</td>
+        <td>{isEditing ? <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.baselineValue)}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.targetValue)}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.currentValue)}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={progressPct} onChange={(event) => setProgressPct(event.target.value)} disabled={isSaving} /> : `${keyResult.progressPct}%`}</td>
@@ -290,7 +296,7 @@ export default function DashboardKrRowEditor({
                       <th>KPI</th>
                       <th>Owner</th>
                       <th>KPI Metric Type</th>
-                      <th>Baseline Value</th>
+                      <th>Weight</th>
                       <th>Target Value</th>
                       <th>Current Value</th>
                       <th>KPI Progress %</th>

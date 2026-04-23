@@ -251,7 +251,12 @@ export default function DashboardObjectiveRowEditor({
     let current = Number(currentValue);
 
     if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Baseline, target, and current values must be numbers.");
+      setError("Weight, target, and current values must be numbers.");
+      return;
+    }
+
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
 
@@ -266,8 +271,9 @@ export default function DashboardObjectiveRowEditor({
       return;
     }
 
-    const resolvedProgressPct = numericProgressPct;
-    current = baseline + ((target - baseline) * resolvedProgressPct) / 100;
+    const resolvedProgressPct = clampPercent(numericProgressPct);
+    target = 100;
+    current = resolvedProgressPct;
 
     setIsSaving(true);
     setError("");
@@ -459,7 +465,9 @@ export default function DashboardObjectiveRowEditor({
           <input
             className="objective-row-input"
             type="number"
-            step="any"
+            step="0.01"
+            min="0"
+            max="1"
             value={baselineValue}
             onChange={(event) => setBaselineValue(event.target.value)}
             disabled={isSaving}
@@ -623,7 +631,7 @@ export default function DashboardObjectiveRowEditor({
                       <th>{childLabel}</th>
                       <th>Owner</th>
                       <th>{childLabel} Metric Type</th>
-                      <th>Baseline Value</th>
+                      <th>Weight</th>
                       <th>Target Value</th>
                       <th>Current Value</th>
                       <th>{childLabel} Progress %</th>

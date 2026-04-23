@@ -84,8 +84,8 @@ function clampPercent(value: number): number {
 }
 
 function normalizeWeightValue(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 1;
+  if (!Number.isFinite(value)) {
+    return 0;
   }
 
   return value;
@@ -198,8 +198,8 @@ export default function DashboardEaseObjectiveCard({
       return;
     }
 
-    if (baseline <= 0) {
-      setError("Weight must be greater than 0.");
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
 
@@ -340,7 +340,7 @@ export default function DashboardEaseObjectiveCard({
                 <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(event) => setOkrCycle(event.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>

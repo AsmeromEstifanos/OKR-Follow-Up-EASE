@@ -229,8 +229,8 @@ export default function DashboardObjectiveControls({
       return null;
     }
 
-    if (resolvedBaselineValue <= 0) {
-      setError("Weight must be greater than 0.");
+    if (resolvedBaselineValue < 0 || resolvedBaselineValue > 1) {
+      setError("Weight must be between 0 and 1.");
       return null;
     }
 
@@ -463,7 +463,9 @@ export default function DashboardObjectiveControls({
               <input
                 name="objectiveBaselineValue"
                 type="number"
-                step="any"
+                step="0.01"
+                min="0"
+                max="1"
                 value={baselineValue}
                 onChange={(event) => setBaselineValue(event.target.value)}
                 disabled={isSaving}

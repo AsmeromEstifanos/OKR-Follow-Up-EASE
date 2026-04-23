@@ -89,8 +89,8 @@ function deriveProgressPct(target: number, current: number, fallback: number): n
 }
 
 function normalizeWeightValue(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 1;
+  if (!Number.isFinite(value)) {
+    return 0;
   }
 
   return value;
@@ -201,8 +201,8 @@ export default function DashboardEaseKpiCard({
       return;
     }
 
-    if (baseline <= 0) {
-      setError("Weight must be greater than 0.");
+    if (baseline < 0 || baseline > 1) {
+      setError("Weight must be between 0 and 1.");
       return;
     }
 
@@ -351,7 +351,7 @@ export default function DashboardEaseKpiCard({
           </div>
           <div className="field">
             <label>Weight</label>
-            <input className="objective-row-input" type="number" step="any" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
+            <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
           </div>
           <div className="field">
             <label>Target Value</label>

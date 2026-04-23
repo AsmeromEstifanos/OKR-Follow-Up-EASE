@@ -56,8 +56,8 @@ function toDateInput(value: string): string {
 }
 
 function normalizeWeightValue(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "1";
+  if (!Number.isFinite(value)) {
+    return "0";
   }
 
   return String(value);
@@ -121,8 +121,8 @@ export default function ObjectiveEditControls({
       return;
     }
 
-    if (baselineValue <= 0) {
-      setError("Weight must be greater than 0.");
+    if (baselineValue < 0 || baselineValue > 1) {
+      setError("Weight must be between 0 and 1.");
       setIsSaving(false);
       return;
     }
@@ -300,7 +300,9 @@ export default function ObjectiveEditControls({
               <input
                 id="objective-baseline-edit"
                 type="number"
-                step="any"
+                step="0.01"
+                min="0"
+                max="1"
                 value={draft.baselineValue}
                 onChange={(event) => setDraft((current) => ({ ...current, baselineValue: event.target.value }))}
               />
