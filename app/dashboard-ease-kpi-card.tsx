@@ -1,5 +1,6 @@
 "use client";
 
+import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
@@ -283,7 +284,9 @@ export default function DashboardEaseKpiCard({
           ) : (
             <h5>{kpi.title}</h5>
           )}
-          {!isEditing && effectiveNotes ? <p className="ease-card-copy">{effectiveNotes}</p> : null}
+          {!isEditing ? (
+            <EaseCardDetailBlocks note={effectiveNotes} blockers={blockers} />
+          ) : null}
         </div>
         <div className="ease-card-head-side">
           <span className={statusChipClass(isEditing ? status : kpi.status)}>

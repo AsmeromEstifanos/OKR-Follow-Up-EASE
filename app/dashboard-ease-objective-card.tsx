@@ -1,5 +1,6 @@
 "use client";
 
+import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKrCard from "@/app/dashboard-ease-kr-card";
 import DashboardKrControls from "@/app/dashboard-kr-controls";
 import OwnerInput from "@/app/owner-input";
@@ -311,7 +312,9 @@ export default function DashboardEaseObjectiveCard({
                 ) : (
                   <h3>{objective.title}</h3>
                 )}
-                {!isEditing && notes ? <p className="ease-card-copy">{notes}</p> : null}
+                {!isEditing ? (
+                  <EaseCardDetailBlocks note={notes} blockers={blockers} />
+                ) : null}
               </div>
               <div className="ease-card-head-side">
                 <span className={statusChipClass(isEditing ? status : objective.status)}>{formatStatus(isEditing ? status : objective.status)}</span>

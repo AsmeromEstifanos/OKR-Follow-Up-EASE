@@ -1148,6 +1148,60 @@ a {
   line-height: 1.6;
 }
 
+.ease-card-details {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.ease-card-detail {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #e2e7eb;
+  border-radius: 12px;
+}
+
+.ease-card-detail-note {
+  background: #fffbea;
+  border-color: #f1df9d;
+}
+
+.ease-card-detail-blockers {
+  background: #fff1f1;
+  border-color: #f0b9b9;
+}
+
+.ease-card-detail-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ease-card-detail-tag-note {
+  background: #fff3c2;
+  color: #7a5c00;
+}
+
+.ease-card-detail-tag-blockers {
+  background: #ffd6d6;
+  color: #922b2b;
+}
+
+.ease-card-detail-body {
+  margin: 0;
+  color: #5c6569;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .ease-card-head-side {
   display: grid;
   justify-items: end;
@@ -1492,10 +1546,21 @@ a {
   }
 
   .ease-card-copy,
+  .ease-card-detail-body,
   .ease-kr-meta,
   .ease-kpi-meta,
   .ease-footer-line {
     font-size: 0.68rem;
+  }
+
+  .ease-card-detail {
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+  }
+
+  .ease-card-detail-tag {
+    font-size: 0.62rem;
+    padding: 0.16rem 0.44rem;
   }
 
   .ease-chip {
