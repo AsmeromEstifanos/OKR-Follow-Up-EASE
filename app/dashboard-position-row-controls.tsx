@@ -58,6 +58,7 @@ export default function DashboardPositionRowControls({
 }: Props): JSX.Element {
   const labels = appProfile.labels;
   const itemLabel = "Position";
+  const objectiveCountLabel = objectiveCount === 1 ? "objective" : "objectives";
   const router = useRouter();
   const contentId = useId();
   const currentUserEmail = useCurrentUserEmail();
@@ -186,7 +187,7 @@ export default function DashboardPositionRowControls({
 
     const warning =
       objectiveCount > 0
-        ? `Delete ${itemLabel.toLowerCase()} '${positionName}'? It currently has ${objectiveCount} objectives. This will also delete related key results and KPIs.`
+        ? `Delete ${itemLabel.toLowerCase()} '${positionName}'? It currently has ${objectiveCount} ${objectiveCountLabel}. This will also delete related key results and KPIs.`
         : `Delete ${itemLabel.toLowerCase()} '${positionName}'? This action cannot be undone.`;
 
     if (!window.confirm(warning)) {
@@ -235,7 +236,7 @@ export default function DashboardPositionRowControls({
               <h3 className="board-group-title">{displayName}</h3>
               {displayOwner ? <p className="meta">{displayOwner}</p> : null}
             </span>
-            <span className="meta">{objectiveCount} {labels.midLevelPlural.toLowerCase()}</span>
+            <span className="meta">{objectiveCount} {objectiveCountLabel}</span>
           </span>
         </button>
         {editTrigger}
