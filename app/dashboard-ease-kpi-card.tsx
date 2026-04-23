@@ -317,8 +317,9 @@ export default function DashboardEaseKpiCard({
             onEmailChange={setOwnerEmail}
             multiple
             disabled={isSaving}
+            className="ease-edit-span"
           />
-          <div className="field">
+          <div className="field ease-edit-span">
             <label>Owner Email</label>
             <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
           </div>

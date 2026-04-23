@@ -1995,13 +1995,55 @@ th {
 
 .owner-input-wrap {
   position: relative;
+  width: 100%;
 }
 
 .owner-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0;
+}
+
+.owner-multi-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.45rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #c9d8e7;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.owner-multi-control:focus-within {
+  border-color: #7ba8d4;
+  box-shadow: 0 0 0 3px rgba(123, 168, 212, 0.16);
+}
+
+.owner-multi-control.is-disabled {
+  background: #f3f6fa;
+}
+
+.owner-multi-input {
+  flex: 1 1 12rem;
+  min-width: 11rem;
+  width: auto;
+  border: 0;
+  padding: 0.18rem 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.owner-multi-input:focus {
+  outline: none;
+}
+
+.owner-multi-input.objective-row-input {
+  border: 0;
+  padding: 0.18rem 0;
 }
 
 .owner-chip {

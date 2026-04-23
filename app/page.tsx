@@ -105,6 +105,22 @@ function getMostRecentTimestamp(
   return candidates.at(-1) ?? null;
 }
 
+function normalizeScopePart(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function getKrScopeKey(objectiveKey: string, krKey: string): string {
+  return `${normalizeScopePart(objectiveKey)}::${normalizeScopePart(krKey)}`;
+}
+
+function getKpiScopeKey(
+  objectiveKey: string,
+  krKey: string,
+  kpiKey: string,
+): string {
+  return `${getKrScopeKey(objectiveKey, krKey)}::${normalizeScopePart(kpiKey)}`;
+}
+
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps): Promise<JSX.Element> {
@@ -164,15 +180,21 @@ export default async function DashboardPage({
   const allKeyResults = (await listKeyResults()).filter((kr) =>
     objectiveKeys.has(kr.objectiveKey.toLowerCase()),
   );
-  const keyResultKeys = new Set(allKeyResults.map((kr) => kr.krKey.toLowerCase()));
+  const keyResultScopeKeys = new Set(
+    allKeyResults.map((kr) => getKrScopeKey(kr.objectiveKey, kr.krKey)),
+  );
   const allKpis = (await listKpis()).filter((kpi) =>
-    keyResultKeys.has(kpi.krKey.toLowerCase()),
+    keyResultScopeKeys.has(getKrScopeKey(kpi.objectiveKey, kpi.krKey)),
   );
 
-  const latestCheckinByKr = (await listCheckIns()).reduce<Map<string, CheckIn>>(
+  const latestCheckinByEntity = (await listCheckIns()).reduce<Map<string, CheckIn>>(
     (map, checkIn) => {
-      const key = checkIn.kpiKey ?? checkIn.krKey;
-      if (!map.has(key)) {
+      const key = checkIn.kpiKey
+        ? getKpiScopeKey(checkIn.objectiveKey, checkIn.krKey, checkIn.kpiKey)
+        : getKrScopeKey(checkIn.objectiveKey, checkIn.krKey);
+      const current = map.get(key);
+
+      if (!current || current.checkInAt.localeCompare(checkIn.checkInAt) < 0) {
         map.set(key, checkIn);
       }
 
@@ -190,9 +212,10 @@ export default async function DashboardPage({
     return map;
   }, new Map());
   const kpisByKr = allKpis.reduce<Map<string, typeof allKpis>>((map, kpi) => {
-    const current = map.get(kpi.krKey) ?? [];
+    const scopeKey = getKrScopeKey(kpi.objectiveKey, kpi.krKey);
+    const current = map.get(scopeKey) ?? [];
     current.push(kpi);
-    map.set(kpi.krKey, current);
+    map.set(scopeKey, current);
     return map;
   }, new Map());
   const objectivesByPosition = allObjectives.reduce<Map<string, Objective[]>>(
@@ -337,11 +360,14 @@ export default async function DashboardPage({
                                 key={objective.objectiveKey}
                                 objective={objective}
                                 keyResults={keyResults.map((kr) => {
-                                  const latest = latestCheckinByKr.get(kr.krKey);
+                                  const krScopeKey = getKrScopeKey(kr.objectiveKey, kr.krKey);
+                                  const latest = latestCheckinByEntity.get(krScopeKey);
                                   return {
                                     keyResult: kr,
-                                    kpis: (kpisByKr.get(kr.krKey) ?? []).map((kpi) => {
-                                      const latestKpi = latestCheckinByKr.get(kpi.kpiKey);
+                                    kpis: (kpisByKr.get(krScopeKey) ?? []).map((kpi) => {
+                                      const latestKpi = latestCheckinByEntity.get(
+                                        getKpiScopeKey(kpi.objectiveKey, kpi.krKey, kpi.kpiKey),
+                                      );
                                       return {
                                         kpi,
                                         latestUpdateNotes: latestKpi?.updateNotes,
@@ -461,24 +487,34 @@ export default async function DashboardPage({
                                   <DashboardObjectiveRowEditor
                                     objective={objective}
                                     keyResults={keyResults.map((kr) => {
-                                      const latest = latestCheckinByKr.get(
+                                      const krScopeKey = getKrScopeKey(
+                                        kr.objectiveKey,
                                         kr.krKey,
                                       );
-                                        return {
-                                          keyResult: kr,
-                                          kpis: (kpisByKr.get(kr.krKey) ?? []).map((kpi) => {
-                                            const latest = latestCheckinByKr.get(kpi.kpiKey);
-                                            return {
-                                              kpi,
-                                              latestUpdateNotes: latest?.updateNotes,
-                                              latestUpdatedAt: getMostRecentTimestamp(
-                                                latest?.checkInAt,
-                                                kpi.lastCheckinAt,
-                                              ),
-                                            };
-                                          }),
-                                          latestUpdateNotes: latest?.updateNotes,
-                                          latestUpdatedAt: getMostRecentTimestamp(
+                                      const latest = latestCheckinByEntity.get(
+                                        krScopeKey,
+                                      );
+                                      return {
+                                        keyResult: kr,
+                                        kpis: (kpisByKr.get(krScopeKey) ?? []).map((kpi) => {
+                                          const latest = latestCheckinByEntity.get(
+                                            getKpiScopeKey(
+                                              kpi.objectiveKey,
+                                              kpi.krKey,
+                                              kpi.kpiKey,
+                                            ),
+                                          );
+                                          return {
+                                            kpi,
+                                            latestUpdateNotes: latest?.updateNotes,
+                                            latestUpdatedAt: getMostRecentTimestamp(
+                                              latest?.checkInAt,
+                                              kpi.lastCheckinAt,
+                                            ),
+                                          };
+                                        }),
+                                        latestUpdateNotes: latest?.updateNotes,
+                                        latestUpdatedAt: getMostRecentTimestamp(
                                           latest?.checkInAt,
                                           kr.lastCheckinAt,
                                         ),

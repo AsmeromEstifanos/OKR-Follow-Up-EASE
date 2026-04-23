@@ -40,7 +40,7 @@ const CLASSIC_PROFILE: AppProfile = {
 
 const EASE_OKR_PROFILE: AppProfile = {
   key: "ease-okr",
-  showVentureTabs: false,
+  showVentureTabs: true,
   labels: {
     ventureSingular: "Venture",
     venturePlural: "Ventures",

@@ -341,8 +341,8 @@ export default function DashboardEaseObjectiveCard({
             ) : (
               <div className="ease-edit-grid">
                 <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
-                <OwnerInput id={`ease-objective-owner-${objective.objectiveKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} />
-                <div className="field"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
+                <OwnerInput id={`ease-objective-owner-${objective.objectiveKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
+                <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
                 <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(event) => setObjectiveType(event.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(event) => setOkrCycle(event.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>

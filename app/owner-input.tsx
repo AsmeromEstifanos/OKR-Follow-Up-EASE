@@ -280,12 +280,20 @@ export default function OwnerInput({
     };
   }, [allUsers.length, queryValue]);
 
+  const ownerInputClassName = inputClassName || undefined;
+  const ownerMultiInputClassName = [inputClassName, "owner-multi-input"]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className={`field ${className}`.trim()}>
       {showLabel ? <label htmlFor={id}>{label}</label> : null}
       <div className="owner-input-wrap">
-        {multiple && selectedOwners.length > 0 ? (
-          <div className="owner-chip-list" aria-label={`${label} selections`}>
+        {multiple ? (
+          <div
+            className={`owner-multi-control ${disabled ? "is-disabled" : ""}`.trim()}
+            aria-label={`${label} selections`}
+          >
             {selectedOwners.map((user, index) => (
               <span key={`${user.email || user.name}-${index}`} className="owner-chip">
                 <span className="owner-chip-text">{user.name || user.email}</span>
@@ -298,56 +306,72 @@ export default function OwnerInput({
                   disabled={disabled}
                   aria-label={`Remove ${user.name || user.email}`}
                 >
-                  ×
+                  &times;
                 </button>
               </span>
             ))}
+            <input
+              id={id}
+              name={inputName}
+              value={queryValue}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+                setIsOpen(true);
+              }}
+              onFocus={() => setIsOpen(true)}
+              onBlur={() => setTimeout(() => setIsOpen(false), 100)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setIsOpen(false);
+                  return;
+                }
+
+                if (event.key === "Enter" || event.key === "," || event.key === ";") {
+                  event.preventDefault();
+                  addTypedOwner();
+                  return;
+                }
+
+                if (event.key === "Backspace" && !searchValue.trim() && selectedOwners.length > 0) {
+                  event.preventDefault();
+                  removeOwner(selectedOwners.length - 1);
+                }
+              }}
+              placeholder="Type a user name, then press Enter or choose a suggestion"
+              autoComplete="new-password"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              className={ownerMultiInputClassName}
+              disabled={disabled}
+            />
           </div>
-        ) : null}
-        <input
-          id={id}
-          name={inputName}
-          value={queryValue}
-          onChange={(event) => {
-            if (multiple) {
-              setSearchValue(event.target.value);
-            } else {
+        ) : (
+          <input
+            id={id}
+            name={inputName}
+            value={queryValue}
+            onChange={(event) => {
               onChange(event.target.value);
               onSelectUser?.(null);
-            }
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 100)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setIsOpen(false);
-              return;
-            }
-
-            if (!multiple) {
-              return;
-            }
-
-            if (event.key === "Enter" || event.key === "," || event.key === ";") {
-              event.preventDefault();
-              addTypedOwner();
-              return;
-            }
-
-            if (event.key === "Backspace" && !searchValue.trim() && selectedOwners.length > 0) {
-              event.preventDefault();
-              removeOwner(selectedOwners.length - 1);
-            }
-          }}
-          placeholder={multiple ? "Type a user name, then press Enter or choose a suggestion" : placeholder}
-          autoComplete="new-password"
-          autoCorrect="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          className={inputClassName || undefined}
-          disabled={disabled}
-        />
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setTimeout(() => setIsOpen(false), 100)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setIsOpen(false);
+              }
+            }}
+            placeholder={placeholder}
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            className={ownerInputClassName}
+            disabled={disabled}
+          />
+        )}
         {isOpen && suggestions.length > 0 ? (
           <ul className="owner-suggest-list" role="listbox" aria-label="Owner suggestions">
             {suggestions.map((user) => (
