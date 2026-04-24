@@ -184,6 +184,101 @@ function entityMatchesOwner(
   return matchesAssignedOwner(entity.owner, entity.ownerEmail, selectedOwner);
 }
 
+type OwnerVisibleEntities = {
+  objectives: Objective[];
+  keyResults: KeyResult[];
+  kpis: Kpi[];
+};
+
+function getOwnerVisibleEntities(
+  objectives: Objective[],
+  keyResults: KeyResult[],
+  kpis: Kpi[],
+  ownerName: string
+): OwnerVisibleEntities {
+  if (!ownerName) {
+    return {
+      objectives,
+      keyResults,
+      kpis
+    };
+  }
+
+  const keyResultsByObjective = new Map<string, KeyResult[]>();
+  const kpisByKr = new Map<string, Kpi[]>();
+
+  keyResults.forEach((keyResult) => {
+    const objectiveKey = keyResult.objectiveKey.toLowerCase();
+    const entries = keyResultsByObjective.get(objectiveKey) ?? [];
+    entries.push(keyResult);
+    keyResultsByObjective.set(objectiveKey, entries);
+  });
+
+  kpis.forEach((kpi) => {
+    const krKey = kpi.krKey.toLowerCase();
+    const entries = kpisByKr.get(krKey) ?? [];
+    entries.push(kpi);
+    kpisByKr.set(krKey, entries);
+  });
+
+  const visibleObjectiveKeys = new Set<string>();
+  const visibleKrKeys = new Set<string>();
+  const visibleKpiKeys = new Set<string>();
+
+  objectives.forEach((objective) => {
+    if (!matchesAssignedOwner(objective.owner, objective.ownerEmail, ownerName)) {
+      return;
+    }
+
+    const objectiveKey = objective.objectiveKey.toLowerCase();
+    visibleObjectiveKeys.add(objectiveKey);
+
+    const childKeyResults = keyResultsByObjective.get(objectiveKey) ?? [];
+    childKeyResults.forEach((keyResult) => {
+      const krKey = keyResult.krKey.toLowerCase();
+      visibleKrKeys.add(krKey);
+      (kpisByKr.get(krKey) ?? []).forEach((kpi) => {
+        visibleKpiKeys.add(kpi.kpiKey.toLowerCase());
+      });
+    });
+  });
+
+  keyResults.forEach((keyResult) => {
+    if (!matchesAssignedOwner(keyResult.owner, keyResult.ownerEmail, ownerName)) {
+      return;
+    }
+
+    const objectiveKey = keyResult.objectiveKey.toLowerCase();
+    const krKey = keyResult.krKey.toLowerCase();
+    visibleObjectiveKeys.add(objectiveKey);
+    visibleKrKeys.add(krKey);
+
+    (kpisByKr.get(krKey) ?? []).forEach((kpi) => {
+      visibleKpiKeys.add(kpi.kpiKey.toLowerCase());
+    });
+  });
+
+  kpis.forEach((kpi) => {
+    if (!matchesAssignedOwner(kpi.owner, kpi.ownerEmail, ownerName)) {
+      return;
+    }
+
+    visibleObjectiveKeys.add(kpi.objectiveKey.toLowerCase());
+    visibleKrKeys.add(kpi.krKey.toLowerCase());
+    visibleKpiKeys.add(kpi.kpiKey.toLowerCase());
+  });
+
+  return {
+    objectives: objectives.filter((objective) =>
+      visibleObjectiveKeys.has(objective.objectiveKey.toLowerCase())
+    ),
+    keyResults: keyResults.filter((keyResult) =>
+      visibleKrKeys.has(keyResult.krKey.toLowerCase())
+    ),
+    kpis: kpis.filter((kpi) => visibleKpiKeys.has(kpi.kpiKey.toLowerCase()))
+  };
+}
+
 function scopeObjectivesBySelection(
   objectives: Objective[],
   selectedVenture: Venture | undefined,
@@ -310,13 +405,6 @@ function getEntitiesForDepartment(
   };
 }
 
-function getOwnerEntities<T extends { owner?: string; ownerEmail?: string }>(
-  items: T[],
-  ownerName: string
-): T[] {
-  return items.filter((item) => matchesAssignedOwner(item.owner, item.ownerEmail, ownerName));
-}
-
 export default async function DashboardAnalyticsPage({
   searchParams
 }: DashboardAnalyticsPageProps): Promise<JSX.Element> {
@@ -355,15 +443,21 @@ export default async function DashboardAnalyticsPage({
       scopedKrKeys.has(kpi.krKey.toLowerCase())
   );
 
-  const filteredObjectives = scopedObjectives.filter((objective) =>
-    entityMatchesOwner(objective, selectedOwner)
+  const ownerVisibleEntities = getOwnerVisibleEntities(
+    scopedObjectives,
+    scopedKeyResults,
+    scopedKpis,
+    selectedOwner
   );
-  const filteredKeyResults = scopedKeyResults.filter((keyResult) =>
-    entityMatchesOwner(keyResult, selectedOwner)
-  );
-  const filteredKpis = scopedKpis.filter((kpi) =>
-    entityMatchesOwner(kpi, selectedOwner)
-  );
+  const filteredObjectives = selectedOwner
+    ? ownerVisibleEntities.objectives
+    : scopedObjectives.filter((objective) => entityMatchesOwner(objective, selectedOwner));
+  const filteredKeyResults = selectedOwner
+    ? ownerVisibleEntities.keyResults
+    : scopedKeyResults.filter((keyResult) => entityMatchesOwner(keyResult, selectedOwner));
+  const filteredKpis = selectedOwner
+    ? ownerVisibleEntities.kpis
+    : scopedKpis.filter((kpi) => entityMatchesOwner(kpi, selectedOwner));
 
   const objectiveSummary = computeEntitySummary(filteredObjectives);
   const krSummary = computeEntitySummary(filteredKeyResults);
@@ -443,12 +537,21 @@ export default async function DashboardAnalyticsPage({
     );
   });
 
-  const ownerRowsAll = ownerOptions.map<OwnerRow>((ownerName) => ({
-    ownerName,
-    objectiveSummary: computeEntitySummary(getOwnerEntities(scopedObjectives, ownerName)),
-    krSummary: computeEntitySummary(getOwnerEntities(scopedKeyResults, ownerName)),
-    kpiSummary: computeEntitySummary(getOwnerEntities(scopedKpis, ownerName))
-  }));
+  const ownerRowsAll = ownerOptions.map<OwnerRow>((ownerName) => {
+    const visibleEntities = getOwnerVisibleEntities(
+      scopedObjectives,
+      scopedKeyResults,
+      scopedKpis,
+      ownerName
+    );
+
+    return {
+      ownerName,
+      objectiveSummary: computeEntitySummary(visibleEntities.objectives),
+      krSummary: computeEntitySummary(visibleEntities.keyResults),
+      kpiSummary: computeEntitySummary(visibleEntities.kpis)
+    };
+  });
   const ownerRows = selectedOwner
     ? ownerRowsAll.filter((row) => row.ownerName.toLowerCase() === selectedOwner.toLowerCase())
     : ownerRowsAll.filter(
