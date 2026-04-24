@@ -23,6 +23,7 @@ const OBJECTIVE_CYCLE_VALUES = ["Q1", "Q2", "Q3", "Q4"];
 const KR_METRIC_TYPE_VALUES = ["Delivery", "Financial", "Operational", "People", "Quality"];
 const KR_STATUS_VALUES = ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"];
 const CHECKIN_FREQUENCY_VALUES = ["Weekly", "BiWeekly", "Monthly", "AdHoc"];
+const BOARD_CARD_COLOR_VALUES = ["#2f6fed", "#00a86b", "#e056b7", "#ff8c42", "#7a5cff"];
 
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
@@ -136,6 +137,7 @@ export default function ConfigPage(): JSX.Element {
   const [keyResultMetricTypes, setKeyResultMetricTypes] = useState<string[]>(KR_METRIC_TYPE_VALUES);
   const [keyResultStatuses, setKeyResultStatuses] = useState<string[]>(KR_STATUS_VALUES);
   const [checkInFrequencies, setCheckInFrequencies] = useState<string[]>(CHECKIN_FREQUENCY_VALUES);
+  const [boardCardColors, setBoardCardColors] = useState<string[]>(BOARD_CARD_COLOR_VALUES);
   const [objectiveTypeDraft, setObjectiveTypeDraft] = useState<string>("");
   const [objectiveStatusDraft, setObjectiveStatusDraft] = useState<string>("");
   const [objectiveCycleDraft, setObjectiveCycleDraft] = useState<string>("");
@@ -166,6 +168,7 @@ export default function ConfigPage(): JSX.Element {
     setKeyResultMetricTypes(payload.fieldOptions.keyResultMetricTypes);
     setKeyResultStatuses(payload.fieldOptions.keyResultStatuses);
     setCheckInFrequencies(payload.fieldOptions.checkInFrequencies);
+    setBoardCardColors(payload.boardCardColors);
     setState("idle");
   }, []);
 
@@ -302,6 +305,40 @@ export default function ConfigPage(): JSX.Element {
 
     setConfig(payload);
     setMessage("Dropdown options updated.");
+    setState("idle");
+  };
+
+  const saveBoardCardColors = async (): Promise<void> => {
+    if (boardCardColors.length === 0) {
+      setError("Add at least one board card color.");
+      return;
+    }
+
+    setState("saving");
+    setError("");
+    setMessage("");
+
+    const response = await fetch(apiPath("/api/config/board-card-colors"), {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-user-email": normalizedCurrentUser
+      },
+      body: JSON.stringify({
+        boardCardColors
+      })
+    });
+    const payload = await readJson<AppConfig & ApiError>(response);
+
+    if (!response.ok || !payload || !("boardCardColors" in payload)) {
+      setError(payload?.error ?? "Failed to update board card colors.");
+      setState("idle");
+      return;
+    }
+
+    setConfig(payload);
+    setBoardCardColors(payload.boardCardColors);
+    setMessage("Board card colors updated.");
     setState("idle");
   };
 
@@ -493,7 +530,7 @@ export default function ConfigPage(): JSX.Element {
   return (
     <div>
       <h1 className="page-title">Configuration</h1>
-      <p className="subtitle">Manage admins, dropdown options, RAG ranges, ventures, and departments.</p>
+      <p className="subtitle">Manage admins, dropdown options, board colors, RAG ranges, ventures, and departments.</p>
 
       <section className="section">
         <h2>Admin Users</h2>
@@ -614,6 +651,51 @@ export default function ConfigPage(): JSX.Element {
         <div className="actions">
           <button className="btn" type="button" onClick={() => void saveFieldOptions()} disabled={isBusy}>
             Save Dropdown Config
+          </button>
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>Board Card Colors</h2>
+        <div className="config-checklist">
+          {boardCardColors.map((color, index) => (
+            <div key={`${color}-${index}`} className="config-inline-row">
+              <input
+                type="color"
+                value={color}
+                onChange={(event) => {
+                  const next = [...boardCardColors];
+                  next[index] = event.target.value;
+                  setBoardCardColors(next);
+                }}
+                disabled={isBusy}
+              />
+              <input
+                value={color}
+                onChange={(event) => {
+                  const next = [...boardCardColors];
+                  next[index] = event.target.value;
+                  setBoardCardColors(next);
+                }}
+                disabled={isBusy}
+              />
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={() => setBoardCardColors((current) => current.filter((_, currentIndex) => currentIndex !== index))}
+                disabled={isBusy || boardCardColors.length <= 1}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="actions">
+          <button className="btn btn-add" type="button" onClick={() => setBoardCardColors((current) => [...current, BOARD_CARD_COLOR_VALUES[current.length % BOARD_CARD_COLOR_VALUES.length]])} disabled={isBusy}>
+            Add Color
+          </button>
+          <button className="btn" type="button" onClick={() => void saveBoardCardColors()} disabled={isBusy}>
+            Save Board Colors
           </button>
         </div>
       </section>

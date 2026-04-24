@@ -51,16 +51,28 @@ type StoreState = {
   keyResults: KeyResult[];
   kpis: Kpi[];
   checkIns: CheckIn[];
+  codeSequences: CodeSequences;
+};
+
+type CodeSequences = {
+  nextObjectiveKey: number;
+  nextKrKey: number;
+  nextKpiKey: number;
+  nextObjectiveCodesByScope: Record<string, number>;
+  nextKrCodesByObjective: Record<string, number>;
+  nextKpiCodesByKr: Record<string, number>;
 };
 
 type PersistedContent = {
   ragThresholds?: RagThresholds;
   fieldOptions?: FieldOptions;
+  boardCardColors?: string[];
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
   kpis: Kpi[];
   checkIns: CheckIn[];
+  codeSequences?: CodeSequences;
 };
 
 export type StoreSnapshot = {
@@ -84,6 +96,14 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   keyResultStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"],
 };
+
+const DEFAULT_BOARD_CARD_COLORS = [
+  "#2f6fed",
+  "#00a86b",
+  "#e056b7",
+  "#ff8c42",
+  "#7a5cff"
+];
 
 const EASE_FALLBACK_PERIOD_KEY = "EASE-DEFAULT";
 const WEIGHT_TOLERANCE = 0.0001;
@@ -111,6 +131,7 @@ function persistContent(_store: StoreState): void {
 }
 
 function persistStore(store: StoreState): void {
+  syncCodeSequencesFromStore(store);
   persistVentures(store);
   persistContent(store);
 }
@@ -316,23 +337,6 @@ function buildDepartmentKey(
   return buildUniqueKey(existingKeys, "DEP", `${ventureKey}-${departmentName}`);
 }
 
-function getNextNumericKey(existingKeys: string[]): string {
-  let maxValue = 0;
-
-  existingKeys.forEach((key) => {
-    const parsed = Number(key.trim());
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      return;
-    }
-
-    if (parsed > maxValue) {
-      maxValue = parsed;
-    }
-  });
-
-  return String(maxValue + 1);
-}
-
 function parseNumberedCode(value: string, prefix: string): number | null {
   const match = new RegExp(`^${prefix}-(\\d+)$`, "i").exec(value.trim());
   if (!match) {
@@ -350,6 +354,105 @@ function parseNumberedCode(value: string, prefix: string): number | null {
 function formatNumberedCode(prefix: string, sequence: number): string {
   const normalized = Math.max(1, Math.floor(sequence));
   return `${prefix}-${String(normalized).padStart(3, "0")}`;
+}
+
+function createEmptyCodeSequences(): CodeSequences {
+  return {
+    nextObjectiveKey: 1,
+    nextKrKey: 1,
+    nextKpiKey: 1,
+    nextObjectiveCodesByScope: {},
+    nextKrCodesByObjective: {},
+    nextKpiCodesByKr: {}
+  };
+}
+
+function buildCodeSequenceFloor(store: StoreState): CodeSequences {
+  const floor = createEmptyCodeSequences();
+  const objectivePrefix = getMidLevelCodePrefix();
+  const krPrefix = getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
+  const kpiPrefix = getLeafLevelCodePrefix();
+
+  store.objectives.forEach((objective) => {
+    const parsedKey = Number(objective.objectiveKey.trim());
+    if (Number.isInteger(parsedKey) && parsedKey >= floor.nextObjectiveKey) {
+      floor.nextObjectiveKey = parsedKey + 1;
+    }
+
+    const scopeKey = buildObjectiveScopeKey(
+      store,
+      objective.department,
+      objective.ventureName ?? "",
+      objective.strategicTheme
+    );
+    const parsedCode = parseNumberedCode(normalizeKey(objective.objectiveCode ?? objective.objectiveKey), objectivePrefix);
+    if (parsedCode) {
+      floor.nextObjectiveCodesByScope[scopeKey] = Math.max(
+        floor.nextObjectiveCodesByScope[scopeKey] ?? 1,
+        parsedCode + 1
+      );
+    }
+  });
+
+  store.keyResults.forEach((keyResult) => {
+    const parsedKey = Number(keyResult.krKey.trim());
+    if (Number.isInteger(parsedKey) && parsedKey >= floor.nextKrKey) {
+      floor.nextKrKey = parsedKey + 1;
+    }
+
+    const scopeKey = keyResult.objectiveKey.toLowerCase();
+    const parsedCode = parseNumberedCode(normalizeKey(keyResult.krCode ?? keyResult.krKey), krPrefix);
+    if (parsedCode) {
+      floor.nextKrCodesByObjective[scopeKey] = Math.max(
+        floor.nextKrCodesByObjective[scopeKey] ?? 1,
+        parsedCode + 1
+      );
+    }
+  });
+
+  store.kpis.forEach((kpi) => {
+    const parsedKey = Number(kpi.kpiKey.trim());
+    if (Number.isInteger(parsedKey) && parsedKey >= floor.nextKpiKey) {
+      floor.nextKpiKey = parsedKey + 1;
+    }
+
+    const scopeKey = kpi.krKey.toLowerCase();
+    const parsedCode = parseNumberedCode(normalizeKey(kpi.kpiCode ?? kpi.kpiKey), kpiPrefix);
+    if (parsedCode) {
+      floor.nextKpiCodesByKr[scopeKey] = Math.max(
+        floor.nextKpiCodesByKr[scopeKey] ?? 1,
+        parsedCode + 1
+      );
+    }
+  });
+
+  return floor;
+}
+
+function mergeSequenceMaps(current: Record<string, number>, floor: Record<string, number>): Record<string, number> {
+  const next: Record<string, number> = { ...floor };
+  Object.entries(current).forEach(([key, value]) => {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    next[key] = Math.max(next[key] ?? 1, Math.max(1, Math.floor(value)));
+  });
+  return next;
+}
+
+function syncCodeSequencesFromStore(store: StoreState): void {
+  const floor = buildCodeSequenceFloor(store);
+  const current = store.codeSequences ?? createEmptyCodeSequences();
+
+  store.codeSequences = {
+    nextObjectiveKey: Math.max(floor.nextObjectiveKey, Math.max(1, Math.floor(current.nextObjectiveKey || 1))),
+    nextKrKey: Math.max(floor.nextKrKey, Math.max(1, Math.floor(current.nextKrKey || 1))),
+    nextKpiKey: Math.max(floor.nextKpiKey, Math.max(1, Math.floor(current.nextKpiKey || 1))),
+    nextObjectiveCodesByScope: mergeSequenceMaps(current.nextObjectiveCodesByScope ?? {}, floor.nextObjectiveCodesByScope),
+    nextKrCodesByObjective: mergeSequenceMaps(current.nextKrCodesByObjective ?? {}, floor.nextKrCodesByObjective),
+    nextKpiCodesByKr: mergeSequenceMaps(current.nextKpiCodesByKr ?? {}, floor.nextKpiCodesByKr)
+  };
 }
 
 function getMidLevelCodePrefix(): string {
@@ -659,7 +762,7 @@ function assertRemainingKpiWeights(
   }
 }
 
-function getNextObjectiveCode(
+function peekNextObjectiveCode(
   store: StoreState,
   departmentName: string,
   ventureName: string,
@@ -671,72 +774,66 @@ function getNextObjectiveCode(
     ventureName,
     strategicTheme,
   );
-  const codePrefix = getMidLevelCodePrefix();
-  let maxSequence = 0;
-
-  store.objectives.forEach((objective) => {
-    if (
-      buildObjectiveScopeKey(
-        store,
-        objective.department,
-        objective.ventureName ?? "",
-        objective.strategicTheme,
-      ) !== scopeKey
-    ) {
-      return;
-    }
-
-    const candidate = normalizeKey(
-      objective.objectiveCode ?? objective.objectiveKey,
-    );
-    const parsed = parseNumberedCode(candidate, codePrefix);
-    if (parsed && parsed > maxSequence) {
-      maxSequence = parsed;
-    }
-  });
-
-  return formatNumberedCode(codePrefix, maxSequence + 1);
+  return formatNumberedCode(
+    getMidLevelCodePrefix(),
+    store.codeSequences.nextObjectiveCodesByScope[scopeKey] ?? 1
+  );
 }
 
-function getNextKrCode(store: StoreState, objectiveKey: string): string {
+function consumeNextObjectiveCode(
+  store: StoreState,
+  departmentName: string,
+  ventureName: string,
+  strategicTheme: string
+): string {
+  const scopeKey = buildObjectiveScopeKey(store, departmentName, ventureName, strategicTheme);
+  const nextSequence = store.codeSequences.nextObjectiveCodesByScope[scopeKey] ?? 1;
+  store.codeSequences.nextObjectiveCodesByScope[scopeKey] = nextSequence + 1;
+  return formatNumberedCode(getMidLevelCodePrefix(), nextSequence);
+}
+
+function peekNextKrCode(store: StoreState, objectiveKey: string): string {
   const normalizedObjectiveKey = objectiveKey.toLowerCase();
-  const codePrefix =
-    getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
-  let maxSequence = 0;
-
-  store.keyResults.forEach((kr) => {
-    if (kr.objectiveKey.toLowerCase() !== normalizedObjectiveKey) {
-      return;
-    }
-
-    const candidate = normalizeKey(kr.krCode ?? kr.krKey);
-    const parsed = parseNumberedCode(candidate, codePrefix);
-    if (parsed && parsed > maxSequence) {
-      maxSequence = parsed;
-    }
-  });
-
-  return formatNumberedCode(codePrefix, maxSequence + 1);
+  const codePrefix = getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
+  return formatNumberedCode(codePrefix, store.codeSequences.nextKrCodesByObjective[normalizedObjectiveKey] ?? 1);
 }
 
-function getNextKpiCode(store: StoreState, krKey: string): string {
+function consumeNextKrCode(store: StoreState, objectiveKey: string): string {
+  const normalizedObjectiveKey = objectiveKey.toLowerCase();
+  const codePrefix = getAppProfile().key === "ease-okr" ? "KR" : getLeafLevelCodePrefix();
+  const nextSequence = store.codeSequences.nextKrCodesByObjective[normalizedObjectiveKey] ?? 1;
+  store.codeSequences.nextKrCodesByObjective[normalizedObjectiveKey] = nextSequence + 1;
+  return formatNumberedCode(codePrefix, nextSequence);
+}
+
+function peekNextKpiCode(store: StoreState, krKey: string): string {
   const normalizedKrKey = krKey.toLowerCase();
-  const codePrefix = getLeafLevelCodePrefix();
-  let maxSequence = 0;
+  return formatNumberedCode(getLeafLevelCodePrefix(), store.codeSequences.nextKpiCodesByKr[normalizedKrKey] ?? 1);
+}
 
-  store.kpis.forEach((kpi) => {
-    if (kpi.krKey.toLowerCase() !== normalizedKrKey) {
-      return;
-    }
+function consumeNextKpiCode(store: StoreState, krKey: string): string {
+  const normalizedKrKey = krKey.toLowerCase();
+  const nextSequence = store.codeSequences.nextKpiCodesByKr[normalizedKrKey] ?? 1;
+  store.codeSequences.nextKpiCodesByKr[normalizedKrKey] = nextSequence + 1;
+  return formatNumberedCode(getLeafLevelCodePrefix(), nextSequence);
+}
 
-    const candidate = normalizeKey(kpi.kpiCode ?? kpi.kpiKey);
-    const parsed = parseNumberedCode(candidate, codePrefix);
-    if (parsed && parsed > maxSequence) {
-      maxSequence = parsed;
-    }
-  });
+function consumeNextObjectiveKey(store: StoreState): string {
+  const next = Math.max(1, Math.floor(store.codeSequences.nextObjectiveKey || 1));
+  store.codeSequences.nextObjectiveKey = next + 1;
+  return String(next);
+}
 
-  return formatNumberedCode(codePrefix, maxSequence + 1);
+function consumeNextKrKey(store: StoreState): string {
+  const next = Math.max(1, Math.floor(store.codeSequences.nextKrKey || 1));
+  store.codeSequences.nextKrKey = next + 1;
+  return String(next);
+}
+
+function consumeNextKpiKey(store: StoreState): string {
+  const next = Math.max(1, Math.floor(store.codeSequences.nextKpiKey || 1));
+  store.codeSequences.nextKpiKey = next + 1;
+  return String(next);
 }
 
 function getOkrCycleFromDate(value: string): OkrCycle {
@@ -869,6 +966,26 @@ function normalizeFieldOptions(input?: Partial<FieldOptions>): FieldOptions {
       DEFAULT_FIELD_OPTIONS.checkInFrequencies,
     ),
   };
+}
+
+function normalizeBoardCardColors(input?: string[]): string[] {
+  const next: string[] = [];
+  (Array.isArray(input) ? input : []).forEach((value) => {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const trimmed = value.trim();
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+      return;
+    }
+
+    if (!next.includes(trimmed)) {
+      next.push(trimmed);
+    }
+  });
+
+  return next.length > 0 ? next : [...DEFAULT_BOARD_CARD_COLORS];
 }
 
 function validateRagThresholds(input: RagThresholds): void {
@@ -1238,6 +1355,7 @@ function buildSeedStore(): StoreState {
         amberMin: 40,
       },
       fieldOptions: clone(DEFAULT_FIELD_OPTIONS),
+      boardCardColors: clone(DEFAULT_BOARD_CARD_COLORS),
       ventures: [],
     },
     periods: [],
@@ -1245,6 +1363,7 @@ function buildSeedStore(): StoreState {
     keyResults: [],
     kpis: [],
     checkIns: [],
+    codeSequences: createEmptyCodeSequences(),
   };
 
   recalcAllObjectivesInStore(store);
@@ -1253,12 +1372,14 @@ function buildSeedStore(): StoreState {
 
 function applyStoreMigrations(store: StoreState): void {
   store.config.fieldOptions = normalizeFieldOptions(store.config.fieldOptions);
+  store.config.boardCardColors = normalizeBoardCardColors(store.config.boardCardColors);
   ensureImplicitPeriod(store);
   ensureUniqueDepartmentKeys(store);
   migrateObjectiveDefaults(store);
   migrateKrDefaults(store);
   migrateKpiDefaults(store);
   normalizeAllWeightGroups(store);
+  syncCodeSequencesFromStore(store);
   recalcAllObjectivesInStore(store);
   persistStore(store);
 }
@@ -1269,11 +1390,13 @@ function toStoreSnapshot(store: StoreState): StoreSnapshot {
     content: {
       ragThresholds: clone(store.config.ragThresholds),
       fieldOptions: clone(store.config.fieldOptions),
+      boardCardColors: clone(store.config.boardCardColors),
       periods: clone(store.periods),
       objectives: clone(store.objectives),
       keyResults: clone(store.keyResults),
       kpis: clone(store.kpis),
       checkIns: clone(store.checkIns),
+      codeSequences: clone(store.codeSequences),
     },
   };
 }
@@ -1292,12 +1415,16 @@ function fromStoreSnapshot(snapshot: StoreSnapshot): StoreState {
       snapshot.content.fieldOptions,
     );
   }
+  if (snapshot.content.boardCardColors) {
+    store.config.boardCardColors = normalizeBoardCardColors(snapshot.content.boardCardColors);
+  }
 
   store.periods = clone(snapshot.content.periods);
   store.objectives = clone(snapshot.content.objectives);
   store.keyResults = clone(snapshot.content.keyResults);
   store.kpis = clone(snapshot.content.kpis ?? []);
   store.checkIns = clone(snapshot.content.checkIns);
+  store.codeSequences = clone(snapshot.content.codeSequences ?? createEmptyCodeSequences());
   return store;
 }
 
@@ -1344,6 +1471,10 @@ function getStore(): StoreState {
       storeContainer.__okrDummyStore.config.fieldOptions =
         normalizeFieldOptions(persistedContent.fieldOptions);
     }
+    if (persistedContent.boardCardColors) {
+      storeContainer.__okrDummyStore.config.boardCardColors =
+        normalizeBoardCardColors(persistedContent.boardCardColors);
+    }
 
     if (persistedContent.periods.length > 0) {
       storeContainer.__okrDummyStore.periods = persistedContent.periods;
@@ -1353,6 +1484,9 @@ function getStore(): StoreState {
     storeContainer.__okrDummyStore.keyResults = persistedContent.keyResults;
     storeContainer.__okrDummyStore.kpis = persistedContent.kpis ?? [];
     storeContainer.__okrDummyStore.checkIns = persistedContent.checkIns;
+    storeContainer.__okrDummyStore.codeSequences = clone(
+      persistedContent.codeSequences ?? createEmptyCodeSequences()
+    );
   }
 
   applyStoreMigrations(storeContainer.__okrDummyStore);
@@ -1442,6 +1576,128 @@ export function updateFieldOptions(input: Partial<FieldOptions>): AppConfig {
 
   persistStore(store);
   return clone(store.config);
+}
+
+export function updateBoardCardColors(input: string[]): AppConfig {
+  const store = getStore();
+  store.config.boardCardColors = normalizeBoardCardColors(input);
+  persistStore(store);
+  return clone(store.config);
+}
+
+type WeightEntry = {
+  key: string;
+  weight: number;
+};
+
+function normalizeWeightEntries(entries: WeightEntry[], entityLabel: string): Map<string, number> {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error(`${entityLabel} weights are required.`);
+  }
+
+  const normalized = new Map<string, number>();
+  entries.forEach((entry) => {
+    const key = normalizeKey(entry.key ?? "");
+    if (!key) {
+      throw new Error(`${entityLabel} weight key is required.`);
+    }
+
+    if (normalized.has(key.toLowerCase())) {
+      throw new Error(`Duplicate ${entityLabel.toLowerCase()} weight entry '${key}'.`);
+    }
+
+    normalized.set(key.toLowerCase(), normalizeWeightInput(entry.weight, entityLabel));
+  });
+
+  assertWeightTotal(entityLabel, Array.from(normalized.values()));
+  return normalized;
+}
+
+export function updateObjectiveWeightGroup(entries: WeightEntry[]): Objective[] {
+  const store = getStore();
+  const normalized = normalizeWeightEntries(entries, "Objective");
+  const objectives = Array.from(normalized.keys()).map((key) => ensureObjectiveExists(store, key));
+  const firstObjective = objectives[0];
+  const firstScopeKey = buildObjectiveScopeKey(
+    store,
+    firstObjective.department,
+    firstObjective.ventureName ?? "",
+    firstObjective.strategicTheme
+  );
+  const firstPeriodKey = firstObjective.periodKey.toLowerCase();
+  const siblingObjectives = store.objectives.filter((objective) => {
+    return (
+      objective.periodKey.toLowerCase() === firstPeriodKey &&
+      buildObjectiveScopeKey(store, objective.department, objective.ventureName ?? "", objective.strategicTheme) === firstScopeKey
+    );
+  });
+
+  if (siblingObjectives.length !== normalized.size) {
+    throw new Error("Provide weights for every objective in this section.");
+  }
+
+  siblingObjectives.forEach((objective) => {
+    if (!normalized.has(objective.objectiveKey.toLowerCase())) {
+      throw new Error("Provide weights for every objective in this section.");
+    }
+  });
+
+  siblingObjectives.forEach((objective) => {
+    objective.baselineValue = normalized.get(objective.objectiveKey.toLowerCase()) ?? objective.baselineValue;
+  });
+
+  recalcAllObjectivesInStore(store);
+  persistStore(store);
+  return clone(siblingObjectives);
+}
+
+export function updateKrWeightGroup(objectiveKey: string, entries: WeightEntry[]): KeyResult[] {
+  const store = getStore();
+  const objective = ensureObjectiveExists(store, objectiveKey);
+  const normalized = normalizeWeightEntries(entries, "Key result");
+  const siblings = store.keyResults.filter((keyResult) => keyResult.objectiveKey.toLowerCase() === objective.objectiveKey.toLowerCase());
+
+  if (siblings.length !== normalized.size) {
+    throw new Error("Provide weights for every key result under this objective.");
+  }
+
+  siblings.forEach((keyResult) => {
+    const nextWeight = normalized.get(keyResult.krKey.toLowerCase());
+    if (nextWeight === undefined) {
+      throw new Error("Provide weights for every key result under this objective.");
+    }
+
+    keyResult.baselineValue = nextWeight;
+  });
+
+  recalcObjectiveInStore(store, objective.objectiveKey);
+  persistStore(store);
+  return clone(siblings);
+}
+
+export function updateKpiWeightGroup(krKey: string, entries: WeightEntry[]): Kpi[] {
+  const store = getStore();
+  const keyResult = ensureKrExists(store, krKey);
+  const normalized = normalizeWeightEntries(entries, "KPI");
+  const siblings = store.kpis.filter((kpi) => kpi.krKey.toLowerCase() === keyResult.krKey.toLowerCase());
+
+  if (siblings.length !== normalized.size) {
+    throw new Error("Provide weights for every KPI under this key result.");
+  }
+
+  siblings.forEach((kpi) => {
+    const nextWeight = normalized.get(kpi.kpiKey.toLowerCase());
+    if (nextWeight === undefined) {
+      throw new Error("Provide weights for every KPI under this key result.");
+    }
+
+    kpi.baselineValue = nextWeight;
+  });
+
+  recalcKeyResultInStore(store, keyResult.krKey);
+  recalcObjectiveInStore(store, keyResult.objectiveKey);
+  persistStore(store);
+  return clone(siblings);
 }
 
 export function addVenture(input: CreateVentureInput): Venture {
@@ -1946,9 +2202,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const requestedObjectiveCode = normalizeKey(
     input.objectiveCode ?? input.objectiveKey ?? "",
   );
-  const objectiveKey = getNextNumericKey(
-    store.objectives.map((objective) => objective.objectiveKey),
-  );
+  const objectiveKey = consumeNextObjectiveKey(store);
   const periodKey = resolvePeriodKey(store, input.periodKey);
   assertDepartmentExists(store, input.department);
   const strategicTheme = normalizeName(input.strategicTheme || "");
@@ -1967,7 +2221,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     objectiveKey,
     objectiveCode:
       requestedObjectiveCode ||
-      getNextObjectiveCode(
+      consumeNextObjectiveCode(
         store,
         input.department,
         input.ventureName ?? "",
@@ -2276,7 +2530,7 @@ export function getKeyResult(krKey: string): KeyResult | null {
 export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const store = getStore();
   const requestedKrCode = normalizeKey(input.krCode ?? input.krKey ?? "");
-  const krKey = getNextNumericKey(store.keyResults.map((kr) => kr.krKey));
+  const krKey = consumeNextKrKey(store);
 
   const objective = ensureObjectiveExists(store, input.objectiveKey);
   const periodKey = resolvePeriodKey(
@@ -2292,7 +2546,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
 
   const keyResult: KeyResult = {
     krKey,
-    krCode: requestedKrCode || getNextKrCode(store, input.objectiveKey),
+    krCode: requestedKrCode || consumeNextKrCode(store, input.objectiveKey),
     objectiveKey: input.objectiveKey,
     periodKey,
     title: input.title,
@@ -2328,7 +2582,7 @@ export function previewNextObjectiveCode(
   strategicTheme: string,
 ): string {
   const store = getStore();
-  return getNextObjectiveCode(
+  return peekNextObjectiveCode(
     store,
     departmentName,
     ventureName,
@@ -2338,7 +2592,7 @@ export function previewNextObjectiveCode(
 
 export function previewNextKrCode(objectiveKey: string): string {
   const store = getStore();
-  return getNextKrCode(store, objectiveKey);
+  return peekNextKrCode(store, objectiveKey);
 }
 
 type KpiFilters = {
@@ -2373,7 +2627,7 @@ export function getKpi(kpiKey: string): Kpi | null {
 export function createKpi(input: CreateKpiInput): Kpi {
   const store = getStore();
   const requestedKpiCode = normalizeKey(input.kpiCode ?? input.kpiKey ?? "");
-  const kpiKey = getNextNumericKey(store.kpis.map((item) => item.kpiKey));
+  const kpiKey = consumeNextKpiKey(store);
   const objective = ensureObjectiveExists(store, input.objectiveKey);
   const keyResult = ensureKrExists(store, input.krKey);
 
@@ -2404,7 +2658,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
 
   const kpi: Kpi = {
     kpiKey,
-    kpiCode: requestedKpiCode || getNextKpiCode(store, input.krKey),
+    kpiCode: requestedKpiCode || consumeNextKpiCode(store, input.krKey),
     objectiveKey: objective.objectiveKey,
     krKey: keyResult.krKey,
     periodKey,
@@ -2438,7 +2692,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
 
 export function previewNextKpiCode(krKey: string): string {
   const store = getStore();
-  return getNextKpiCode(store, krKey);
+  return peekNextKpiCode(store, krKey);
 }
 
 export function updateKeyResult(

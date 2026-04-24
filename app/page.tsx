@@ -38,15 +38,6 @@ type DashboardPageProps = {
       }>;
 };
 
-const GROUP_COLORS = [
-  "#2b6de0",
-  "#00a76f",
-  "#cc3fa0",
-  "#ff9f1a",
-  "#00a9c9",
-  "#7846f8",
-];
-
 function getSearchParamValue(
   value: string | string[] | undefined,
 ): string | undefined {
@@ -130,6 +121,7 @@ export default async function DashboardPage({
   const positionLabel = "Position";
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const config = await getConfig();
+  const groupColors = config.boardCardColors.length > 0 ? config.boardCardColors : ["#2f6fed"];
   const ventures = config.ventures;
   const fieldOptions = config.fieldOptions;
   const adminEmails = await listAdminEmails();
@@ -310,7 +302,7 @@ export default async function DashboardPage({
           <div className="board-groups">
               {ownerSections.map((section, sectionIndex) => {
                 const sectionStyle = {
-                  "--group-color": GROUP_COLORS[sectionIndex % GROUP_COLORS.length]
+                  "--group-color": groupColors[sectionIndex % groupColors.length]
                 } as CSSProperties;
                 const positionScopeKey = [
                   selectedVenture?.ventureKey ?? "default",
@@ -327,6 +319,11 @@ export default async function DashboardPage({
                       positionOwner={section.positionOwner}
                       positionOwnerEmail={section.positionOwnerEmail}
                       objectiveCount={section.objectives.length}
+                      objectiveWeights={section.objectives.map((objective) => ({
+                        key: objective.objectiveKey,
+                        label: objective.objectiveCode ?? objective.title,
+                        weight: objective.baselineValue
+                      }))}
                       adminEmails={adminEmails}
                     >
                       <div className="board-group-title-wrap">
@@ -404,7 +401,7 @@ export default async function DashboardPage({
             {ownerSections.map((section, sectionIndex) => {
               const sectionStyle = {
                 "--group-color":
-                  GROUP_COLORS[sectionIndex % GROUP_COLORS.length],
+                    groupColors[sectionIndex % groupColors.length],
               } as CSSProperties;
               const positionScopeKey = [
                 selectedVenture?.ventureKey ?? "default",
@@ -425,6 +422,11 @@ export default async function DashboardPage({
                     positionOwner={section.positionOwner}
                     positionOwnerEmail={section.positionOwnerEmail}
                     objectiveCount={section.objectives.length}
+                    objectiveWeights={section.objectives.map((objective) => ({
+                      key: objective.objectiveKey,
+                      label: objective.objectiveCode ?? objective.title,
+                      weight: objective.baselineValue
+                    }))}
                     adminEmails={adminEmails}
                   >
                     <div className="board-group-title-wrap">

@@ -29,10 +29,14 @@ import {
   previewNextKrCode as previewNextKrCodeLocal,
   previewNextKpiCode as previewNextKpiCodeLocal,
   previewNextObjectiveCode as previewNextObjectiveCodeLocal,
+  updateBoardCardColors as updateBoardCardColorsLocal,
   updateDepartmentInVenture as updateDepartmentInVentureLocal,
   updateFieldOptions as updateFieldOptionsLocal,
+  updateKpiWeightGroup as updateKpiWeightGroupLocal,
   updateKeyResult as updateKeyResultLocal,
+  updateKrWeightGroup as updateKrWeightGroupLocal,
   updateKpi as updateKpiLocal,
+  updateObjectiveWeightGroup as updateObjectiveWeightGroupLocal,
   updateObjective as updateObjectiveLocal,
   updatePeriod as updatePeriodLocal,
   updateRagThresholds as updateRagThresholdsLocal,
@@ -236,6 +240,14 @@ export async function updateFieldOptions(input: Partial<FieldOptions>): Promise<
   await ensureStoreHydrated();
   updateOperationProgress(28, "Applying dropdown changes");
   const config = updateFieldOptionsLocal(input);
+  await syncStoreToSharePoint();
+  return config;
+}
+
+export async function updateBoardCardColors(input: string[]): Promise<AppConfig> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Applying board color changes");
+  const config = updateBoardCardColorsLocal(input);
   await syncStoreToSharePoint();
   return config;
 }
@@ -452,6 +464,36 @@ export async function updateKpi(kpiKey: string, patch: UpdateKpiInput): Promise<
     await syncStoreToSharePoint();
   }
 
+  return result;
+}
+
+export async function updateObjectiveWeightGroup(entries: Array<{ key: string; weight: number }>): Promise<Objective[]> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Updating objective weights");
+  const result = updateObjectiveWeightGroupLocal(entries);
+  await syncStoreToSharePoint();
+  return result;
+}
+
+export async function updateKrWeightGroup(
+  objectiveKey: string,
+  entries: Array<{ key: string; weight: number }>
+): Promise<KeyResult[]> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Updating key result weights");
+  const result = updateKrWeightGroupLocal(objectiveKey, entries);
+  await syncStoreToSharePoint();
+  return result;
+}
+
+export async function updateKpiWeightGroup(
+  krKey: string,
+  entries: Array<{ key: string; weight: number }>
+): Promise<Kpi[]> {
+  await ensureStoreHydrated();
+  updateOperationProgress(28, "Updating KPI weights");
+  const result = updateKpiWeightGroupLocal(krKey, entries);
+  await syncStoreToSharePoint();
   return result;
 }
 

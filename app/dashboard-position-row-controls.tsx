@@ -2,6 +2,7 @@
 
 import { appProfile } from "@/lib/app-profile";
 import OwnerInput from "@/app/owner-input";
+import WeightGroupControls from "@/app/weight-group-controls";
 import { apiPath } from "@/lib/base-path";
 import { formatOwnerEmailLabel, formatOwnerLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import { broadcastOkrRefresh } from "@/lib/tab-sync";
@@ -16,6 +17,11 @@ type Props = {
   positionOwner?: string;
   positionOwnerEmail?: string;
   objectiveCount: number;
+  objectiveWeights?: Array<{
+    key: string;
+    label: string;
+    weight: number;
+  }>;
   adminEmails: string[];
   children: ReactNode;
 };
@@ -48,6 +54,7 @@ export default function DashboardPositionRowControls({
   positionOwner,
   positionOwnerEmail,
   objectiveCount,
+  objectiveWeights = [],
   adminEmails,
   children
 }: Props): JSX.Element {
@@ -236,6 +243,17 @@ export default function DashboardPositionRowControls({
         </button>
         {editTrigger}
       </div>
+      {isOpen && objectiveWeights.length > 0 ? (
+        <WeightGroupControls
+          title="Objective Weights"
+          actionLabel="Edit Objective Weights"
+          requestPath="/api/objectives/weights"
+          items={objectiveWeights}
+          adminEmails={adminEmails}
+          ownerEmail={positionOwnerEmail}
+          emptyMessage="No objectives to weight yet."
+        />
+      ) : null}
       {isEditing ? (
         <div className="board-position-edit-panel">
           <div className="position-header-controls">

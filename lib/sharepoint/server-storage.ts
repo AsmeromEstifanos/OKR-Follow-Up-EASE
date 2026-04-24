@@ -18,15 +18,28 @@ const LEGACY_VENTURES_RECORD_KEY = "ventures";
 const LEGACY_CONTENT_RECORD_KEY = "content";
 const RAG_CONFIG_KEY = "ragThresholds";
 const FIELD_OPTIONS_CONFIG_KEY = "fieldOptions";
+const BOARD_CARD_COLORS_CONFIG_KEY = "boardCardColors";
+const CODE_SEQUENCES_CONFIG_KEY = "codeSequences";
+
+type CodeSequences = {
+  nextObjectiveKey: number;
+  nextKrKey: number;
+  nextKpiKey: number;
+  nextObjectiveCodesByScope: Record<string, number>;
+  nextKrCodesByObjective: Record<string, number>;
+  nextKpiCodesByKr: Record<string, number>;
+};
 
 type PersistedContent = {
   ragThresholds?: RagThresholds;
   fieldOptions?: FieldOptions;
+  boardCardColors?: string[];
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
   kpis: Kpi[];
   checkIns: CheckIn[];
+  codeSequences?: CodeSequences;
 };
 
 export type SharePointStoreSnapshot = {
@@ -1214,6 +1227,21 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
       : {})
   });
 
+  if (capabilities.hasConfigValueJsonColumn) {
+    config.push({
+      ConfigKey: BOARD_CARD_COLORS_CONFIG_KEY,
+      GreenMin: null,
+      AmberMin: null,
+      ValueJson: JSON.stringify(snapshot.content.boardCardColors ?? [])
+    });
+    config.push({
+      ConfigKey: CODE_SEQUENCES_CONFIG_KEY,
+      GreenMin: null,
+      AmberMin: null,
+      ValueJson: JSON.stringify(snapshot.content.codeSequences ?? {})
+    });
+  }
+
   return {
     ventures,
     departments,
@@ -1694,6 +1722,12 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
   const fieldOptionsItem = configItems.find(
     (item) => asString(item.fields?.ConfigKey).trim().toLowerCase() === FIELD_OPTIONS_CONFIG_KEY.toLowerCase()
   );
+  const boardCardColorsItem = configItems.find(
+    (item) => asString(item.fields?.ConfigKey).trim().toLowerCase() === BOARD_CARD_COLORS_CONFIG_KEY.toLowerCase()
+  );
+  const codeSequencesItem = configItems.find(
+    (item) => asString(item.fields?.ConfigKey).trim().toLowerCase() === CODE_SEQUENCES_CONFIG_KEY.toLowerCase()
+  );
 
   const ragThresholds = ragItem
     ? {
@@ -1704,17 +1738,25 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
   const fieldOptions = fieldOptionsItem
     ? normalizeFieldOptions(parseConfigJson(fieldOptionsItem.fields?.ValueJson))
     : normalizeFieldOptions(undefined);
+  const boardCardColors = Array.isArray(parseConfigJson(boardCardColorsItem?.fields?.ValueJson))
+    ? (parseConfigJson(boardCardColorsItem?.fields?.ValueJson) as string[])
+    : undefined;
+  const codeSequences = codeSequencesItem
+    ? (parseConfigJson(codeSequencesItem.fields?.ValueJson) as CodeSequences | undefined)
+    : undefined;
 
   return {
     ventures,
     content: {
       ragThresholds,
       fieldOptions,
+      boardCardColors,
       periods,
       objectives,
       keyResults,
       kpis,
-      checkIns
+      checkIns,
+      codeSequences
     }
   };
 }

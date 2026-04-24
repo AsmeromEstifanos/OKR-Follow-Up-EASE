@@ -4,6 +4,7 @@ import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKrCard from "@/app/dashboard-ease-kr-card";
 import DashboardKrControls from "@/app/dashboard-kr-controls";
 import OwnerInput from "@/app/owner-input";
+import WeightGroupControls from "@/app/weight-group-controls";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import {
@@ -380,6 +381,20 @@ export default function DashboardEaseObjectiveCard({
           </div>
           {isKrSectionOpen ? (
             <div className="ease-kr-list">
+              {keyResults.length > 0 ? (
+                <WeightGroupControls
+                  title="Key Result Weights"
+                  actionLabel="Edit KR Weights"
+                  requestPath={`/api/objectives/${encodeURIComponent(objective.objectiveKey)}/key-results/weights`}
+                  items={keyResults.map((item) => ({
+                    key: item.keyResult.krKey,
+                    label: item.keyResult.krCode ?? item.keyResult.title,
+                    weight: normalizeWeightValue(item.keyResult.baselineValue)
+                  }))}
+                  canEdit={canEdit}
+                  emptyMessage="No key results to weight yet."
+                />
+              ) : null}
               {keyResults.length === 0 ? (
                 <p className="meta">No key results for this objective yet.</p>
               ) : (

@@ -29,6 +29,7 @@ export interface Venture {
 export interface AppConfig {
   ragThresholds: RagThresholds;
   fieldOptions: FieldOptions;
+  boardCardColors: string[];
   ventures: Venture[];
 }
 
