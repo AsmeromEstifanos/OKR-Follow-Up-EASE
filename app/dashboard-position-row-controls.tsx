@@ -22,6 +22,7 @@ type Props = {
     label: string;
     weight: number;
   }>;
+  forcedOpen?: boolean;
   adminEmails: string[];
   children: ReactNode;
 };
@@ -55,6 +56,7 @@ export default function DashboardPositionRowControls({
   positionOwnerEmail,
   objectiveCount,
   objectiveWeights = [],
+  forcedOpen,
   adminEmails,
   children
 }: Props): JSX.Element {
@@ -82,6 +84,12 @@ export default function DashboardPositionRowControls({
     setDisplayName(positionName);
     setDisplayOwner(formatOwnerLabel(positionOwner, positionOwnerEmail));
   }, [positionName, positionOwner, positionOwnerEmail, selectedVentureKey, departmentKey]);
+
+  useEffect(() => {
+    if (typeof forcedOpen === "boolean") {
+      setIsOpen(forcedOpen);
+    }
+  }, [forcedOpen]);
 
   const canManage = isAdmin && Boolean(selectedVentureKey && departmentKey);
   const editTrigger =

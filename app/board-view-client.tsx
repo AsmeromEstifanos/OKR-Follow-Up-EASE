@@ -87,6 +87,7 @@ export default function BoardViewClient({
   const currentUserEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(currentUserEmail);
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
+  const [allSectionsOpen, setAllSectionsOpen] = useState(true);
 
   const boardColorVars = useMemo(
     () =>
@@ -180,12 +181,26 @@ export default function BoardViewClient({
         </div>
         {normalizedUserEmail ? (
           <div className="board-visibility-filters">
+            <label className="ios-switch-field">
+              <span className="ios-switch-label">Assigned To Me</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showAssignedOnly}
+                className={`ios-switch ${showAssignedOnly ? "is-on" : ""}`}
+                onClick={() => setShowAssignedOnly((current) => !current)}
+              >
+                <span className="ios-switch-track" aria-hidden="true">
+                  <span className="ios-switch-thumb" />
+                </span>
+              </button>
+            </label>
             <button
               type="button"
-              className={`tab-btn ${showAssignedOnly ? "tab-btn-active" : ""}`}
-              onClick={() => setShowAssignedOnly((current) => !current)}
+              className="tab-btn"
+              onClick={() => setAllSectionsOpen((current) => !current)}
             >
-              Assigned To Me
+              {allSectionsOpen ? "Collapse All" : "Expand All"}
             </button>
           </div>
         ) : null}
@@ -224,6 +239,7 @@ export default function BoardViewClient({
                       entry.objective.objectiveCode ?? entry.objective.title,
                     weight: entry.objective.baselineValue,
                   }))}
+                  forcedOpen={allSectionsOpen}
                   adminEmails={adminEmails}
                 >
                   <div className="board-group-title-wrap">
@@ -269,6 +285,7 @@ export default function BoardViewClient({
                             key={entry.objective.objectiveKey}
                             objective={entry.objective}
                             keyResults={entry.keyResults}
+                            forcedKrSectionOpen={allSectionsOpen}
                             positionOwnerEmail={section.positionOwnerEmail}
                             adminEmails={adminEmails}
                             objectiveTypeOptions={

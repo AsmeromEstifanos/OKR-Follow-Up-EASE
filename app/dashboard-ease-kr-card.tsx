@@ -29,6 +29,7 @@ type Props = {
   keyResult: KeyResult;
   kpis: KpiRowData[];
   latestUpdatedAt?: string | null;
+  forcedKpiSectionOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
   metricTypeOptions: MetricType[];
@@ -107,6 +108,7 @@ export default function DashboardEaseKrCard({
   keyResult,
   kpis,
   latestUpdatedAt,
+  forcedKpiSectionOpen,
   positionOwnerEmail,
   adminEmails,
   metricTypeOptions,
@@ -158,6 +160,12 @@ export default function DashboardEaseKrCard({
     setComment(keyResult.comment ?? "");
     setNotes(keyResult.notes ?? "");
   }, [keyResult, codeValue]);
+
+  useEffect(() => {
+    if (typeof forcedKpiSectionOpen === "boolean") {
+      setIsKpiSectionOpen(forcedKpiSectionOpen);
+    }
+  }, [forcedKpiSectionOpen]);
 
   const progressValue = clampPercent(keyResult.progressPct);
   const displayWeight = normalizeWeightValue(keyResult.baselineValue);

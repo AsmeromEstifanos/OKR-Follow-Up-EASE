@@ -720,6 +720,66 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ios-switch-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ios-switch-label {
+  white-space: nowrap;
+}
+
+.ios-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ios-switch-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 3.2rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  background: #d4d9e1;
+  box-shadow: inset 0 0 0 1px rgba(24, 48, 56, 0.08);
+  transition: background-color 0.18s ease;
+}
+
+.ios-switch-thumb {
+  position: absolute;
+  left: 0.14rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.22);
+  transition: transform 0.18s ease;
+}
+
+.ios-switch.is-on .ios-switch-track {
+  background: var(--accent);
+}
+
+.ios-switch.is-on .ios-switch-thumb {
+  transform: translateX(1.34rem);
+}
+
+.ios-switch:focus-visible {
+  outline: 2px solid #8cb7de;
+  outline-offset: 3px;
+  border-radius: 999px;
 }
 
 .position-controls {

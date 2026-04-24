@@ -33,6 +33,7 @@ type KeyResultRowData = {
 type Props = {
   objective: Objective;
   keyResults: KeyResultRowData[];
+  forcedKrSectionOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
   objectiveTypeOptions: ObjectiveType[];
@@ -105,6 +106,7 @@ async function readJson<T>(response: Response): Promise<T | null> {
 export default function DashboardEaseObjectiveCard({
   objective,
   keyResults,
+  forcedKrSectionOpen,
   positionOwnerEmail,
   adminEmails,
   objectiveTypeOptions,
@@ -165,6 +167,12 @@ export default function DashboardEaseObjectiveCard({
     setKeyRisksDependency(objective.keyRisksDependency ?? "");
     setNotes(objective.notes ?? objective.description ?? "");
   }, [objective, objectiveCode]);
+
+  useEffect(() => {
+    if (typeof forcedKrSectionOpen === "boolean") {
+      setIsKrSectionOpen(forcedKrSectionOpen);
+    }
+  }, [forcedKrSectionOpen]);
 
   const progressValue = clampPercent(objective.progressPct);
   const displayWeight = normalizeWeightValue(objective.baselineValue);
@@ -405,7 +413,7 @@ export default function DashboardEaseObjectiveCard({
                 <p className="meta">No key results for this objective yet.</p>
               ) : (
                 keyResults.map((item) => (
-                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} forcedKpiSectionOpen={forcedKrSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
                 ))
               )}
             </div>
