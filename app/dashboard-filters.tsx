@@ -9,12 +9,16 @@ type Props = {
   ventures: Venture[];
   selectedVentureKey?: string;
   selectedDepartment?: string;
+  ownerOptions?: string[];
+  selectedOwner?: string;
 };
 
 export default function DashboardFilters({
   ventures,
   selectedVentureKey,
-  selectedDepartment
+  selectedDepartment,
+  ownerOptions = [],
+  selectedOwner = ""
 }: Props): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
@@ -22,6 +26,7 @@ export default function DashboardFilters({
 
   const [ventureKey, setVentureKey] = useState<string>(selectedVentureKey ?? "");
   const [department, setDepartment] = useState<string>(selectedDepartment ?? "");
+  const [owner, setOwner] = useState<string>(selectedOwner);
 
   useEffect(() => {
     setVentureKey(selectedVentureKey ?? "");
@@ -30,6 +35,10 @@ export default function DashboardFilters({
   useEffect(() => {
     setDepartment(selectedDepartment ?? "");
   }, [selectedDepartment]);
+
+  useEffect(() => {
+    setOwner(selectedOwner ?? "");
+  }, [selectedOwner]);
 
   const departmentOptions = useMemo(() => {
     if (ventureKey) {
@@ -46,7 +55,11 @@ export default function DashboardFilters({
     ).sort((left, right) => left.localeCompare(right));
   }, [ventureKey, ventures]);
 
-  const applyFilters = (nextVentureKey: string, nextDepartment: string): void => {
+  const applyFilters = (
+    nextVentureKey: string,
+    nextDepartment: string,
+    nextOwner: string
+  ): void => {
     const params = new URLSearchParams(searchParams.toString());
 
     if (nextVentureKey) {
@@ -61,6 +74,12 @@ export default function DashboardFilters({
       params.delete("department");
     }
 
+    if (nextOwner) {
+      params.set("owner", nextOwner);
+    } else {
+      params.delete("owner");
+    }
+
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
@@ -68,12 +87,17 @@ export default function DashboardFilters({
   const handleVentureChange = (value: string): void => {
     setVentureKey(value);
     setDepartment("");
-    applyFilters(value, "");
+    applyFilters(value, "", owner);
   };
 
   const handleDepartmentChange = (value: string): void => {
     setDepartment(value);
-    applyFilters(ventureKey, value);
+    applyFilters(ventureKey, value, owner);
+  };
+
+  const handleOwnerChange = (value: string): void => {
+    setOwner(value);
+    applyFilters(ventureKey, department, value);
   };
 
   return (
@@ -86,14 +110,14 @@ export default function DashboardFilters({
       </div>
       <div className="config-grid">
         <div className="field">
-          <label htmlFor="ventureKey">Venture</label>
+          <label htmlFor="ventureKey">Department</label>
           <select
             id="ventureKey"
             name="ventureKey"
             value={ventureKey}
             onChange={(event) => handleVentureChange(event.target.value)}
           >
-            <option value="">All ventures</option>
+            <option value="">All departments</option>
             {ventures.map((venture) => (
               <option key={venture.ventureKey} value={venture.ventureKey}>
                 {venture.name}
@@ -103,12 +127,24 @@ export default function DashboardFilters({
         </div>
 
         <div className="field">
-          <label htmlFor="department">Department</label>
+          <label htmlFor="department">OKR</label>
           <select id="department" name="department" value={department} onChange={(event) => handleDepartmentChange(event.target.value)}>
-            <option value="">All departments</option>
+            <option value="">All OKRs</option>
             {departmentOptions.map((departmentName) => (
               <option key={departmentName} value={departmentName}>
                 {departmentName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="owner">Owner</label>
+          <select id="owner" name="owner" value={owner} onChange={(event) => handleOwnerChange(event.target.value)}>
+            <option value="">All owners</option>
+            {ownerOptions.map((ownerName) => (
+              <option key={ownerName} value={ownerName}>
+                {ownerName}
               </option>
             ))}
           </select>

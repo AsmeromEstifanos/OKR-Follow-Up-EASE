@@ -1,7 +1,17 @@
 import DashboardFilters from "@/app/dashboard-filters";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
-import { getConfig, listKeyResults, listObjectives } from "@/lib/store";
-import type { Objective, ObjectiveStatus, Venture } from "@/lib/types";
+import {
+  matchesAssignedOwner,
+  parseAssignedOwners,
+} from "@/lib/owner";
+import { getConfig, listKeyResults, listKpis, listObjectives } from "@/lib/store";
+import type {
+  Kpi,
+  KeyResult,
+  Objective,
+  ObjectiveStatus,
+  Venture,
+} from "@/lib/types";
 import { Fragment } from "react";
 
 export const dynamic = "force-dynamic";
@@ -11,22 +21,17 @@ type DashboardAnalyticsPageProps = {
     | {
         ventureKey?: string | string[];
         department?: string | string[];
+        owner?: string | string[];
       }
     | Promise<{
         ventureKey?: string | string[];
         department?: string | string[];
+        owner?: string | string[];
       }>;
 };
 
-type Summary = {
-  objectiveCount: number;
-  keyResultCount: number;
-  statusCounts: Record<string, number>;
-  avgProgress: number;
-};
-
-type KrSummary = {
-  keyResultCount: number;
+type EntitySummary = {
+  count: number;
   statusCounts: Record<string, number>;
   avgProgress: number;
 };
@@ -34,15 +39,24 @@ type KrSummary = {
 type VentureRow = {
   ventureKey: string;
   ventureName: string;
-  objectiveSummary: Summary;
-  krSummary: KrSummary;
+  objectiveSummary: EntitySummary;
+  krSummary: EntitySummary;
+  kpiSummary: EntitySummary;
 };
 
 type DepartmentRow = {
   ventureName: string;
   departmentName: string;
-  objectiveSummary: Summary;
-  krSummary: KrSummary;
+  objectiveSummary: EntitySummary;
+  krSummary: EntitySummary;
+  kpiSummary: EntitySummary;
+};
+
+type OwnerRow = {
+  ownerName: string;
+  objectiveSummary: EntitySummary;
+  krSummary: EntitySummary;
+  kpiSummary: EntitySummary;
 };
 
 function getSearchParamValue(value: string | string[] | undefined): string | undefined {
@@ -55,7 +69,7 @@ function getSearchParamValue(value: string | string[] | undefined): string | und
 
 async function resolveSearchParams(
   searchParams: DashboardAnalyticsPageProps["searchParams"]
-): Promise<{ ventureKey?: string | string[]; department?: string | string[] }> {
+): Promise<{ ventureKey?: string | string[]; department?: string | string[]; owner?: string | string[] }> {
   if (!searchParams) {
     return {};
   }
@@ -67,41 +81,24 @@ async function resolveSearchParams(
   return searchParams;
 }
 
-function computeSummary(objectives: Objective[], keyResultCountByObjective: Map<string, number>): Summary {
-  const objectiveCount = objectives.length;
-  const keyResultCount = objectives.reduce((total, objective) => {
-    return total + (keyResultCountByObjective.get(objective.objectiveKey.toLowerCase()) ?? 0);
-  }, 0);
-  const statusCounts = objectives.reduce<Record<string, number>>((counts, objective) => {
-    counts[objective.status] = (counts[objective.status] ?? 0) + 1;
+function computeEntitySummary<T extends { status: string; progressPct: number }>(
+  items: T[]
+): EntitySummary {
+  const count = items.length;
+  const statusCounts = items.reduce<Record<string, number>>((counts, item) => {
+    counts[item.status] = (counts[item.status] ?? 0) + 1;
     return counts;
   }, {});
   const avgProgress =
-    objectiveCount > 0
-      ? objectives.reduce((sum, objective) => sum + (Number.isFinite(objective.progressPct) ? objective.progressPct : 0), 0) / objectiveCount
+    count > 0
+      ? items.reduce(
+          (sum, item) => sum + (Number.isFinite(item.progressPct) ? item.progressPct : 0),
+          0
+        ) / count
       : 0;
 
   return {
-    objectiveCount,
-    keyResultCount,
-    statusCounts,
-    avgProgress
-  };
-}
-
-function computeKrSummary(keyResults: Array<{ status: string; progressPct: number }>): KrSummary {
-  const keyResultCount = keyResults.length;
-  const statusCounts = keyResults.reduce<Record<string, number>>((counts, keyResult) => {
-    counts[keyResult.status] = (counts[keyResult.status] ?? 0) + 1;
-    return counts;
-  }, {});
-  const avgProgress =
-    keyResultCount > 0
-      ? keyResults.reduce((sum, keyResult) => sum + (Number.isFinite(keyResult.progressPct) ? keyResult.progressPct : 0), 0) / keyResultCount
-      : 0;
-
-  return {
-    keyResultCount,
+    count,
     statusCounts,
     avgProgress
   };
@@ -176,28 +173,23 @@ function formatProgressPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-export default async function DashboardAnalyticsPage({
-  searchParams
-}: DashboardAnalyticsPageProps): Promise<JSX.Element> {
-  const resolvedSearchParams = await resolveSearchParams(searchParams);
-  const requestedVentureKey = getSearchParamValue(resolvedSearchParams?.ventureKey)?.trim();
-  const selectedDepartment = getSearchParamValue(resolvedSearchParams?.department)?.trim() ?? "";
+function entityMatchesOwner(
+  entity: Objective | KeyResult | Kpi,
+  selectedOwner: string
+): boolean {
+  if (!selectedOwner) {
+    return true;
+  }
 
-  const config = await getConfig();
-  const ventures = config.ventures;
-  const selectedVenture = requestedVentureKey
-    ? ventures.find((venture) => venture.ventureKey.toLowerCase() === requestedVentureKey.toLowerCase())
-    : undefined;
+  return matchesAssignedOwner(entity.owner, entity.ownerEmail, selectedOwner);
+}
 
-  const allObjectives = await listObjectives();
-  const allKeyResults = await listKeyResults();
-  const keyResultCountByObjective = allKeyResults.reduce<Map<string, number>>((map, keyResult) => {
-    const key = keyResult.objectiveKey.toLowerCase();
-    map.set(key, (map.get(key) ?? 0) + 1);
-    return map;
-  }, new Map());
-
-  const filteredObjectives = allObjectives.filter((objective) => {
+function scopeObjectivesBySelection(
+  objectives: Objective[],
+  selectedVenture: Venture | undefined,
+  selectedDepartment: string
+): Objective[] {
+  return objectives.filter((objective) => {
     if (selectedVenture && !objectiveBelongsToVenture(objective, selectedVenture)) {
       return false;
     }
@@ -208,49 +200,232 @@ export default async function DashboardAnalyticsPage({
 
     return true;
   });
+}
 
-  const summary = computeSummary(filteredObjectives, keyResultCountByObjective);
-  const filteredObjectiveKeys = new Set(filteredObjectives.map((objective) => objective.objectiveKey.toLowerCase()));
-  const filteredKeyResults = allKeyResults.filter((keyResult) => filteredObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()));
-  const krSummary = computeKrSummary(filteredKeyResults);
-  const tableStatusColumns = Array.from(
-    new Set([...config.fieldOptions.objectiveStatuses, ...config.fieldOptions.keyResultStatuses])
-  );
-  const objectiveStatusCards = buildStatusCards(filteredObjectives, config.fieldOptions.objectiveStatuses);
-  const keyResultStatusCards = buildStatusCards(filteredKeyResults, config.fieldOptions.keyResultStatuses);
+function collectOwnerOptions(
+  objectives: Objective[],
+  keyResults: KeyResult[],
+  kpis: Kpi[]
+): string[] {
+  const owners = new Set<string>();
 
-  const ventureRowsAll = ventures.map<VentureRow>((venture) => {
-    const scopedObjectives = filteredObjectives.filter((objective) => objectiveBelongsToVenture(objective, venture));
-    const scopedObjectiveKeys = new Set(scopedObjectives.map((objective) => objective.objectiveKey.toLowerCase()));
-    const scopedKeyResults = filteredKeyResults.filter((keyResult) => scopedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()));
-    return {
-      ventureKey: venture.ventureKey,
-      ventureName: venture.name,
-      objectiveSummary: computeSummary(scopedObjectives, keyResultCountByObjective),
-      krSummary: computeKrSummary(scopedKeyResults)
-    };
+  [objectives, keyResults, kpis].forEach((items) => {
+    items.forEach((item) => {
+      parseAssignedOwners(item.owner, item.ownerEmail).forEach((owner) => {
+        const label = owner.name || owner.email;
+        if (label.trim()) {
+          owners.add(label.trim());
+        }
+      });
+    });
   });
+
+  return Array.from(owners).sort((left, right) => left.localeCompare(right));
+}
+
+function getEntitiesForVenture(
+  venture: Venture,
+  scopedObjectives: Objective[],
+  scopedKeyResults: KeyResult[],
+  scopedKpis: Kpi[],
+  objectiveByKey: Map<string, Objective>,
+  selectedOwner: string
+): VentureRow {
+  const ventureObjectives = scopedObjectives.filter((objective) =>
+    objectiveBelongsToVenture(objective, venture)
+  );
+  const ventureObjectiveKeys = new Set(
+    ventureObjectives.map((objective) => objective.objectiveKey.toLowerCase())
+  );
+  const ventureKeyResults = scopedKeyResults.filter((keyResult) =>
+    ventureObjectiveKeys.has(keyResult.objectiveKey.toLowerCase())
+  );
+  const ventureKrKeys = new Set(
+    ventureKeyResults.map((keyResult) => keyResult.krKey.toLowerCase())
+  );
+  const ventureKpis = scopedKpis.filter((kpi) => {
+    const objective = objectiveByKey.get(kpi.objectiveKey.toLowerCase());
+    if (!objective || !objectiveBelongsToVenture(objective, venture)) {
+      return false;
+    }
+
+    return ventureKrKeys.has(kpi.krKey.toLowerCase());
+  });
+
+  return {
+    ventureKey: venture.ventureKey,
+    ventureName: venture.name,
+    objectiveSummary: computeEntitySummary(
+      ventureObjectives.filter((objective) => entityMatchesOwner(objective, selectedOwner))
+    ),
+    krSummary: computeEntitySummary(
+      ventureKeyResults.filter((keyResult) => entityMatchesOwner(keyResult, selectedOwner))
+    ),
+    kpiSummary: computeEntitySummary(
+      ventureKpis.filter((kpi) => entityMatchesOwner(kpi, selectedOwner))
+    )
+  };
+}
+
+function getEntitiesForDepartment(
+  venture: Venture,
+  departmentName: string,
+  scopedObjectives: Objective[],
+  scopedKeyResults: KeyResult[],
+  scopedKpis: Kpi[],
+  selectedOwner: string
+): DepartmentRow {
+  const departmentObjectives = scopedObjectives.filter(
+    (objective) =>
+      objective.department.toLowerCase() === departmentName.toLowerCase() &&
+      objectiveBelongsToVenture(objective, venture)
+  );
+  const departmentObjectiveKeys = new Set(
+    departmentObjectives.map((objective) => objective.objectiveKey.toLowerCase())
+  );
+  const departmentKeyResults = scopedKeyResults.filter((keyResult) =>
+    departmentObjectiveKeys.has(keyResult.objectiveKey.toLowerCase())
+  );
+  const departmentKrKeys = new Set(
+    departmentKeyResults.map((keyResult) => keyResult.krKey.toLowerCase())
+  );
+  const departmentKpis = scopedKpis.filter(
+    (kpi) =>
+      departmentObjectiveKeys.has(kpi.objectiveKey.toLowerCase()) &&
+      departmentKrKeys.has(kpi.krKey.toLowerCase())
+  );
+
+  return {
+    ventureName: venture.name,
+    departmentName,
+    objectiveSummary: computeEntitySummary(
+      departmentObjectives.filter((objective) => entityMatchesOwner(objective, selectedOwner))
+    ),
+    krSummary: computeEntitySummary(
+      departmentKeyResults.filter((keyResult) => entityMatchesOwner(keyResult, selectedOwner))
+    ),
+    kpiSummary: computeEntitySummary(
+      departmentKpis.filter((kpi) => entityMatchesOwner(kpi, selectedOwner))
+    )
+  };
+}
+
+function getOwnerEntities<T extends { owner?: string; ownerEmail?: string }>(
+  items: T[],
+  ownerName: string
+): T[] {
+  return items.filter((item) => matchesAssignedOwner(item.owner, item.ownerEmail, ownerName));
+}
+
+export default async function DashboardAnalyticsPage({
+  searchParams
+}: DashboardAnalyticsPageProps): Promise<JSX.Element> {
+  const resolvedSearchParams = await resolveSearchParams(searchParams);
+  const requestedVentureKey = getSearchParamValue(resolvedSearchParams?.ventureKey)?.trim();
+  const selectedDepartment = getSearchParamValue(resolvedSearchParams?.department)?.trim() ?? "";
+  const selectedOwner = getSearchParamValue(resolvedSearchParams?.owner)?.trim() ?? "";
+
+  const config = await getConfig();
+  const ventures = config.ventures;
+  const selectedVenture = requestedVentureKey
+    ? ventures.find((venture) => venture.ventureKey.toLowerCase() === requestedVentureKey.toLowerCase())
+    : undefined;
+
+  const allObjectives = await listObjectives();
+  const allKeyResults = await listKeyResults();
+  const allKpis = await listKpis();
+
+  const scopedObjectives = scopeObjectivesBySelection(
+    allObjectives,
+    selectedVenture,
+    selectedDepartment
+  );
+  const scopedObjectiveKeys = new Set(
+    scopedObjectives.map((objective) => objective.objectiveKey.toLowerCase())
+  );
+  const scopedKeyResults = allKeyResults.filter((keyResult) =>
+    scopedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase())
+  );
+  const scopedKrKeys = new Set(
+    scopedKeyResults.map((keyResult) => keyResult.krKey.toLowerCase())
+  );
+  const scopedKpis = allKpis.filter(
+    (kpi) =>
+      scopedObjectiveKeys.has(kpi.objectiveKey.toLowerCase()) &&
+      scopedKrKeys.has(kpi.krKey.toLowerCase())
+  );
+
+  const filteredObjectives = scopedObjectives.filter((objective) =>
+    entityMatchesOwner(objective, selectedOwner)
+  );
+  const filteredKeyResults = scopedKeyResults.filter((keyResult) =>
+    entityMatchesOwner(keyResult, selectedOwner)
+  );
+  const filteredKpis = scopedKpis.filter((kpi) =>
+    entityMatchesOwner(kpi, selectedOwner)
+  );
+
+  const objectiveSummary = computeEntitySummary(filteredObjectives);
+  const krSummary = computeEntitySummary(filteredKeyResults);
+  const kpiSummary = computeEntitySummary(filteredKpis);
+
+  const tableStatusColumns = Array.from(
+    new Set([
+      ...config.fieldOptions.objectiveStatuses,
+      ...config.fieldOptions.keyResultStatuses
+    ])
+  );
+
+  const objectiveStatusCards = buildStatusCards(
+    filteredObjectives,
+    config.fieldOptions.objectiveStatuses
+  );
+  const keyResultStatusCards = buildStatusCards(
+    filteredKeyResults,
+    config.fieldOptions.keyResultStatuses
+  );
+  const kpiStatusCards = buildStatusCards(
+    filteredKpis,
+    config.fieldOptions.keyResultStatuses
+  );
+
+  const ownerOptions = collectOwnerOptions(scopedObjectives, scopedKeyResults, scopedKpis);
+  const objectiveByKey = new Map(
+    scopedObjectives.map((objective) => [objective.objectiveKey.toLowerCase(), objective])
+  );
+
+  const ventureRowsAll = ventures.map((venture) =>
+    getEntitiesForVenture(
+      venture,
+      scopedObjectives,
+      scopedKeyResults,
+      scopedKpis,
+      objectiveByKey,
+      selectedOwner
+    )
+  );
   const ventureRows = selectedVenture
-    ? ventureRowsAll.filter((row) => row.ventureKey.toLowerCase() === selectedVenture.ventureKey.toLowerCase())
-    : ventureRowsAll.filter((row) => row.objectiveSummary.objectiveCount > 0 || row.krSummary.keyResultCount > 0);
+    ? ventureRowsAll.filter(
+        (row) => row.ventureKey.toLowerCase() === selectedVenture.ventureKey.toLowerCase()
+      )
+    : ventureRowsAll.filter(
+        (row) =>
+          row.objectiveSummary.count > 0 ||
+          row.krSummary.count > 0 ||
+          row.kpiSummary.count > 0
+      );
 
   const departmentRowsAll = ventures.flatMap<DepartmentRow>((venture) =>
-    venture.departments.map((department) => {
-      const scopedObjectives = filteredObjectives.filter((objective) => {
-        return (
-          objective.department.toLowerCase() === department.name.toLowerCase() && objectiveBelongsToVenture(objective, venture)
-        );
-      });
-      const scopedObjectiveKeys = new Set(scopedObjectives.map((objective) => objective.objectiveKey.toLowerCase()));
-      const scopedKeyResults = filteredKeyResults.filter((keyResult) => scopedObjectiveKeys.has(keyResult.objectiveKey.toLowerCase()));
-
-      return {
-        ventureName: venture.name,
-        departmentName: department.name,
-        objectiveSummary: computeSummary(scopedObjectives, keyResultCountByObjective),
-        krSummary: computeKrSummary(scopedKeyResults)
-      };
-    })
+    venture.departments.map((department) =>
+      getEntitiesForDepartment(
+        venture,
+        department.name,
+        scopedObjectives,
+        scopedKeyResults,
+        scopedKpis,
+        selectedOwner
+      )
+    )
   );
   const departmentRows = departmentRowsAll.filter((row) => {
     if (selectedVenture && row.ventureName.toLowerCase() !== selectedVenture.name.toLowerCase()) {
@@ -261,8 +436,27 @@ export default async function DashboardAnalyticsPage({
       return row.departmentName.toLowerCase() === selectedDepartment.toLowerCase();
     }
 
-    return row.objectiveSummary.objectiveCount > 0 || row.krSummary.keyResultCount > 0;
+    return (
+      row.objectiveSummary.count > 0 ||
+      row.krSummary.count > 0 ||
+      row.kpiSummary.count > 0
+    );
   });
+
+  const ownerRowsAll = ownerOptions.map<OwnerRow>((ownerName) => ({
+    ownerName,
+    objectiveSummary: computeEntitySummary(getOwnerEntities(scopedObjectives, ownerName)),
+    krSummary: computeEntitySummary(getOwnerEntities(scopedKeyResults, ownerName)),
+    kpiSummary: computeEntitySummary(getOwnerEntities(scopedKpis, ownerName))
+  }));
+  const ownerRows = selectedOwner
+    ? ownerRowsAll.filter((row) => row.ownerName.toLowerCase() === selectedOwner.toLowerCase())
+    : ownerRowsAll.filter(
+        (row) =>
+          row.objectiveSummary.count > 0 ||
+          row.krSummary.count > 0 ||
+          row.kpiSummary.count > 0
+      );
 
   const scopeLabel = selectedVenture
     ? selectedDepartment
@@ -270,22 +464,31 @@ export default async function DashboardAnalyticsPage({
       : selectedVenture.name
     : selectedDepartment
       ? selectedDepartment
-      : "All ventures and departments";
+      : "All departments and OKRs";
+  const scopeLabelWithOwner = selectedOwner ? `${scopeLabel} / ${selectedOwner}` : scopeLabel;
 
   return (
     <div className="dashboard-page analytics-page">
-      <DashboardFilters ventures={ventures} selectedVentureKey={selectedVenture?.ventureKey} selectedDepartment={selectedDepartment} />
+      <DashboardFilters
+        ventures={ventures}
+        selectedVentureKey={selectedVenture?.ventureKey}
+        selectedDepartment={selectedDepartment}
+        ownerOptions={ownerOptions}
+        selectedOwner={selectedOwner}
+      />
 
       <section className="section analytics-overview">
         <div className="section-header">
           <h2>OKR Dashboard</h2>
-          <span className="meta">Scope: {scopeLabel}</span>
+          <span className="meta">Scope: {scopeLabelWithOwner}</span>
         </div>
 
         <div className="analytics-single-metric">
           <article className="analytics-summary-card analytics-summary-progress analytics-single-metric-card">
             <h3>Avg Progress</h3>
-            <div className="analytics-summary-value">{formatProgressPercent(summary.avgProgress)}</div>
+            <div className="analytics-summary-value">
+              {formatProgressPercent(objectiveSummary.avgProgress)}
+            </div>
           </article>
         </div>
 
@@ -300,8 +503,8 @@ export default async function DashboardAnalyticsPage({
             </article>
           ))}
         </div>
+        <p className="meta analytics-summary-meta">{objectiveSummary.count} objective(s)</p>
 
-        <p className="meta analytics-summary-meta">{summary.objectiveCount} objective(s)</p>
         <div className="section-header analytics-subsection-head">
           <h3>Key Result Progress</h3>
         </div>
@@ -313,57 +516,20 @@ export default async function DashboardAnalyticsPage({
             </article>
           ))}
         </div>
-        <p className="meta analytics-summary-meta">{krSummary.keyResultCount} key result(s)</p>
-      </section>
+        <p className="meta analytics-summary-meta">{krSummary.count} key result(s)</p>
 
-      <section className="section">
-        <div className="section-header">
-          <h2>Venture Performance</h2>
+        <div className="section-header analytics-subsection-head">
+          <h3>KPI Progress</h3>
         </div>
-        <div className="table-wrap">
-          <table className="analytics-table">
-            <thead>
-              <tr>
-                <th>Venture</th>
-                <th>Metric</th>
-                <th>Count</th>
-                {tableStatusColumns.map((statusOption) => (
-                  <th key={statusOption}>{formatStatus(statusOption)}</th>
-                ))}
-                <th>Avg Progress</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ventureRows.length === 0 ? (
-                <tr>
-                  <td colSpan={tableStatusColumns.length + 4}>No venture data for the current filter.</td>
-                </tr>
-              ) : (
-                ventureRows.map((row) => (
-                  <Fragment key={row.ventureKey}>
-                    <tr>
-                      <td rowSpan={2}>{row.ventureName}</td>
-                      <td>Objectives</td>
-                      <td>{row.objectiveSummary.objectiveCount}</td>
-                      {tableStatusColumns.map((statusOption) => (
-                        <td key={statusOption}>{row.objectiveSummary.statusCounts[statusOption] ?? 0}</td>
-                      ))}
-                      <td>{formatProgressPercent(row.objectiveSummary.avgProgress)}</td>
-                    </tr>
-                    <tr>
-                      <td>Key Results</td>
-                      <td>{row.krSummary.keyResultCount}</td>
-                      {tableStatusColumns.map((statusOption) => (
-                        <td key={statusOption}>{row.krSummary.statusCounts[statusOption] ?? 0}</td>
-                      ))}
-                      <td>{formatProgressPercent(row.krSummary.avgProgress)}</td>
-                    </tr>
-                  </Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="analytics-summary-grid">
+          {kpiStatusCards.map((card) => (
+            <article key={card.status} className={`analytics-summary-card ${card.className}`}>
+              <h3>{card.label}</h3>
+              <div className="analytics-summary-value">{card.count}</div>
+            </article>
+          ))}
         </div>
+        <p className="meta analytics-summary-meta">{kpiSummary.count} KPI(s)</p>
       </section>
 
       <section className="section">
@@ -375,7 +541,67 @@ export default async function DashboardAnalyticsPage({
             <thead>
               <tr>
                 <th>Department</th>
-                <th>Venture</th>
+                <th>Metric</th>
+                <th>Count</th>
+                {tableStatusColumns.map((statusOption) => (
+                  <th key={statusOption}>{formatStatus(statusOption)}</th>
+                ))}
+                <th>Avg Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ventureRows.length === 0 ? (
+                <tr>
+                  <td colSpan={tableStatusColumns.length + 4}>
+                    No department data for the current filter.
+                  </td>
+                </tr>
+              ) : (
+                ventureRows.map((row) => (
+                  <Fragment key={row.ventureKey}>
+                    <tr>
+                      <td rowSpan={3}>{row.ventureName}</td>
+                      <td>Objectives</td>
+                      <td>{row.objectiveSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.objectiveSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.objectiveSummary.avgProgress)}</td>
+                    </tr>
+                    <tr>
+                      <td>Key Results</td>
+                      <td>{row.krSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.krSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.krSummary.avgProgress)}</td>
+                    </tr>
+                    <tr>
+                      <td>KPIs</td>
+                      <td>{row.kpiSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.kpiSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.kpiSummary.avgProgress)}</td>
+                    </tr>
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-header">
+          <h2>OKR Performance</h2>
+        </div>
+        <div className="table-wrap">
+          <table className="analytics-table">
+            <thead>
+              <tr>
+                <th>OKR</th>
+                <th>Department</th>
                 <th>Metric</th>
                 <th>Count</th>
                 {tableStatusColumns.map((statusOption) => (
@@ -387,16 +613,18 @@ export default async function DashboardAnalyticsPage({
             <tbody>
               {departmentRows.length === 0 ? (
                 <tr>
-                  <td colSpan={tableStatusColumns.length + 5}>No department data for the current filter.</td>
+                  <td colSpan={tableStatusColumns.length + 5}>
+                    No OKR data for the current filter.
+                  </td>
                 </tr>
               ) : (
                 departmentRows.map((row) => (
                   <Fragment key={`${row.ventureName}::${row.departmentName}`}>
                     <tr>
-                      <td rowSpan={2}>{row.departmentName}</td>
-                      <td rowSpan={2}>{row.ventureName}</td>
+                      <td rowSpan={3}>{row.departmentName}</td>
+                      <td rowSpan={3}>{row.ventureName}</td>
                       <td>Objectives</td>
-                      <td>{row.objectiveSummary.objectiveCount}</td>
+                      <td>{row.objectiveSummary.count}</td>
                       {tableStatusColumns.map((statusOption) => (
                         <td key={statusOption}>{row.objectiveSummary.statusCounts[statusOption] ?? 0}</td>
                       ))}
@@ -404,11 +632,79 @@ export default async function DashboardAnalyticsPage({
                     </tr>
                     <tr>
                       <td>Key Results</td>
-                      <td>{row.krSummary.keyResultCount}</td>
+                      <td>{row.krSummary.count}</td>
                       {tableStatusColumns.map((statusOption) => (
                         <td key={statusOption}>{row.krSummary.statusCounts[statusOption] ?? 0}</td>
                       ))}
                       <td>{formatProgressPercent(row.krSummary.avgProgress)}</td>
+                    </tr>
+                    <tr>
+                      <td>KPIs</td>
+                      <td>{row.kpiSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.kpiSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.kpiSummary.avgProgress)}</td>
+                    </tr>
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-header">
+          <h2>Owner Performance</h2>
+        </div>
+        <div className="table-wrap">
+          <table className="analytics-table">
+            <thead>
+              <tr>
+                <th>Owner</th>
+                <th>Metric</th>
+                <th>Count</th>
+                {tableStatusColumns.map((statusOption) => (
+                  <th key={statusOption}>{formatStatus(statusOption)}</th>
+                ))}
+                <th>Avg Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ownerRows.length === 0 ? (
+                <tr>
+                  <td colSpan={tableStatusColumns.length + 4}>
+                    No owner data for the current filter.
+                  </td>
+                </tr>
+              ) : (
+                ownerRows.map((row) => (
+                  <Fragment key={row.ownerName}>
+                    <tr>
+                      <td rowSpan={3}>{row.ownerName}</td>
+                      <td>Objectives</td>
+                      <td>{row.objectiveSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.objectiveSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.objectiveSummary.avgProgress)}</td>
+                    </tr>
+                    <tr>
+                      <td>Key Results</td>
+                      <td>{row.krSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.krSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.krSummary.avgProgress)}</td>
+                    </tr>
+                    <tr>
+                      <td>KPIs</td>
+                      <td>{row.kpiSummary.count}</td>
+                      {tableStatusColumns.map((statusOption) => (
+                        <td key={statusOption}>{row.kpiSummary.statusCounts[statusOption] ?? 0}</td>
+                      ))}
+                      <td>{formatProgressPercent(row.kpiSummary.avgProgress)}</td>
                     </tr>
                   </Fragment>
                 ))
