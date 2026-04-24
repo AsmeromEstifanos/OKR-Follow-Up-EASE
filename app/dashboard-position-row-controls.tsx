@@ -105,6 +105,18 @@ export default function DashboardPositionRowControls({
         </svg>
       </button>
     ) : null;
+  const objectiveWeightTrigger =
+    isOpen && objectiveWeights.length > 0 ? (
+      <WeightGroupControls
+        title="Objective Weights"
+        actionLabel="Edit Objective Weights"
+        requestPath="/api/objectives/weights"
+        items={objectiveWeights}
+        adminEmails={adminEmails}
+        ownerEmail={positionOwnerEmail}
+        emptyMessage="No objectives to weight yet."
+      />
+    ) : null;
 
   const closeEdit = (): void => {
     if (isSaving) {
@@ -238,22 +250,14 @@ export default function DashboardPositionRowControls({
               <h3 className="board-group-title">{displayName}</h3>
               {displayOwner ? <p className="meta">{displayOwner}</p> : null}
             </span>
-            <span className="meta">{objectiveCount} {objectiveCountLabel}</span>
           </span>
         </button>
-        {editTrigger}
+        <div className="board-position-header-actions">
+          {objectiveWeightTrigger}
+          <span className="meta">{objectiveCount} {objectiveCountLabel}</span>
+          {editTrigger}
+        </div>
       </div>
-      {isOpen && objectiveWeights.length > 0 ? (
-        <WeightGroupControls
-          title="Objective Weights"
-          actionLabel="Edit Objective Weights"
-          requestPath="/api/objectives/weights"
-          items={objectiveWeights}
-          adminEmails={adminEmails}
-          ownerEmail={positionOwnerEmail}
-          emptyMessage="No objectives to weight yet."
-        />
-      ) : null}
       {isEditing ? (
         <div className="board-position-edit-panel">
           <div className="position-header-controls">

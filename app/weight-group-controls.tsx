@@ -137,7 +137,7 @@ export default function WeightGroupControls({
   };
 
   return (
-    <>
+    <div className="ease-weight-group-anchor">
       {isEditing ? (
         <div className="ease-weight-group-controls">
           <div className="ease-weight-group-header">
@@ -194,6 +194,6 @@ export default function WeightGroupControls({
         </button>
       ) : null}
       {error ? <p className="message danger">{error}</p> : null}
-    </>
+    </div>
   );
 }
