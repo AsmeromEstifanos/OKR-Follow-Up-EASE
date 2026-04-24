@@ -75,6 +75,7 @@ export interface Objective {
   targetValue: number;
   currentValue: number;
   blockers?: string;
+  comment?: string;
   keyRisksDependency: string;
   notes: string;
   status: ObjectiveStatus;
@@ -105,6 +106,7 @@ export interface KeyResult {
   dueDate: string;
   checkInFrequency: CheckInFrequency;
   blockers?: string;
+  comment?: string;
   notes: string;
   lastCheckinAt: string | null;
 }
@@ -127,6 +129,7 @@ export interface Kpi {
   dueDate: string;
   checkInFrequency: CheckInFrequency;
   blockers?: string;
+  comment?: string;
   notes: string;
   lastCheckinAt: string | null;
 }
@@ -212,6 +215,7 @@ export type UpdateObjectiveInput = Partial<
     | "targetValue"
     | "currentValue"
     | "blockers"
+    | "comment"
     | "keyRisksDependency"
     | "notes"
     | "status"
@@ -232,6 +236,7 @@ export type CreateKeyResultInput = Omit<
   progressPct?: number;
   checkInFrequency?: CheckInFrequency;
   blockers?: string;
+  comment?: string;
   notes?: string;
   lastCheckinAt?: string | null;
 };
@@ -245,6 +250,7 @@ export type CreateKpiInput = Omit<
   progressPct?: number;
   checkInFrequency?: CheckInFrequency;
   blockers?: string;
+  comment?: string;
   notes?: string;
   lastCheckinAt?: string | null;
 };
@@ -265,6 +271,7 @@ export type UpdateKeyResultInput = Partial<
     | "dueDate"
     | "checkInFrequency"
     | "blockers"
+    | "comment"
     | "notes"
   >
 >;
@@ -286,6 +293,7 @@ export type UpdateKpiInput = Partial<
     | "dueDate"
     | "checkInFrequency"
     | "blockers"
+    | "comment"
     | "notes"
   >
 >;

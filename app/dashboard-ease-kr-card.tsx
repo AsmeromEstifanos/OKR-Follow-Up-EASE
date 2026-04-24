@@ -141,6 +141,7 @@ export default function DashboardEaseKrCard({
   const [dueDate, setDueDate] = useState(toDateInput(keyResult.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(keyResult.checkInFrequency);
   const [blockers, setBlockers] = useState(keyResult.blockers ?? "");
+  const [comment, setComment] = useState(keyResult.comment ?? "");
   const [notes, setNotes] = useState(keyResult.notes ?? "");
 
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function DashboardEaseKrCard({
     setDueDate(toDateInput(keyResult.dueDate));
     setCheckInFrequency(keyResult.checkInFrequency);
     setBlockers(keyResult.blockers ?? "");
+    setComment(keyResult.comment ?? "");
     setNotes(keyResult.notes ?? "");
   }, [keyResult, codeValue]);
 
@@ -173,6 +175,7 @@ export default function DashboardEaseKrCard({
     setDueDate(toDateInput(keyResult.dueDate));
     setCheckInFrequency(keyResult.checkInFrequency);
     setBlockers(keyResult.blockers ?? "");
+    setComment(keyResult.comment ?? "");
     setNotes(keyResult.notes ?? "");
   };
 
@@ -219,6 +222,7 @@ export default function DashboardEaseKrCard({
         dueDate,
         checkInFrequency,
         blockers: blockers.trim(),
+        comment: comment.trim(),
         notes: notes.trim()
       })
     });
@@ -279,7 +283,7 @@ export default function DashboardEaseKrCard({
             <h4>{keyResult.title}</h4>
           )}
           {!isEditing ? (
-            <EaseCardDetailBlocks note={notes} blockers={blockers} />
+            <EaseCardDetailBlocks note={notes} blockers={blockers} comment={comment} />
           ) : null}
         </div>
         <div className="ease-card-head-side">
@@ -318,6 +322,7 @@ export default function DashboardEaseKrCard({
           <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
           <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
           <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
+          <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} /></div>
           <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
         </div>
       )}

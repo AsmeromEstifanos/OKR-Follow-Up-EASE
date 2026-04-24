@@ -35,6 +35,7 @@ type PendingKpi = {
   dueDate: string;
   checkInFrequency: CheckInFrequency;
   blockers: string;
+  comment: string;
   notes: string;
 };
 
@@ -104,6 +105,7 @@ export default function DashboardKeyResultControls({
   const [dueDate, setDueDate] = useState(toDateInput(defaultDueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
   const [blockers, setBlockers] = useState("");
+  const [comment, setComment] = useState("");
   const [notes, setNotes] = useState("");
   const [pendingItems, setPendingItems] = useState<PendingKpi[]>([]);
   const [error, setError] = useState("");
@@ -140,6 +142,7 @@ export default function DashboardKeyResultControls({
     setDueDate(toDateInput(defaultDueDate));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
+    setComment("");
     setNotes("");
   };
 
@@ -208,6 +211,7 @@ export default function DashboardKeyResultControls({
       dueDate,
       checkInFrequency,
       blockers: blockers.trim(),
+      comment: comment.trim(),
       notes: notes.trim()
     };
   };
@@ -359,6 +363,10 @@ export default function DashboardKeyResultControls({
             <div className="field kr-field-wide">
               <label>Blockers</label>
               <textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} />
+            </div>
+            <div className="field kr-field-wide">
+              <label>Comment</label>
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} />
             </div>
             <div className="field kr-field-wide">
               <label>Notes</label>

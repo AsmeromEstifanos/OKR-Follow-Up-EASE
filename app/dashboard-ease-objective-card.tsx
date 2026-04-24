@@ -144,6 +144,7 @@ export default function DashboardEaseObjectiveCard({
   const [dueDate, setDueDate] = useState(toDateInput(objective.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(objective.checkInFrequency);
   const [blockers, setBlockers] = useState(objective.blockers ?? "");
+  const [comment, setComment] = useState(objective.comment ?? "");
   const [keyRisksDependency, setKeyRisksDependency] = useState(objective.keyRisksDependency ?? "");
   const [notes, setNotes] = useState(objective.notes ?? objective.description ?? "");
 
@@ -160,6 +161,7 @@ export default function DashboardEaseObjectiveCard({
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
+    setComment(objective.comment ?? "");
     setKeyRisksDependency(objective.keyRisksDependency ?? "");
     setNotes(objective.notes ?? objective.description ?? "");
   }, [objective, objectiveCode]);
@@ -182,6 +184,7 @@ export default function DashboardEaseObjectiveCard({
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
     setBlockers(objective.blockers ?? "");
+    setComment(objective.comment ?? "");
     setKeyRisksDependency(objective.keyRisksDependency ?? "");
     setNotes(objective.notes ?? objective.description ?? "");
   };
@@ -232,6 +235,7 @@ export default function DashboardEaseObjectiveCard({
         endDate: dueDate,
         checkInFrequency,
         blockers: blockers.trim(),
+        comment: comment.trim(),
         keyRisksDependency: keyRisksDependency.trim(),
         notes: notes.trim()
       })
@@ -303,6 +307,7 @@ export default function DashboardEaseObjectiveCard({
                   <EaseCardDetailBlocks
                     note={notes}
                     blockers={blockers}
+                    comment={comment}
                     keyRisksDependency={keyRisksDependency}
                   />
                 ) : null}
@@ -346,6 +351,7 @@ export default function DashboardEaseObjectiveCard({
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                 <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} /></div>
                 <div className="field ease-edit-span"><label>Key Risks/Dependency</label><textarea value={keyRisksDependency} onChange={(event) => setKeyRisksDependency(event.target.value)} disabled={isSaving} /></div>
                 <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
               </div>

@@ -1,8 +1,4 @@
-import DashboardObjectiveControls from "@/app/dashboard-objective-controls";
-import DashboardPositionControls from "@/app/dashboard-position-controls";
-import DashboardPositionRowControls from "@/app/dashboard-position-row-controls";
-import DashboardObjectiveRowEditor from "@/app/dashboard-objective-row-editor";
-import DashboardEaseObjectiveCard from "@/app/dashboard-ease-objective-card";
+import BoardViewClient from "@/app/board-view-client";
 import DashboardVentureTabs from "@/app/dashboard-venture-tabs";
 import { appProfile } from "@/lib/app-profile";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
@@ -15,8 +11,7 @@ import {
   listObjectives,
   listPeriods,
 } from "@/lib/store";
-import type { CheckIn, Objective, OkrCycle, Venture } from "@/lib/types";
-import { Fragment, type CSSProperties } from "react";
+import type { CheckIn, Kpi, KeyResult, Objective, OkrCycle } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +20,19 @@ type OwnerSection = {
   positionKey?: string;
   positionOwner?: string;
   positionOwnerEmail?: string;
-  objectives: Objective[];
+  objectives: Array<{
+    objective: Objective;
+    keyResults: Array<{
+      keyResult: KeyResult;
+      kpis: Array<{
+        kpi: Kpi;
+        latestUpdateNotes?: string;
+        latestUpdatedAt?: string | null;
+      }>;
+      latestUpdateNotes?: string;
+      latestUpdatedAt?: string | null;
+    }>;
+  }>;
 };
 
 type DashboardPageProps = {
@@ -116,18 +123,8 @@ export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps): Promise<JSX.Element> {
   const labels = appProfile.labels;
-  const objectiveLabel = appProfile.key === "ease-okr" ? "Objective" : labels.midLevelSingular;
-  const objectiveLabelPlural = appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
-  const positionLabel = "Position";
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const config = await getConfig();
-  const boardColorVars = {
-    "--department-card-bg": config.boardCardColors.department,
-    "--objective-card-bg": config.boardCardColors.objective,
-    "--kr-card-bg": config.boardCardColors.keyResult,
-    "--kpi-card-bg": config.boardCardColors.kpi,
-    "--group-color": "#0f766e"
-  } as CSSProperties;
   const ventures = config.ventures;
   const fieldOptions = config.fieldOptions;
   const adminEmails = await listAdminEmails();
@@ -274,7 +271,47 @@ export default async function DashboardPage({
       positionOwnerEmail: configuredPositionByName.get(
         positionName.toLowerCase(),
       )?.ownerEmail,
-      objectives: objectivesByPosition.get(positionName.toLowerCase()) ?? [],
+      objectives: (objectivesByPosition.get(positionName.toLowerCase()) ?? []).map(
+        (objective) => {
+          const keyResults =
+            keyResultsByObjective.get(objective.objectiveKey) ?? [];
+
+          return {
+            objective,
+            keyResults: keyResults.map((kr) => {
+              const krScopeKey = getKrScopeKey(kr.objectiveKey, kr.krKey);
+              const latest = latestCheckinByEntity.get(krScopeKey);
+
+              return {
+                keyResult: kr,
+                kpis: (kpisByKr.get(krScopeKey) ?? []).map((kpi) => {
+                  const latestKpi = latestCheckinByEntity.get(
+                    getKpiScopeKey(
+                      kpi.objectiveKey,
+                      kpi.krKey,
+                      kpi.kpiKey,
+                    ),
+                  );
+
+                  return {
+                    kpi,
+                    latestUpdateNotes: latestKpi?.updateNotes,
+                    latestUpdatedAt: getMostRecentTimestamp(
+                      latestKpi?.checkInAt,
+                      kpi.lastCheckinAt,
+                    ),
+                  };
+                }),
+                latestUpdateNotes: latest?.updateNotes,
+                latestUpdatedAt: getMostRecentTimestamp(
+                  latest?.checkInAt,
+                  kr.lastCheckinAt,
+                ),
+              };
+            }),
+          };
+        },
+      ),
     };
   });
 
@@ -289,276 +326,17 @@ export default async function DashboardPage({
       ) : null}
 
       <section className="section">
-        <div className="section-header">
-          <div className="section-header-left">
-            <h2>OKR Board View</h2>
-            {appProfile.key === "ease-okr" ? null : (
-              <DashboardPositionControls
-                selectedVentureKey={selectedVenture?.ventureKey}
-                existingPositionNames={configuredPositions}
-                adminEmails={adminEmails}
-              />
-            )}
-          </div>
-        </div>
-        {appProfile.key === "ease-okr" ? (
-          ownerSections.length === 0 ? (
-            <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
-        ) : (
-          <div className="board-groups">
-              {ownerSections.map((section) => {
-                const sectionStyle = boardColorVars;
-                const positionScopeKey = [
-                  selectedVenture?.ventureKey ?? "default",
-                  section.positionKey ?? section.positionName
-                ].join("::");
-
-                return (
-                  <section className="board-group" key={positionScopeKey} style={sectionStyle}>
-                    <DashboardPositionRowControls
-                      key={`${positionScopeKey}::position`}
-                      selectedVentureKey={selectedVenture?.ventureKey}
-                      departmentKey={section.positionKey}
-                      positionName={section.positionName}
-                      positionOwner={section.positionOwner}
-                      positionOwnerEmail={section.positionOwnerEmail}
-                      objectiveCount={section.objectives.length}
-                      objectiveWeights={section.objectives.map((objective) => ({
-                        key: objective.objectiveKey,
-                        label: objective.objectiveCode ?? objective.title,
-                        weight: objective.baselineValue
-                      }))}
-                      adminEmails={adminEmails}
-                    >
-                      <div className="board-group-title-wrap">
-                        <div className="board-group-title-row">
-                          <DashboardObjectiveControls
-                            key={`${positionScopeKey}::objectives`}
-                            positionName={section.positionName}
-                            strategicTheme={selectedVenture?.name ?? "SVH"}
-                            defaultStartDate={defaultPeriod?.startDate}
-                            defaultEndDate={defaultPeriod?.endDate}
-                            defaultCycle={defaultCycle}
-                            defaultOwner={section.positionOwner ?? ""}
-                            positionOwnerEmail={section.positionOwnerEmail}
-                            adminEmails={adminEmails}
-                            objectiveTypeOptions={fieldOptions.objectiveTypes}
-                            objectiveStatusOptions={fieldOptions.objectiveStatuses}
-                            objectiveCycleOptions={fieldOptions.objectiveCycles}
-                            metricTypeOptions={fieldOptions.keyResultMetricTypes}
-                            checkInFrequencyOptions={fieldOptions.checkInFrequencies}
-                          />
-                        </div>
-                      </div>
-                      <div className="ease-objective-list">
-                        {section.objectives.length === 0 ? (
-                          <p className="meta">No {objectiveLabelPlural.toLowerCase()} yet for this department.</p>
-                        ) : (
-                          section.objectives.map((objective) => {
-                            const keyResults = keyResultsByObjective.get(objective.objectiveKey) ?? [];
-                            return (
-                              <DashboardEaseObjectiveCard
-                                key={objective.objectiveKey}
-                                objective={objective}
-                                keyResults={keyResults.map((kr) => {
-                                  const krScopeKey = getKrScopeKey(kr.objectiveKey, kr.krKey);
-                                  const latest = latestCheckinByEntity.get(krScopeKey);
-                                  return {
-                                    keyResult: kr,
-                                    kpis: (kpisByKr.get(krScopeKey) ?? []).map((kpi) => {
-                                      const latestKpi = latestCheckinByEntity.get(
-                                        getKpiScopeKey(kpi.objectiveKey, kpi.krKey, kpi.kpiKey),
-                                      );
-                                      return {
-                                        kpi,
-                                        latestUpdateNotes: latestKpi?.updateNotes,
-                                        latestUpdatedAt: getMostRecentTimestamp(latestKpi?.checkInAt, kpi.lastCheckinAt)
-                                      };
-                                    }),
-                                    latestUpdateNotes: latest?.updateNotes,
-                                    latestUpdatedAt: getMostRecentTimestamp(latest?.checkInAt, kr.lastCheckinAt)
-                                  };
-                                })}
-                                positionOwnerEmail={section.positionOwnerEmail}
-                                adminEmails={adminEmails}
-                                objectiveTypeOptions={fieldOptions.objectiveTypes}
-                                objectiveStatusOptions={fieldOptions.objectiveStatuses}
-                                objectiveCycleOptions={fieldOptions.objectiveCycles}
-                                metricTypeOptions={fieldOptions.keyResultMetricTypes}
-                                keyResultStatusOptions={fieldOptions.keyResultStatuses}
-                                checkInFrequencyOptions={fieldOptions.checkInFrequencies}
-                              />
-                            );
-                          })
-                        )}
-                      </div>
-                    </DashboardPositionRowControls>
-                  </section>
-                );
-              })}
-            </div>
-          )
-        ) : ownerSections.length === 0 ? (
-          <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
-        ) : (
-          <div className="board-groups">
-            {ownerSections.map((section) => {
-              const sectionStyle = boardColorVars;
-              const positionScopeKey = [
-                selectedVenture?.ventureKey ?? "default",
-                section.positionKey ?? section.positionName,
-              ].join("::");
-
-              return (
-                <section
-                  className="board-group"
-                  key={positionScopeKey}
-                  style={sectionStyle}
-                >
-                  <DashboardPositionRowControls
-                    key={`${positionScopeKey}::position`}
-                    selectedVentureKey={selectedVenture?.ventureKey}
-                    departmentKey={section.positionKey}
-                    positionName={section.positionName}
-                    positionOwner={section.positionOwner}
-                    positionOwnerEmail={section.positionOwnerEmail}
-                    objectiveCount={section.objectives.length}
-                    objectiveWeights={section.objectives.map((objective) => ({
-                      key: objective.objectiveKey,
-                      label: objective.objectiveCode ?? objective.title,
-                      weight: objective.baselineValue
-                    }))}
-                    adminEmails={adminEmails}
-                  >
-                    <div className="board-group-title-wrap">
-                      <div className="board-group-title-row">
-                        <DashboardObjectiveControls
-                          key={`${positionScopeKey}::objectives`}
-                          positionName={section.positionName}
-                          strategicTheme={selectedVenture?.name ?? "SVH"}
-                          defaultStartDate={defaultPeriod?.startDate}
-                          defaultEndDate={defaultPeriod?.endDate}
-                          defaultCycle={defaultCycle}
-                          defaultOwner=""
-                          positionOwnerEmail={section.positionOwnerEmail}
-                          adminEmails={adminEmails}
-                          objectiveTypeOptions={fieldOptions.objectiveTypes}
-                          objectiveStatusOptions={
-                            fieldOptions.objectiveStatuses
-                          }
-                          objectiveCycleOptions={fieldOptions.objectiveCycles}
-                          metricTypeOptions={fieldOptions.keyResultMetricTypes}
-                          checkInFrequencyOptions={fieldOptions.checkInFrequencies}
-                        />
-                      </div>
-                    </div>
-                    <div className="table-wrap">
-                      <table className="board-table">
-                        <thead>
-                          <tr>
-                            <th>{objectiveLabel}</th>
-                            <th>Owner</th>
-                            <th>{objectiveLabel} Metric Type</th>
-                            <th>Weight</th>
-                            <th>Target Value</th>
-                            <th>Current Value</th>
-                            <th>Progress %</th>
-                            <th>Health</th>
-                            <th>Due Date</th>
-                            <th>Check-in Frequency</th>
-                            <th>Blockers</th>
-                            <th>Key Risks/Dependancy</th>
-                            <th>Notes</th>
-                            <th>Last updated</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {section.objectives.length === 0 ? (
-                            <tr className="board-empty-row">
-                              <td colSpan={14}>
-                                No {objectiveLabelPlural.toLowerCase()} yet for this {positionLabel.toLowerCase()}.
-                              </td>
-                            </tr>
-                          ) : (
-                            section.objectives.map((objective) => {
-                              const keyResults =
-                                keyResultsByObjective.get(
-                                  objective.objectiveKey,
-                                ) ?? [];
-                              return (
-                                <Fragment key={objective.objectiveKey}>
-                                  <DashboardObjectiveRowEditor
-                                    objective={objective}
-                                    keyResults={keyResults.map((kr) => {
-                                      const krScopeKey = getKrScopeKey(
-                                        kr.objectiveKey,
-                                        kr.krKey,
-                                      );
-                                      const latest = latestCheckinByEntity.get(
-                                        krScopeKey,
-                                      );
-                                      return {
-                                        keyResult: kr,
-                                        kpis: (kpisByKr.get(krScopeKey) ?? []).map((kpi) => {
-                                          const latest = latestCheckinByEntity.get(
-                                            getKpiScopeKey(
-                                              kpi.objectiveKey,
-                                              kpi.krKey,
-                                              kpi.kpiKey,
-                                            ),
-                                          );
-                                          return {
-                                            kpi,
-                                            latestUpdateNotes: latest?.updateNotes,
-                                            latestUpdatedAt: getMostRecentTimestamp(
-                                              latest?.checkInAt,
-                                              kpi.lastCheckinAt,
-                                            ),
-                                          };
-                                        }),
-                                        latestUpdateNotes: latest?.updateNotes,
-                                        latestUpdatedAt: getMostRecentTimestamp(
-                                          latest?.checkInAt,
-                                          kr.lastCheckinAt,
-                                        ),
-                                      };
-                                    })}
-                                    positionOwnerEmail={
-                                      section.positionOwnerEmail
-                                    }
-                                    adminEmails={adminEmails}
-                                    objectiveTypeOptions={
-                                      fieldOptions.objectiveTypes
-                                    }
-                                    objectiveStatusOptions={
-                                      fieldOptions.objectiveStatuses
-                                    }
-                                    objectiveCycleOptions={
-                                      fieldOptions.objectiveCycles
-                                    }
-                                    metricTypeOptions={
-                                      fieldOptions.keyResultMetricTypes
-                                    }
-                                    keyResultStatusOptions={
-                                      fieldOptions.keyResultStatuses
-                                    }
-                                    checkInFrequencyOptions={
-                                      fieldOptions.checkInFrequencies
-                                    }
-                                  />
-                                </Fragment>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </DashboardPositionRowControls>
-                </section>
-              );
-            })}
-          </div>
-        )}
+        <BoardViewClient
+          selectedVentureKey={selectedVenture?.ventureKey}
+          selectedVentureName={selectedVenture?.name}
+          ownerSections={ownerSections}
+          adminEmails={adminEmails}
+          defaultStartDate={defaultPeriod?.startDate}
+          defaultEndDate={defaultPeriod?.endDate}
+          defaultCycle={defaultCycle}
+          fieldOptions={fieldOptions}
+          boardCardColors={config.boardCardColors}
+        />
       </section>
     </div>
   );

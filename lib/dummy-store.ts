@@ -1266,6 +1266,10 @@ function migrateObjectiveDefaults(store: StoreState): void {
       objective.blockers = "";
     }
 
+    if (objective.comment === undefined || objective.comment === null) {
+      objective.comment = "";
+    }
+
     if (!objective.keyRisksDependency) {
       objective.keyRisksDependency = "";
     }
@@ -1315,6 +1319,10 @@ function migrateKrDefaults(store: StoreState): void {
       kr.blockers = "";
     }
 
+    if (kr.comment === undefined || kr.comment === null) {
+      kr.comment = "";
+    }
+
     if (kr.notes === undefined || kr.notes === null) {
       kr.notes = "";
     }
@@ -1343,6 +1351,10 @@ function migrateKpiDefaults(store: StoreState): void {
 
     if (kpi.blockers === undefined || kpi.blockers === null) {
       kpi.blockers = "";
+    }
+
+    if (kpi.comment === undefined || kpi.comment === null) {
+      kpi.comment = "";
     }
 
     if (kpi.notes === undefined || kpi.notes === null) {
@@ -2215,6 +2227,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   assertDepartmentExists(store, input.department);
   const strategicTheme = normalizeName(input.strategicTheme || "");
   const blockers = normalizeName(input.blockers || "");
+  const comment = normalizeName(input.comment || "");
   const notes = normalizeName(input.notes || input.description || "");
   const cycle = normalizeOkrCycle(input.okrCycle);
   const metricType = normalizeMetricType(input.metricType);
@@ -2262,6 +2275,7 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     targetValue,
     currentValue,
     blockers,
+    comment,
     keyRisksDependency: input.keyRisksDependency || "",
     notes,
     status: input.status,
@@ -2372,6 +2386,10 @@ export function updateObjective(
 
     if (patch.blockers !== undefined) {
       objective.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.comment !== undefined) {
+      objective.comment = normalizeName(patch.comment);
     }
 
     if (patch.keyRisksDependency !== undefined) {
@@ -2550,6 +2568,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const weightValue = normalizeWeightInput(input.baselineValue, "Key result");
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
+  const comment = normalizeName(input.comment ?? "");
   const notes = normalizeName(input.notes ?? "");
 
   const keyResult: KeyResult = {
@@ -2573,6 +2592,7 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     dueDate: input.dueDate,
     checkInFrequency,
     blockers,
+    comment,
     notes,
     lastCheckinAt: nowIso(),
   };
@@ -2662,6 +2682,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
   );
   const checkInFrequency = normalizeCheckInFrequency(input.checkInFrequency);
   const blockers = normalizeName(input.blockers ?? "");
+  const comment = normalizeName(input.comment ?? "");
   const notes = normalizeName(input.notes ?? "");
 
   const kpi: Kpi = {
@@ -2686,6 +2707,7 @@ export function createKpi(input: CreateKpiInput): Kpi {
     dueDate: input.dueDate,
     checkInFrequency,
     blockers,
+    comment,
     notes,
     lastCheckinAt: nowIso(),
   };
@@ -2783,6 +2805,10 @@ export function updateKeyResult(
 
     if (patch.blockers !== undefined) {
       keyResult.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.comment !== undefined) {
+      keyResult.comment = normalizeName(patch.comment);
     }
 
     if (patch.notes !== undefined) {
@@ -2910,6 +2936,10 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
 
     if (patch.blockers !== undefined) {
       kpi.blockers = normalizeName(patch.blockers);
+    }
+
+    if (patch.comment !== undefined) {
+      kpi.comment = normalizeName(patch.comment);
     }
 
     if (patch.notes !== undefined) {

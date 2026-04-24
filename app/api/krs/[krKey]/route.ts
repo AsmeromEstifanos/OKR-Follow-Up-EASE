@@ -27,6 +27,7 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "dueDate",
   "checkInFrequency",
   "blockers",
+  "comment",
   "notes"
 ]);
 const READ_ONLY_FIELDS = new Set(["krKey", "progressPct"]);
@@ -122,6 +123,10 @@ function parseKrPatch(body: unknown): UpdateKeyResultInput {
 
   if (raw.blockers !== undefined) {
     patch.blockers = expectString(raw, "blockers", true);
+  }
+
+  if (raw.comment !== undefined) {
+    patch.comment = expectString(raw, "comment", true);
   }
 
   if (raw.notes !== undefined) {

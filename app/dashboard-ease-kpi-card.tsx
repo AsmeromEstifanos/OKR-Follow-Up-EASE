@@ -146,6 +146,7 @@ export default function DashboardEaseKpiCard({
   const [dueDate, setDueDate] = useState(toDateInput(kpi.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(kpi.checkInFrequency);
   const [blockers, setBlockers] = useState(kpi.blockers ?? "");
+  const [comment, setComment] = useState(kpi.comment ?? "");
   const [notes, setNotes] = useState(effectiveNotes);
 
   useEffect(() => {
@@ -161,6 +162,7 @@ export default function DashboardEaseKpiCard({
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
     setBlockers(kpi.blockers ?? "");
+    setComment(kpi.comment ?? "");
     setNotes(effectiveNotes);
   }, [kpi, codeValue, effectiveNotes]);
 
@@ -182,6 +184,7 @@ export default function DashboardEaseKpiCard({
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
     setBlockers(kpi.blockers ?? "");
+    setComment(kpi.comment ?? "");
     setNotes(effectiveNotes);
   };
 
@@ -238,6 +241,7 @@ export default function DashboardEaseKpiCard({
         dueDate,
         checkInFrequency,
         blockers: blockers.trim(),
+        comment: comment.trim(),
         notes: notes.trim()
       })
     });
@@ -298,7 +302,7 @@ export default function DashboardEaseKpiCard({
             <h5>{kpi.title}</h5>
           )}
           {!isEditing ? (
-            <EaseCardDetailBlocks note={effectiveNotes} blockers={blockers} />
+            <EaseCardDetailBlocks note={effectiveNotes} blockers={blockers} comment={comment} />
           ) : null}
         </div>
         <div className="ease-card-head-side">
@@ -392,6 +396,10 @@ export default function DashboardEaseKpiCard({
           <div className="field ease-edit-span">
             <label>Blockers</label>
             <textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} />
+          </div>
+          <div className="field ease-edit-span">
+            <label>Comment</label>
+            <textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} />
           </div>
           <div className="field ease-edit-span">
             <label>Notes</label>

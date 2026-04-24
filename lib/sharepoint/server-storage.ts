@@ -126,12 +126,15 @@ type AtomicCapabilities = {
   hasObjectiveVentureColumn: boolean;
   hasObjectiveOwnerEmailColumn: boolean;
   hasObjectiveBlockersColumn: boolean;
+  hasObjectiveCommentColumn: boolean;
   hasKrCodeColumn: boolean;
   hasKrOwnerEmailColumn: boolean;
   hasKrBlockersColumn: boolean;
+  hasKrCommentColumn: boolean;
   hasKpiCodeColumn: boolean;
   hasKpiOwnerEmailColumn: boolean;
   hasKpiBlockersColumn: boolean;
+  hasKpiCommentColumn: boolean;
   hasCheckInKpiColumn: boolean;
   hasConfigValueJsonColumn: boolean;
 };
@@ -190,6 +193,7 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "TargetValue", type: "number" },
       { name: "CurrentValue", type: "number" },
       { name: "Blockers", type: "multilineText", optional: true },
+      { name: "Comment", type: "multilineText", optional: true },
       { name: "KeyRisksDependency", type: "multilineText" },
       { name: "Notes", type: "multilineText" },
       { name: "Status", type: "text" },
@@ -223,6 +227,7 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "DueDate", type: "text" },
       { name: "CheckInFrequency", type: "text" },
       { name: "Blockers", type: "multilineText", optional: true },
+      { name: "Comment", type: "multilineText", optional: true },
       { name: "Notes", type: "multilineText" },
       { name: "LastCheckinAt", type: "text" }
     ]
@@ -248,6 +253,7 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "DueDate", type: "text" },
       { name: "CheckInFrequency", type: "text" },
       { name: "Blockers", type: "multilineText", optional: true },
+      { name: "Comment", type: "multilineText", optional: true },
       { name: "Notes", type: "multilineText" },
       { name: "LastCheckinAt", type: "text" }
     ]
@@ -1082,12 +1088,15 @@ async function loadAtomicCapabilities(
     hasObjectiveVentureColumn: await listHasColumn(config, siteId, listIds.objectives, "VentureName"),
     hasObjectiveOwnerEmailColumn: await listHasColumn(config, siteId, listIds.objectives, "OwnerEmail"),
     hasObjectiveBlockersColumn: await listHasColumn(config, siteId, listIds.objectives, "Blockers"),
+    hasObjectiveCommentColumn: await listHasColumn(config, siteId, listIds.objectives, "Comment"),
     hasKrCodeColumn: await listHasColumn(config, siteId, listIds.keyResults, "KrCode"),
     hasKrOwnerEmailColumn: await listHasColumn(config, siteId, listIds.keyResults, "OwnerEmail"),
     hasKrBlockersColumn: await listHasColumn(config, siteId, listIds.keyResults, "Blockers"),
+    hasKrCommentColumn: await listHasColumn(config, siteId, listIds.keyResults, "Comment"),
     hasKpiCodeColumn: await listHasColumn(config, siteId, listIds.kpis, "KpiCode"),
     hasKpiOwnerEmailColumn: await listHasColumn(config, siteId, listIds.kpis, "OwnerEmail"),
     hasKpiBlockersColumn: await listHasColumn(config, siteId, listIds.kpis, "Blockers"),
+    hasKpiCommentColumn: await listHasColumn(config, siteId, listIds.kpis, "Comment"),
     hasCheckInKpiColumn: await listHasColumn(config, siteId, listIds.checkIns, "KpiKey"),
     hasConfigValueJsonColumn: await listHasColumn(config, siteId, listIds.config, "ValueJson")
   };
@@ -1135,6 +1144,7 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     TargetValue: objective.targetValue,
     CurrentValue: objective.currentValue,
     ...(capabilities.hasObjectiveBlockersColumn ? { Blockers: objective.blockers ?? "" } : {}),
+    ...(capabilities.hasObjectiveCommentColumn ? { Comment: objective.comment ?? "" } : {}),
     KeyRisksDependency: objective.keyRisksDependency,
     Notes: objective.notes,
     Status: objective.status,
@@ -1165,6 +1175,7 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     DueDate: kr.dueDate,
     CheckInFrequency: kr.checkInFrequency,
     ...(capabilities.hasKrBlockersColumn ? { Blockers: kr.blockers ?? "" } : {}),
+    ...(capabilities.hasKrCommentColumn ? { Comment: kr.comment ?? "" } : {}),
     Notes: kr.notes,
     LastCheckinAt: kr.lastCheckinAt ?? ""
   }));
@@ -1187,6 +1198,7 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     DueDate: kpi.dueDate,
     CheckInFrequency: kpi.checkInFrequency,
     ...(capabilities.hasKpiBlockersColumn ? { Blockers: kpi.blockers ?? "" } : {}),
+    ...(capabilities.hasKpiCommentColumn ? { Comment: kpi.comment ?? "" } : {}),
     Notes: kpi.notes,
     LastCheckinAt: kpi.lastCheckinAt ?? ""
   }));
@@ -1407,12 +1419,15 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
   const hasObjectiveVentureColumn = await listHasColumn(config, siteId, listIds.objectives, "VentureName");
   const hasObjectiveOwnerEmailColumn = await listHasColumn(config, siteId, listIds.objectives, "OwnerEmail");
   const hasObjectiveBlockersColumn = await listHasColumn(config, siteId, listIds.objectives, "Blockers");
+  const hasObjectiveCommentColumn = await listHasColumn(config, siteId, listIds.objectives, "Comment");
   const hasKrCodeColumn = await listHasColumn(config, siteId, listIds.keyResults, "KrCode");
   const hasKrOwnerEmailColumn = await listHasColumn(config, siteId, listIds.keyResults, "OwnerEmail");
   const hasKrBlockersColumn = await listHasColumn(config, siteId, listIds.keyResults, "Blockers");
+  const hasKrCommentColumn = await listHasColumn(config, siteId, listIds.keyResults, "Comment");
   const hasKpiCodeColumn = await listHasColumn(config, siteId, listIds.kpis, "KpiCode");
   const hasKpiOwnerEmailColumn = await listHasColumn(config, siteId, listIds.kpis, "OwnerEmail");
   const hasKpiBlockersColumn = await listHasColumn(config, siteId, listIds.kpis, "Blockers");
+  const hasKpiCommentColumn = await listHasColumn(config, siteId, listIds.kpis, "Comment");
   const hasCheckInKpiColumn = await listHasColumn(config, siteId, listIds.checkIns, "KpiKey");
   const hasConfigValueJsonColumn = await listHasColumn(config, siteId, listIds.config, "ValueJson");
   const objectiveSelectFields = [
@@ -1433,6 +1448,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "TargetValue",
     "CurrentValue",
     ...(hasObjectiveBlockersColumn ? ["Blockers"] : []),
+    ...(hasObjectiveCommentColumn ? ["Comment"] : []),
     "KeyRisksDependency",
     "Notes",
     "Status",
@@ -1462,6 +1478,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "DueDate",
     "CheckInFrequency",
     ...(hasKrBlockersColumn ? ["Blockers"] : []),
+    ...(hasKrCommentColumn ? ["Comment"] : []),
     "Notes",
     "LastCheckinAt"
   ];
@@ -1483,6 +1500,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "DueDate",
     "CheckInFrequency",
     ...(hasKpiBlockersColumn ? ["Blockers"] : []),
+    ...(hasKpiCommentColumn ? ["Comment"] : []),
     "Notes",
     "LastCheckinAt"
   ];
@@ -1614,6 +1632,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         targetValue: asNumber(item.fields?.TargetValue, 100),
         currentValue: asNumber(item.fields?.CurrentValue, 0),
         blockers: asString(item.fields?.Blockers),
+        comment: asString(item.fields?.Comment),
         keyRisksDependency: asString(item.fields?.KeyRisksDependency),
         notes: asString(item.fields?.Notes),
         status: asString(item.fields?.Status) as Objective["status"],
@@ -1653,6 +1672,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         dueDate: asString(item.fields?.DueDate),
         checkInFrequency: asString(item.fields?.CheckInFrequency) as KeyResult["checkInFrequency"],
         blockers: asString(item.fields?.Blockers),
+        comment: asString(item.fields?.Comment),
         notes: asString(item.fields?.Notes),
         lastCheckinAt: asNullableString(item.fields?.LastCheckinAt)
       } as KeyResult;
@@ -1684,6 +1704,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         dueDate: asString(item.fields?.DueDate),
         checkInFrequency: asString(item.fields?.CheckInFrequency) as Kpi["checkInFrequency"],
         blockers: asString(item.fields?.Blockers),
+        comment: asString(item.fields?.Comment),
         notes: asString(item.fields?.Notes),
         lastCheckinAt: asNullableString(item.fields?.LastCheckinAt)
       } as Kpi;

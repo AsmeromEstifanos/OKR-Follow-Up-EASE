@@ -30,6 +30,7 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "targetValue",
   "currentValue",
   "blockers",
+  "comment",
   "keyRisksDependency",
   "notes",
   "status",
@@ -146,6 +147,10 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
 
   if (raw.blockers !== undefined) {
     patch.blockers = expectString(raw, "blockers", true);
+  }
+
+  if (raw.comment !== undefined) {
+    patch.comment = expectString(raw, "comment", true);
   }
 
   if (raw.notes !== undefined) {

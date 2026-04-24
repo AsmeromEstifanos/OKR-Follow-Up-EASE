@@ -28,6 +28,7 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "dueDate",
   "checkInFrequency",
   "blockers",
+  "comment",
   "notes"
 ]);
 const READ_ONLY_FIELDS = new Set(["kpiKey", "progressPct"]);
@@ -91,6 +92,7 @@ function parseKpiPatch(body: unknown): UpdateKpiInput {
   if (raw.dueDate !== undefined) patch.dueDate = expectString(raw, "dueDate");
   if (raw.checkInFrequency !== undefined) patch.checkInFrequency = expectString(raw, "checkInFrequency");
   if (raw.blockers !== undefined) patch.blockers = expectString(raw, "blockers", true);
+  if (raw.comment !== undefined) patch.comment = expectString(raw, "comment", true);
   if (raw.notes !== undefined) patch.notes = expectString(raw, "notes", true);
 
   return patch;

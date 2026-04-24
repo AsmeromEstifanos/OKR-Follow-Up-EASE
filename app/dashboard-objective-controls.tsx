@@ -42,6 +42,7 @@ type PendingObjective = {
   dueDate: string;
   checkInFrequency: CheckInFrequency;
   blockers: string;
+  comment: string;
   keyRisksDependency: string;
   notes: string;
 };
@@ -122,6 +123,7 @@ export default function DashboardObjectiveControls({
   const [dueDate, setDueDate] = useState<string>(defaultEndDate ?? todayPlus(90));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
   const [blockers, setBlockers] = useState<string>("");
+  const [comment, setComment] = useState<string>("");
   const [keyRisksDependency, setKeyRisksDependency] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [pendingObjectives, setPendingObjectives] = useState<PendingObjective[]>([]);
@@ -158,6 +160,7 @@ export default function DashboardObjectiveControls({
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
+    setComment("");
     setKeyRisksDependency("");
     setNotes("");
     setPendingObjectives([]);
@@ -176,6 +179,7 @@ export default function DashboardObjectiveControls({
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
     setBlockers("");
+    setComment("");
     setKeyRisksDependency("");
     setNotes("");
   };
@@ -251,6 +255,7 @@ export default function DashboardObjectiveControls({
       dueDate: resolvedDueDate,
       checkInFrequency,
       blockers: blockers.trim(),
+      comment: comment.trim(),
       keyRisksDependency: keyRisksDependency.trim(),
       notes: notes.trim()
     };
@@ -320,6 +325,7 @@ export default function DashboardObjectiveControls({
             metricType: item.metricType,
             baselineValue: item.baselineValue,
             blockers: item.blockers,
+            comment: item.comment,
             keyRisksDependency: item.keyRisksDependency,
             notes: item.notes,
             status: item.status,
@@ -522,6 +528,15 @@ export default function DashboardObjectiveControls({
                 value={blockers}
                 onChange={(event) => setBlockers(event.target.value)}
                 placeholder="Current blockers"
+                disabled={isSaving}
+              />
+            </div>
+            <div className="field objective-field-wide">
+              <label>Comment</label>
+              <textarea
+                name="objectiveComment"
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
                 disabled={isSaving}
               />
             </div>
