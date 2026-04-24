@@ -2683,6 +2683,28 @@ textarea {
   margin: 0.2rem 0 0;
 }
 
+.ease-weight-group-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2f5ea6;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 0.12rem;
+  cursor: pointer;
+}
+
+.ease-weight-group-trigger:hover {
+  color: #214a87;
+}
+
+.ease-weight-group-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .ease-weight-group-list {
   display: grid;
   gap: 0.7rem;

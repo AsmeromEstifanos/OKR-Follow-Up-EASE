@@ -128,6 +128,7 @@ export default function DashboardEaseKrCard({
   const codeValue = keyResult.krCode ?? keyResult.krKey;
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState(codeValue);
@@ -336,32 +337,41 @@ export default function DashboardEaseKrCard({
       {error ? <p className="message danger">{error}</p> : null}
       <div className="ease-kpi-section">
         <div className="ease-subsection-head">
-          <h5>KPIs ({kpis.length})</h5>
+          <button
+            className={`objective-kr-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
+            type="button"
+            onClick={() => setIsKpiSectionOpen((current) => !current)}
+            aria-expanded={isKpiSectionOpen}
+          >
+            KPIs ({kpis.length})
+          </button>
           <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
         </div>
-        <div className="ease-kpi-list">
-          {kpis.length > 0 ? (
-            <WeightGroupControls
-              title="KPI Weights"
-              actionLabel="Edit KPI Weights"
-              requestPath={`/api/krs/${encodeURIComponent(keyResult.krKey)}/kpis/weights`}
-              items={kpis.map((item) => ({
-                key: item.kpi.kpiKey,
-                label: item.kpi.kpiCode ?? item.kpi.title,
-                weight: normalizeWeightValue(item.kpi.baselineValue)
-              }))}
-              canEdit={canEdit}
-              emptyMessage="No KPIs to weight yet."
-            />
-          ) : null}
-          {kpis.length === 0 ? (
-            <p className="meta">No KPIs for this key result yet.</p>
-          ) : (
-            kpis.map((item) => (
-              <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-            ))
-          )}
-        </div>
+        {isKpiSectionOpen ? (
+          <div className="ease-kpi-list">
+            {kpis.length > 0 ? (
+              <WeightGroupControls
+                title="KPI Weights"
+                actionLabel="Edit KPI Weights"
+                requestPath={`/api/krs/${encodeURIComponent(keyResult.krKey)}/kpis/weights`}
+                items={kpis.map((item) => ({
+                  key: item.kpi.kpiKey,
+                  label: item.kpi.kpiCode ?? item.kpi.title,
+                  weight: normalizeWeightValue(item.kpi.baselineValue)
+                }))}
+                canEdit={canEdit}
+                emptyMessage="No KPIs to weight yet."
+              />
+            ) : null}
+            {kpis.length === 0 ? (
+              <p className="meta">No KPIs for this key result yet.</p>
+            ) : (
+              kpis.map((item) => (
+                <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+              ))
+            )}
+          </div>
+        ) : null}
       </div>
     </article>
   );

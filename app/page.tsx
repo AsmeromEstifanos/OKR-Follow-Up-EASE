@@ -126,7 +126,7 @@ export default async function DashboardPage({
     "--objective-card-bg": config.boardCardColors.objective,
     "--kr-card-bg": config.boardCardColors.keyResult,
     "--kpi-card-bg": config.boardCardColors.kpi,
-    "--group-color": config.boardCardColors.department
+    "--group-color": "#0f766e"
   } as CSSProperties;
   const ventures = config.ventures;
   const fieldOptions = config.fieldOptions;

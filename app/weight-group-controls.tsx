@@ -137,15 +137,14 @@ export default function WeightGroupControls({
   };
 
   return (
-    <div className="ease-weight-group-controls">
-      <div className="ease-weight-group-header">
-        <div>
-          <h5>{title}</h5>
-          <p className="meta">Total: {totalWeight}</p>
-          {!isEditing ? <p className="meta ease-weight-group-summary">{items.length} items</p> : null}
-        </div>
-        {resolvedCanEdit ? (
-          isEditing ? (
+    <>
+      {isEditing ? (
+        <div className="ease-weight-group-controls">
+          <div className="ease-weight-group-header">
+            <div>
+              <h5>{title}</h5>
+              <p className="meta">Total: {totalWeight}</p>
+            </div>
             <div className="ease-weight-group-actions">
               <button className="btn" type="button" onClick={() => void handleSave()} disabled={isSaving}>
                 Save
@@ -162,22 +161,7 @@ export default function WeightGroupControls({
                 Cancel
               </button>
             </div>
-          ) : (
-            <button
-              className="tab-btn"
-              type="button"
-              onClick={() => {
-                resetDrafts();
-                setIsEditing(true);
-              }}
-              disabled={isSaving}
-            >
-              {actionLabel}
-            </button>
-          )
-        ) : null}
-      </div>
-      {isEditing ? (
+          </div>
         <div className="ease-weight-group-list">
           {items.map((item) => (
             <label key={item.key} className="ease-weight-group-row">
@@ -195,8 +179,21 @@ export default function WeightGroupControls({
             </label>
           ))}
         </div>
+        </div>
+      ) : resolvedCanEdit ? (
+        <button
+          className="ease-weight-group-trigger"
+          type="button"
+          onClick={() => {
+            resetDrafts();
+            setIsEditing(true);
+          }}
+          disabled={isSaving}
+        >
+          {actionLabel}
+        </button>
       ) : null}
       {error ? <p className="message danger">{error}</p> : null}
-    </div>
+    </>
   );
 }
