@@ -1424,18 +1424,31 @@ a {
 .ease-section-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
-  color: inherit;
+  color: #74787d;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
-.ease-section-toggle span {
+.ease-section-toggle-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.8rem;
+  flex: 0 0 0.8rem;
   color: #7b8086;
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1;
+}
+
+.ease-section-toggle-label {
+  display: inline-block;
 }
 
 .ease-section-toggle:focus-visible {
@@ -1444,13 +1457,14 @@ a {
   border-radius: 8px;
 }
 
+.ease-section-toggle.is-open,
+.ease-section-toggle.is-open .ease-section-toggle-indicator {
+  color: #74787d;
+}
+
 .ease-subsection-head h4,
 .ease-subsection-head h5 {
   margin: 0;
-  color: #74787d;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  font-weight: 500;
 }
 
 .ease-subsection-head h4 {

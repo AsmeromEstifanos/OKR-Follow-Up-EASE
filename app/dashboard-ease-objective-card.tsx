@@ -374,8 +374,8 @@ export default function DashboardEaseObjectiveCard({
               aria-expanded={isKrSectionOpen}
               onClick={() => setIsKrSectionOpen((current) => !current)}
             >
-              <span aria-hidden="true">{isKrSectionOpen ? "⌄" : "›"}</span>
-              <h4>Key Results ({keyResults.length})</h4>
+              <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
+              <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
             </button>
             <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
           </div>

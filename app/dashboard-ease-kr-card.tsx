@@ -128,7 +128,7 @@ export default function DashboardEaseKrCard({
   const codeValue = keyResult.krCode ?? keyResult.krKey;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(true);
+  const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState(codeValue);
@@ -338,12 +338,13 @@ export default function DashboardEaseKrCard({
       <div className="ease-kpi-section">
         <div className="ease-subsection-head">
           <button
-            className={`objective-kr-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
+            className={`ease-section-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
             type="button"
             onClick={() => setIsKpiSectionOpen((current) => !current)}
             aria-expanded={isKpiSectionOpen}
           >
-            KPIs ({kpis.length})
+            <span className="ease-section-toggle-indicator" aria-hidden="true">{isKpiSectionOpen ? "v" : ">"}</span>
+            <span className="ease-section-toggle-label">KPIs ({kpis.length})</span>
           </button>
           <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
         </div>
