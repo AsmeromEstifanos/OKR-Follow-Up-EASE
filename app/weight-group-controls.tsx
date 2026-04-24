@@ -83,6 +83,13 @@ export default function WeightGroupControls({
     return <p className="meta">{emptyMessage}</p>;
   }
 
+  const resetDrafts = (): void => {
+    setDrafts(
+      Object.fromEntries(items.map((item) => [item.key, String(item.weight)]))
+    );
+    setError("");
+  };
+
   const handleSave = async (): Promise<void> => {
     if (isSaving) return;
 
@@ -135,6 +142,7 @@ export default function WeightGroupControls({
         <div>
           <h5>{title}</h5>
           <p className="meta">Total: {totalWeight}</p>
+          {!isEditing ? <p className="meta ease-weight-group-summary">{items.length} items</p> : null}
         </div>
         {resolvedCanEdit ? (
           isEditing ? (
@@ -142,34 +150,52 @@ export default function WeightGroupControls({
               <button className="btn" type="button" onClick={() => void handleSave()} disabled={isSaving}>
                 Save
               </button>
-              <button className="tab-btn" type="button" onClick={() => setIsEditing(false)} disabled={isSaving}>
+              <button
+                className="tab-btn"
+                type="button"
+                onClick={() => {
+                  resetDrafts();
+                  setIsEditing(false);
+                }}
+                disabled={isSaving}
+              >
                 Cancel
               </button>
             </div>
           ) : (
-            <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>
+            <button
+              className="tab-btn"
+              type="button"
+              onClick={() => {
+                resetDrafts();
+                setIsEditing(true);
+              }}
+              disabled={isSaving}
+            >
               {actionLabel}
             </button>
           )
         ) : null}
       </div>
-      <div className="ease-weight-group-list">
-        {items.map((item) => (
-          <label key={item.key} className="ease-weight-group-row">
-            <span>{item.label}</span>
-            <input
-              className="objective-row-input"
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
-              value={drafts[item.key] ?? String(item.weight)}
-              onChange={(event) => setDrafts((current) => ({ ...current, [item.key]: event.target.value }))}
-              disabled={!isEditing || isSaving}
-            />
-          </label>
-        ))}
-      </div>
+      {isEditing ? (
+        <div className="ease-weight-group-list">
+          {items.map((item) => (
+            <label key={item.key} className="ease-weight-group-row">
+              <span>{item.label}</span>
+              <input
+                className="objective-row-input"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={drafts[item.key] ?? String(item.weight)}
+                onChange={(event) => setDrafts((current) => ({ ...current, [item.key]: event.target.value }))}
+                disabled={isSaving}
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
       {error ? <p className="message danger">{error}</p> : null}
     </div>
   );

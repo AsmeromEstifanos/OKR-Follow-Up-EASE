@@ -121,7 +121,13 @@ export default async function DashboardPage({
   const positionLabel = "Position";
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const config = await getConfig();
-  const groupColors = config.boardCardColors.length > 0 ? config.boardCardColors : ["#2f6fed"];
+  const boardColorVars = {
+    "--department-card-bg": config.boardCardColors.department,
+    "--objective-card-bg": config.boardCardColors.objective,
+    "--kr-card-bg": config.boardCardColors.keyResult,
+    "--kpi-card-bg": config.boardCardColors.kpi,
+    "--group-color": config.boardCardColors.department
+  } as CSSProperties;
   const ventures = config.ventures;
   const fieldOptions = config.fieldOptions;
   const adminEmails = await listAdminEmails();
@@ -300,10 +306,8 @@ export default async function DashboardPage({
             <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
         ) : (
           <div className="board-groups">
-              {ownerSections.map((section, sectionIndex) => {
-                const sectionStyle = {
-                  "--group-color": groupColors[sectionIndex % groupColors.length]
-                } as CSSProperties;
+              {ownerSections.map((section) => {
+                const sectionStyle = boardColorVars;
                 const positionScopeKey = [
                   selectedVenture?.ventureKey ?? "default",
                   section.positionKey ?? section.positionName
@@ -398,11 +402,8 @@ export default async function DashboardPage({
           <p className="meta">No {objectiveLabelPlural.toLowerCase()} available.</p>
         ) : (
           <div className="board-groups">
-            {ownerSections.map((section, sectionIndex) => {
-              const sectionStyle = {
-                "--group-color":
-                    groupColors[sectionIndex % groupColors.length],
-              } as CSSProperties;
+            {ownerSections.map((section) => {
+              const sectionStyle = boardColorVars;
               const positionScopeKey = [
                 selectedVenture?.ventureKey ?? "default",
                 section.positionKey ?? section.positionName,

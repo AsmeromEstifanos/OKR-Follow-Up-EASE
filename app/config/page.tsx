@@ -3,8 +3,8 @@
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
-import type { AppConfig } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { AppConfig, BoardCardColors } from "@/lib/types";
+import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
 
 type ApiError = {
   error?: string;
@@ -23,7 +23,19 @@ const OBJECTIVE_CYCLE_VALUES = ["Q1", "Q2", "Q3", "Q4"];
 const KR_METRIC_TYPE_VALUES = ["Delivery", "Financial", "Operational", "People", "Quality"];
 const KR_STATUS_VALUES = ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"];
 const CHECKIN_FREQUENCY_VALUES = ["Weekly", "BiWeekly", "Monthly", "AdHoc"];
-const BOARD_CARD_COLOR_VALUES = ["#2f6fed", "#00a86b", "#e056b7", "#ff8c42", "#7a5cff"];
+const DEFAULT_BOARD_CARD_COLORS: BoardCardColors = {
+  department: "#f8fbff",
+  objective: "#fff9ef",
+  keyResult: "#eefaf6",
+  kpi: "#f0f5ff"
+};
+
+const BOARD_COLOR_FIELDS: Array<{ key: keyof BoardCardColors; label: string; helper: string }> = [
+  { key: "department", label: "OKR / Department Card", helper: "Section card background" },
+  { key: "objective", label: "Objective Card", helper: "Objective card background" },
+  { key: "keyResult", label: "Key Result Card", helper: "Key result card background" },
+  { key: "kpi", label: "KPI Card", helper: "KPI card background" }
+];
 
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
@@ -61,6 +73,11 @@ function addOption(values: string[], value: string): string[] {
 
 function removeOption(values: string[], value: string): string[] {
   return values.filter((item) => item.toLowerCase() !== value.toLowerCase());
+}
+
+function normalizeColorValue(value: string, fallback: string): string {
+  const normalized = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
 }
 
 function OptionEditor({
@@ -137,7 +154,7 @@ export default function ConfigPage(): JSX.Element {
   const [keyResultMetricTypes, setKeyResultMetricTypes] = useState<string[]>(KR_METRIC_TYPE_VALUES);
   const [keyResultStatuses, setKeyResultStatuses] = useState<string[]>(KR_STATUS_VALUES);
   const [checkInFrequencies, setCheckInFrequencies] = useState<string[]>(CHECKIN_FREQUENCY_VALUES);
-  const [boardCardColors, setBoardCardColors] = useState<string[]>(BOARD_CARD_COLOR_VALUES);
+  const [boardCardColors, setBoardCardColors] = useState<BoardCardColors>(DEFAULT_BOARD_CARD_COLORS);
   const [objectiveTypeDraft, setObjectiveTypeDraft] = useState<string>("");
   const [objectiveStatusDraft, setObjectiveStatusDraft] = useState<string>("");
   const [objectiveCycleDraft, setObjectiveCycleDraft] = useState<string>("");
@@ -168,7 +185,7 @@ export default function ConfigPage(): JSX.Element {
     setKeyResultMetricTypes(payload.fieldOptions.keyResultMetricTypes);
     setKeyResultStatuses(payload.fieldOptions.keyResultStatuses);
     setCheckInFrequencies(payload.fieldOptions.checkInFrequencies);
-    setBoardCardColors(payload.boardCardColors);
+    setBoardCardColors(payload.boardCardColors ?? DEFAULT_BOARD_CARD_COLORS);
     setState("idle");
   }, []);
 
@@ -225,6 +242,18 @@ export default function ConfigPage(): JSX.Element {
 
     return `Green: ${nextGreen}-100 | Amber: ${nextAmber}-${nextGreen - 1} | Red: 0-${nextAmber - 1}`;
   }, [greenMin, amberMin]);
+
+  const boardColorPreviewStyle = useMemo(
+    () =>
+      ({
+        "--department-card-bg": boardCardColors.department,
+        "--objective-card-bg": boardCardColors.objective,
+        "--kr-card-bg": boardCardColors.keyResult,
+        "--kpi-card-bg": boardCardColors.kpi,
+        "--group-color": "#2f6fed"
+      }) as CSSProperties,
+    [boardCardColors]
+  );
 
   const saveRagConfig = async (): Promise<void> => {
     const nextGreen = Number(greenMin);
@@ -309,11 +338,6 @@ export default function ConfigPage(): JSX.Element {
   };
 
   const saveBoardCardColors = async (): Promise<void> => {
-    if (boardCardColors.length === 0) {
-      setError("Add at least one board card color.");
-      return;
-    }
-
     setState("saving");
     setError("");
     setMessage("");
@@ -337,7 +361,7 @@ export default function ConfigPage(): JSX.Element {
     }
 
     setConfig(payload);
-    setBoardCardColors(payload.boardCardColors);
+    setBoardCardColors(payload.boardCardColors ?? DEFAULT_BOARD_CARD_COLORS);
     setMessage("Board card colors updated.");
     setState("idle");
   };
@@ -657,42 +681,62 @@ export default function ConfigPage(): JSX.Element {
 
       <section className="section">
         <h2>Board Card Colors</h2>
-        <div className="config-checklist">
-          {boardCardColors.map((color, index) => (
-            <div key={`${color}-${index}`} className="config-inline-row">
-              <input
-                type="color"
-                value={color}
-                onChange={(event) => {
-                  const next = [...boardCardColors];
-                  next[index] = event.target.value;
-                  setBoardCardColors(next);
-                }}
-                disabled={isBusy}
-              />
-              <input
-                value={color}
-                onChange={(event) => {
-                  const next = [...boardCardColors];
-                  next[index] = event.target.value;
-                  setBoardCardColors(next);
-                }}
-                disabled={isBusy}
-              />
-              <button
-                className="btn btn-danger"
-                type="button"
-                onClick={() => setBoardCardColors((current) => current.filter((_, currentIndex) => currentIndex !== index))}
-                disabled={isBusy || boardCardColors.length <= 1}
-              >
-                Remove
-              </button>
-            </div>
+        <div className="config-color-grid">
+          {BOARD_COLOR_FIELDS.map((field) => (
+            <article
+              key={field.key}
+              className="config-color-card"
+              style={{ "--preview-color": boardCardColors[field.key] } as CSSProperties}
+            >
+              <div className="config-color-card-top">
+                <div>
+                  <h3 className="config-option-title">{field.label}</h3>
+                  <p className="meta">{field.helper}</p>
+                </div>
+                <div className="config-color-swatch" aria-hidden="true" />
+              </div>
+              <label className="field">
+                <span>Pick Color</span>
+                <input
+                  className="config-color-picker"
+                  type="color"
+                  value={normalizeColorValue(boardCardColors[field.key], DEFAULT_BOARD_CARD_COLORS[field.key])}
+                  onChange={(event) =>
+                    setBoardCardColors((current) => ({
+                      ...current,
+                      [field.key]: event.target.value
+                    }))
+                  }
+                  disabled={isBusy}
+                />
+              </label>
+              <label className="field">
+                <span>Hex Value</span>
+                <input
+                  value={boardCardColors[field.key]}
+                  onChange={(event) =>
+                    setBoardCardColors((current) => ({
+                      ...current,
+                      [field.key]: event.target.value
+                    }))
+                  }
+                  disabled={isBusy}
+                />
+              </label>
+            </article>
           ))}
         </div>
+        <div className="config-board-preview" style={boardColorPreviewStyle}>
+          <div className="config-board-preview-department">
+            <div className="config-board-preview-title">Department / OKR</div>
+            <div className="config-board-preview-objective">Objective</div>
+            <div className="config-board-preview-kr">Key Result</div>
+            <div className="config-board-preview-kpi">KPI</div>
+          </div>
+        </div>
         <div className="actions">
-          <button className="btn btn-add" type="button" onClick={() => setBoardCardColors((current) => [...current, BOARD_CARD_COLOR_VALUES[current.length % BOARD_CARD_COLOR_VALUES.length]])} disabled={isBusy}>
-            Add Color
+          <button className="tab-btn" type="button" onClick={() => setBoardCardColors(DEFAULT_BOARD_CARD_COLORS)} disabled={isBusy}>
+            Reset Defaults
           </button>
           <button className="btn" type="button" onClick={() => void saveBoardCardColors()} disabled={isBusy}>
             Save Board Colors

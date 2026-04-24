@@ -1,6 +1,7 @@
 import type {
   ActivityLogEntry,
   AuthLogEntry,
+  BoardCardColors,
   CheckIn,
   FieldOptions,
   KeyResult,
@@ -33,7 +34,7 @@ type CodeSequences = {
 type PersistedContent = {
   ragThresholds?: RagThresholds;
   fieldOptions?: FieldOptions;
-  boardCardColors?: string[];
+  boardCardColors?: BoardCardColors | string[];
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
@@ -1232,7 +1233,7 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
       ConfigKey: BOARD_CARD_COLORS_CONFIG_KEY,
       GreenMin: null,
       AmberMin: null,
-      ValueJson: JSON.stringify(snapshot.content.boardCardColors ?? [])
+      ValueJson: JSON.stringify(snapshot.content.boardCardColors ?? {})
     });
     config.push({
       ConfigKey: CODE_SEQUENCES_CONFIG_KEY,
@@ -1738,8 +1739,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
   const fieldOptions = fieldOptionsItem
     ? normalizeFieldOptions(parseConfigJson(fieldOptionsItem.fields?.ValueJson))
     : normalizeFieldOptions(undefined);
-  const boardCardColors = Array.isArray(parseConfigJson(boardCardColorsItem?.fields?.ValueJson))
-    ? (parseConfigJson(boardCardColorsItem?.fields?.ValueJson) as string[])
+  const boardCardColors = boardCardColorsItem
+    ? (parseConfigJson(boardCardColorsItem.fields?.ValueJson) as BoardCardColors | string[] | undefined)
     : undefined;
   const codeSequences = codeSequencesItem
     ? (parseConfigJson(codeSequencesItem.fields?.ValueJson) as CodeSequences | undefined)

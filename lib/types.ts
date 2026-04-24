@@ -26,10 +26,17 @@ export interface Venture {
   departments: Department[];
 }
 
+export interface BoardCardColors {
+  department: string;
+  objective: string;
+  keyResult: string;
+  kpi: string;
+}
+
 export interface AppConfig {
   ragThresholds: RagThresholds;
   fieldOptions: FieldOptions;
-  boardCardColors: string[];
+  boardCardColors: BoardCardColors;
   ventures: Venture[];
 }
 

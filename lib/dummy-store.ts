@@ -13,6 +13,7 @@ import {
 } from "@/lib/okr-rules";
 import type {
   AppConfig,
+  BoardCardColors,
   CheckInFrequency,
   CheckIn,
   CreateCheckInInput,
@@ -66,7 +67,7 @@ type CodeSequences = {
 type PersistedContent = {
   ragThresholds?: RagThresholds;
   fieldOptions?: FieldOptions;
-  boardCardColors?: string[];
+  boardCardColors?: BoardCardColors | string[];
   periods: Period[];
   objectives: Objective[];
   keyResults: KeyResult[];
@@ -97,13 +98,12 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"],
 };
 
-const DEFAULT_BOARD_CARD_COLORS = [
-  "#2f6fed",
-  "#00a86b",
-  "#e056b7",
-  "#ff8c42",
-  "#7a5cff"
-];
+const DEFAULT_BOARD_CARD_COLORS: BoardCardColors = {
+  department: "#f8fbff",
+  objective: "#fff9ef",
+  keyResult: "#eefaf6",
+  kpi: "#f0f5ff"
+};
 
 const EASE_FALLBACK_PERIOD_KEY = "EASE-DEFAULT";
 const WEIGHT_TOLERANCE = 0.0001;
@@ -968,24 +968,32 @@ function normalizeFieldOptions(input?: Partial<FieldOptions>): FieldOptions {
   };
 }
 
-function normalizeBoardCardColors(input?: string[]): string[] {
-  const next: string[] = [];
-  (Array.isArray(input) ? input : []).forEach((value) => {
-    if (typeof value !== "string") {
-      return;
-    }
+function normalizeHexColor(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
 
-    const trimmed = value.trim();
-    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
-      return;
-    }
+  const trimmed = value.trim();
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed) ? trimmed : fallback;
+}
 
-    if (!next.includes(trimmed)) {
-      next.push(trimmed);
-    }
-  });
+function normalizeBoardCardColors(input?: BoardCardColors | string[]): BoardCardColors {
+  if (Array.isArray(input)) {
+    return {
+      department: normalizeHexColor(input[0], DEFAULT_BOARD_CARD_COLORS.department),
+      objective: normalizeHexColor(input[1], DEFAULT_BOARD_CARD_COLORS.objective),
+      keyResult: normalizeHexColor(input[2], DEFAULT_BOARD_CARD_COLORS.keyResult),
+      kpi: normalizeHexColor(input[3], DEFAULT_BOARD_CARD_COLORS.kpi)
+    };
+  }
 
-  return next.length > 0 ? next : [...DEFAULT_BOARD_CARD_COLORS];
+  const source = (input && typeof input === "object" ? input : {}) as Partial<BoardCardColors>;
+  return {
+    department: normalizeHexColor(source.department, DEFAULT_BOARD_CARD_COLORS.department),
+    objective: normalizeHexColor(source.objective, DEFAULT_BOARD_CARD_COLORS.objective),
+    keyResult: normalizeHexColor(source.keyResult, DEFAULT_BOARD_CARD_COLORS.keyResult),
+    kpi: normalizeHexColor(source.kpi, DEFAULT_BOARD_CARD_COLORS.kpi)
+  };
 }
 
 function validateRagThresholds(input: RagThresholds): void {
@@ -1578,7 +1586,7 @@ export function updateFieldOptions(input: Partial<FieldOptions>): AppConfig {
   return clone(store.config);
 }
 
-export function updateBoardCardColors(input: string[]): AppConfig {
+export function updateBoardCardColors(input: BoardCardColors): AppConfig {
   const store = getStore();
   store.config.boardCardColors = normalizeBoardCardColors(input);
   persistStore(store);

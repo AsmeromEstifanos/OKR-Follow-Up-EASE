@@ -61,6 +61,7 @@ import type {
   ActivityLogEntry,
   AppConfig,
   AuthLogEntry,
+  BoardCardColors,
   CheckIn,
   CreateCheckInInput,
   CreateDepartmentInput,
@@ -244,7 +245,7 @@ export async function updateFieldOptions(input: Partial<FieldOptions>): Promise<
   return config;
 }
 
-export async function updateBoardCardColors(input: string[]): Promise<AppConfig> {
+export async function updateBoardCardColors(input: BoardCardColors): Promise<AppConfig> {
   await ensureStoreHydrated();
   updateOperationProgress(28, "Applying board color changes");
   const config = updateBoardCardColorsLocal(input);
