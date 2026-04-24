@@ -1,4 +1,4 @@
-import BoardViewClient from "@/app/board-view-client";
+import BoardPageShell from "@/app/board-page-shell";
 import DashboardVentureTabs from "@/app/dashboard-venture-tabs";
 import { appProfile } from "@/lib/app-profile";
 import { objectiveBelongsToVenture } from "@/lib/objective-scope";
@@ -317,27 +317,19 @@ export default async function DashboardPage({
 
   return (
     <div className="dashboard-page">
-      {appProfile.showVentureTabs ? (
-        <DashboardVentureTabs
-          ventures={ventures}
-          selectedVentureKey={selectedVenture?.ventureKey}
-          adminEmails={adminEmails}
-        />
-      ) : null}
-
-      <section className="section">
-        <BoardViewClient
-          selectedVentureKey={selectedVenture?.ventureKey}
-          selectedVentureName={selectedVenture?.name}
-          ownerSections={ownerSections}
-          adminEmails={adminEmails}
-          defaultStartDate={defaultPeriod?.startDate}
-          defaultEndDate={defaultPeriod?.endDate}
-          defaultCycle={defaultCycle}
-          fieldOptions={fieldOptions}
-          boardCardColors={config.boardCardColors}
-        />
-      </section>
+      <BoardPageShell
+        showVentureTabs={appProfile.showVentureTabs}
+        ventures={ventures}
+        selectedVentureKey={selectedVenture?.ventureKey}
+        selectedVentureName={selectedVenture?.name}
+        ownerSections={ownerSections}
+        adminEmails={adminEmails}
+        defaultStartDate={defaultPeriod?.startDate}
+        defaultEndDate={defaultPeriod?.endDate}
+        defaultCycle={defaultCycle}
+        fieldOptions={fieldOptions}
+        boardCardColors={config.boardCardColors}
+      />
     </div>
   );
 }

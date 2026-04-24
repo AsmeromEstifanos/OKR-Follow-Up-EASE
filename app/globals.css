@@ -545,6 +545,14 @@ a {
   backdrop-filter: blur(4px);
 }
 
+.venture-tabs-toolbar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .venture-tab-item {
   position: relative;
   display: inline-flex;

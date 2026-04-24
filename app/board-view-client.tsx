@@ -22,8 +22,7 @@ import type {
   ObjectiveType,
   OkrCycle,
 } from "@/lib/types";
-import { useMemo, useState, type CSSProperties, Fragment } from "react";
-import useCurrentUserEmail from "./use-current-user-email";
+import { useMemo, type CSSProperties, Fragment } from "react";
 
 type BoardKpiData = {
   kpi: Kpi;
@@ -61,6 +60,9 @@ type Props = {
   defaultCycle: OkrCycle;
   fieldOptions: FieldOptions;
   boardCardColors: BoardCardColors;
+  currentUserEmail?: string;
+  showAssignedOnly: boolean;
+  allSectionsOpen: boolean;
 };
 
 function normalizeEmail(value: string | undefined): string {
@@ -77,6 +79,9 @@ export default function BoardViewClient({
   defaultCycle,
   fieldOptions,
   boardCardColors,
+  currentUserEmail,
+  showAssignedOnly,
+  allSectionsOpen,
 }: Props): JSX.Element {
   const labels = appProfile.labels;
   const objectiveLabel =
@@ -84,10 +89,7 @@ export default function BoardViewClient({
   const objectiveLabelPlural =
     appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
   const positionLabel = "Position";
-  const currentUserEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(currentUserEmail);
-  const [showAssignedOnly, setShowAssignedOnly] = useState(false);
-  const [allSectionsOpen, setAllSectionsOpen] = useState(true);
 
   const boardColorVars = useMemo(
     () =>
@@ -179,31 +181,6 @@ export default function BoardViewClient({
         <div className="section-header-left">
           <h2>OKR Board View</h2>
         </div>
-        {normalizedUserEmail ? (
-          <div className="board-visibility-filters">
-            <label className="ios-switch-field">
-              <span className="ios-switch-label">Assigned To Me</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={showAssignedOnly}
-                className={`ios-switch ${showAssignedOnly ? "is-on" : ""}`}
-                onClick={() => setShowAssignedOnly((current) => !current)}
-              >
-                <span className="ios-switch-track" aria-hidden="true">
-                  <span className="ios-switch-thumb" />
-                </span>
-              </button>
-            </label>
-            <button
-              type="button"
-              className="tab-btn"
-              onClick={() => setAllSectionsOpen((current) => !current)}
-            >
-              {allSectionsOpen ? "Collapse All" : "Expand All"}
-            </button>
-          </div>
-        ) : null}
       </div>
       {filteredSections.length === 0 ? (
         <p className="meta">

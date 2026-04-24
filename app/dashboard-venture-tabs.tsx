@@ -4,13 +4,14 @@ import { apiPath } from "@/lib/base-path";
 import type { Venture } from "@/lib/types";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import useCurrentUserEmail from "./use-current-user-email";
 
 type Props = {
   ventures: Venture[];
   selectedVentureKey?: string;
   adminEmails: string[];
+  trailingContent?: ReactNode;
 };
 
 type ApiError = {
@@ -41,7 +42,12 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export default function DashboardVentureTabs({ ventures, selectedVentureKey, adminEmails }: Props): JSX.Element {
+export default function DashboardVentureTabs({
+  ventures,
+  selectedVentureKey,
+  adminEmails,
+  trailingContent
+}: Props): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -268,6 +274,9 @@ export default function DashboardVentureTabs({ ventures, selectedVentureKey, adm
           >
             Add Venture
           </button>
+        ) : null}
+        {trailingContent ? (
+          <div className="venture-tabs-toolbar">{trailingContent}</div>
         ) : null}
       </div>
 
