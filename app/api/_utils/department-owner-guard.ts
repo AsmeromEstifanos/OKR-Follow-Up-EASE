@@ -41,6 +41,57 @@ function isDepartmentOwner(
   });
 }
 
+async function isVentureOwner(
+  ventureKey: string,
+  signedInEmail: string
+): Promise<boolean> {
+  const normalizedVentureKey = normalize(ventureKey);
+  if (!normalizedVentureKey || !signedInEmail) {
+    return false;
+  }
+
+  const config = await getConfig();
+  const venture = config.ventures.find(
+    (item) => normalize(item.ventureKey) === normalizedVentureKey
+  );
+  if (!venture) {
+    return false;
+  }
+
+  return includesAssignedOwnerEmail(venture.owner, venture.ownerEmail, signedInEmail);
+}
+
+export async function requireVentureOwnerOrAdmin(
+  request: NextRequest,
+  ventureKey?: string
+): Promise<NextResponse | null> {
+  const labels = appProfile.labels;
+  const signedInEmail = getSignedInEmail(request);
+  if (!signedInEmail) {
+    return NextResponse.json({ error: "Missing signed-in user email." }, { status: 401 });
+  }
+
+  const isAdmin = await isAdminEmail(signedInEmail);
+  if (isAdmin) {
+    return null;
+  }
+
+  const normalizedVentureKey = (ventureKey ?? "").trim();
+  if (!normalizedVentureKey) {
+    return NextResponse.json({ error: `${labels.ventureSingular} is required.` }, { status: 400 });
+  }
+
+  const ownerAllowed = await isVentureOwner(normalizedVentureKey, signedInEmail);
+  if (ownerAllowed) {
+    return null;
+  }
+
+  return NextResponse.json(
+    { error: `Only the ${labels.ventureSingular.toLowerCase()} owner or an admin can create ${labels.topLevelPlural.toLowerCase()}.` },
+    { status: 403 }
+  );
+}
+
 export async function requireDepartmentOwnerOrAdminForObjectiveCreate(
   request: NextRequest,
   payload: { department?: string; ventureName?: string }

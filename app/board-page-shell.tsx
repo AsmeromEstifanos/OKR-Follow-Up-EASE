@@ -1,6 +1,7 @@
 "use client";
 
 import BoardViewClient from "@/app/board-view-client";
+import DashboardDepartmentControls from "@/app/dashboard-department-controls";
 import DashboardVentureTabs from "@/app/dashboard-venture-tabs";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import type {
@@ -81,9 +82,15 @@ export default function BoardPageShell({
   const [allSectionsOpen, setAllSectionsOpen] = useState(true);
 
   const toolbar = currentUserEmail ? (
-    <div className="board-visibility-filters">
-      <label className="ios-switch-field">
-        <span className="ios-switch-label">Assigned To Me</span>
+      <div className="board-visibility-filters">
+        <DashboardDepartmentControls
+          selectedVentureKey={selectedVentureKey}
+          selectedVentureOwner={selectedVentureOwner}
+          selectedVentureOwnerEmail={selectedVentureOwnerEmail}
+          adminEmails={adminEmails}
+        />
+        <label className="ios-switch-field">
+          <span className="ios-switch-label">Assigned To Me</span>
         <button
           type="button"
           role="switch"

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/app/api/_utils/admin-guard";
+import { requireVentureOwnerOrAdmin } from "@/app/api/_utils/department-owner-guard";
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
 import { addDepartmentToVenture } from "@/lib/store";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,7 +14,7 @@ type Context = {
 
 export async function POST(request: NextRequest, context: Context): Promise<NextResponse> {
   return withOperationProgress(request, "Creating position", async () => {
-    const blocked = await requireAdmin(request);
+    const blocked = await requireVentureOwnerOrAdmin(request, context.params.ventureKey);
     if (blocked) {
       return blocked;
     }

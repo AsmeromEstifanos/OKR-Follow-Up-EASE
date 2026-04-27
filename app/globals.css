@@ -553,6 +553,21 @@ a {
   flex-wrap: wrap;
 }
 
+.board-top-level-controls {
+  display: inline-grid;
+  gap: 0.45rem;
+}
+
+.board-top-level-form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border: 1px solid #c9d8d1;
+  border-radius: 10px;
+  background: #ffffffea;
+  min-width: min(92vw, 420px);
+}
+
 .venture-tab-item {
   position: relative;
   display: inline-flex;
