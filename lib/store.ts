@@ -99,9 +99,12 @@ type SharePointSetupStatus = {
 const storeSyncState = globalThis as {
   __okrStoreHydrationPromise?: Promise<void>;
   __okrStoreHydrated?: boolean;
+  __okrStoreHydratedAt?: number;
   __okrStoreSyncPromise?: Promise<void>;
   __okrLastSyncedSnapshot?: StoreSnapshot;
 };
+
+const STORE_HYDRATION_TTL_MS = 5_000;
 
 function requireSharePointConfigured(): {
   enabled: true;
@@ -149,7 +152,12 @@ async function hydrateStoreFromSharePointInternal(): Promise<void> {
 }
 
 async function ensureStoreHydrated(): Promise<void> {
-  if (storeSyncState.__okrStoreHydrated) {
+  const hydratedAt = storeSyncState.__okrStoreHydratedAt ?? 0;
+  const isFresh =
+    storeSyncState.__okrStoreHydrated &&
+    Date.now() - hydratedAt < STORE_HYDRATION_TTL_MS;
+
+  if (isFresh) {
     updateOperationProgress(24, "Data ready");
     return;
   }
@@ -159,10 +167,13 @@ async function ensureStoreHydrated(): Promise<void> {
     storeSyncState.__okrStoreHydrationPromise = hydrateStoreFromSharePointInternal()
       .then(() => {
         storeSyncState.__okrStoreHydrated = true;
+        storeSyncState.__okrStoreHydratedAt = Date.now();
       })
       .catch((error) => {
-        storeSyncState.__okrStoreHydrationPromise = undefined;
         throw error;
+      })
+      .finally(() => {
+        storeSyncState.__okrStoreHydrationPromise = undefined;
       });
   }
 
@@ -187,6 +198,8 @@ async function syncStoreToSharePoint(): Promise<void> {
       }
 
       storeSyncState.__okrLastSyncedSnapshot = targetSnapshot;
+      storeSyncState.__okrStoreHydrated = true;
+      storeSyncState.__okrStoreHydratedAt = Date.now();
     });
 
   storeSyncState.__okrStoreSyncPromise = next;
