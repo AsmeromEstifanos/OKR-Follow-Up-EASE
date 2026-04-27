@@ -1,7 +1,6 @@
 "use client";
 
 import BoardViewClient from "@/app/board-view-client";
-import DashboardDepartmentControls from "@/app/dashboard-department-controls";
 import DashboardVentureTabs from "@/app/dashboard-venture-tabs";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import type {
@@ -18,7 +17,7 @@ import type {
   OkrCycle,
   Venture,
 } from "@/lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type BoardKpiData = {
   kpi: Kpi;
@@ -62,6 +61,8 @@ type Props = {
   boardCardColors: BoardCardColors;
 };
 
+const ASSIGNED_ONLY_STORAGE_KEY = "ease-okr-board-assigned-only";
+
 export default function BoardPageShell({
   showVentureTabs,
   ventures,
@@ -81,14 +82,28 @@ export default function BoardPageShell({
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
   const [allSectionsOpen, setAllSectionsOpen] = useState(true);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const saved = window.localStorage.getItem(ASSIGNED_ONLY_STORAGE_KEY);
+    setShowAssignedOnly(saved === "true");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      ASSIGNED_ONLY_STORAGE_KEY,
+      showAssignedOnly ? "true" : "false",
+    );
+  }, [showAssignedOnly]);
+
   const toolbar = currentUserEmail ? (
       <div className="board-visibility-filters">
-        <DashboardDepartmentControls
-          selectedVentureKey={selectedVentureKey}
-          selectedVentureOwner={selectedVentureOwner}
-          selectedVentureOwnerEmail={selectedVentureOwnerEmail}
-          adminEmails={adminEmails}
-        />
         <label className="ios-switch-field">
           <span className="ios-switch-label">Assigned To Me</span>
         <button

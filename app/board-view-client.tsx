@@ -1,5 +1,6 @@
 "use client";
 
+import DashboardDepartmentControls from "@/app/dashboard-department-controls";
 import DashboardObjectiveControls from "@/app/dashboard-objective-controls";
 import DashboardPositionRowControls from "@/app/dashboard-position-row-controls";
 import DashboardObjectiveRowEditor from "@/app/dashboard-objective-row-editor";
@@ -187,11 +188,22 @@ export default function BoardViewClient({
         </div>
       </div>
       {filteredSections.length === 0 ? (
-        <p className="meta">
-          {showAssignedOnly
-            ? `No ${objectiveLabelPlural.toLowerCase()} assigned to you.`
-            : `No ${objectiveLabelPlural.toLowerCase()} available.`}
-        </p>
+        <div className="board-empty-state">
+          <p className="meta">
+            {showAssignedOnly
+              ? `No ${objectiveLabelPlural.toLowerCase()} assigned to you.`
+              : `No ${objectiveLabelPlural.toLowerCase()} available.`}
+          </p>
+          <div className="board-empty-state-actions">
+            <DashboardDepartmentControls
+              selectedVentureKey={selectedVentureKey}
+              selectedVentureOwner={selectedVentureOwner}
+              selectedVentureOwnerEmail={selectedVentureOwnerEmail}
+              adminEmails={adminEmails}
+              compact
+            />
+          </div>
+        </div>
       ) : (
         <div className="board-groups">
           {filteredSections.map((section) => {
@@ -373,6 +385,15 @@ export default function BoardViewClient({
               </section>
             );
           })}
+          <div className="board-bottom-actions">
+            <DashboardDepartmentControls
+              selectedVentureKey={selectedVentureKey}
+              selectedVentureOwner={selectedVentureOwner}
+              selectedVentureOwnerEmail={selectedVentureOwnerEmail}
+              adminEmails={adminEmails}
+              compact
+            />
+          </div>
         </div>
       )}
     </>

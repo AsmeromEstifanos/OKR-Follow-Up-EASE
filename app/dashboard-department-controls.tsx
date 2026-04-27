@@ -16,6 +16,7 @@ type Props = {
   selectedVentureOwner?: string;
   selectedVentureOwnerEmail?: string;
   adminEmails: string[];
+  compact?: boolean;
 };
 
 type ApiError = {
@@ -44,6 +45,7 @@ export default function DashboardDepartmentControls({
   selectedVentureOwner,
   selectedVentureOwnerEmail,
   adminEmails,
+  compact = false,
 }: Props): JSX.Element | null {
   const router = useRouter();
   const currentUserEmail = useCurrentUserEmail();
@@ -137,11 +139,24 @@ export default function DashboardDepartmentControls({
     <div className="board-top-level-controls">
       <button
         type="button"
-        className={`tab-btn ${isAdding ? "tab-btn-active" : ""}`}
+        className={`${
+          compact ? "board-add-icon-btn" : "tab-btn"
+        } ${isAdding ? "tab-btn-active" : ""}`.trim()}
         onClick={isAdding ? closeAdd : openAdd}
         disabled={isSaving}
+        aria-label={`Add ${itemLabel}`}
+        title={`Add ${itemLabel}`}
       >
-        Add {itemLabel}
+        {compact ? (
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M12 5c.55 0 1 .45 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 1 1 0-2h5V6c0-.55.45-1 1-1Z"
+              fill="currentColor"
+            />
+          </svg>
+        ) : (
+          `Add ${itemLabel}`
+        )}
       </button>
       {isAdding ? (
         <form
