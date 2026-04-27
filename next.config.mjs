@@ -15,7 +15,7 @@ const nextConfig = {
   reactStrictMode: true,
   ...(basePath ? { basePath } : {}),
   env: {
-    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "0.1.2",
+    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "0.1.3",
     NEXT_PUBLIC_APP_PROFILE: process.env.NEXT_PUBLIC_APP_PROFILE ?? "",
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_AZURE_CLIENT_ID:

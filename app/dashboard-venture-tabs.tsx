@@ -178,7 +178,7 @@ export default function DashboardVentureTabs({
 
   const deleteVentureByKey = async (venture: Venture, isActiveTab: boolean): Promise<void> => {
     const shouldDelete = window.confirm(
-      `Delete venture '${venture.name}'? This will also delete related positions, objectives, key results, and check-ins.`
+      `Delete venture '${venture.name}'?\n\nThis permanently deletes the entire department space and all descendants:\n- positions\n- objectives\n- key results\n- KPIs\n- related check-ins\n\nThis action cannot be undone.`
     );
     if (!shouldDelete) {
       return;

@@ -17,6 +17,8 @@ type Props = {
   positionOwner?: string;
   positionOwnerEmail?: string;
   objectiveCount: number;
+  krCount?: number;
+  kpiCount?: number;
   objectiveWeights?: Array<{
     key: string;
     label: string;
@@ -55,6 +57,8 @@ export default function DashboardPositionRowControls({
   positionOwner,
   positionOwnerEmail,
   objectiveCount,
+  krCount = 0,
+  kpiCount = 0,
   objectiveWeights = [],
   forcedOpen,
   adminEmails,
@@ -209,8 +213,8 @@ export default function DashboardPositionRowControls({
 
     const warning =
       objectiveCount > 0
-        ? `Delete ${itemLabel.toLowerCase()} '${positionName}'? It currently has ${objectiveCount} ${objectiveCountLabel}. This will also delete related key results and KPIs.`
-        : `Delete ${itemLabel.toLowerCase()} '${positionName}'? This action cannot be undone.`;
+        ? `Delete ${itemLabel.toLowerCase()} '${positionName}'?\n\nThis permanently deletes this ${itemLabel.toLowerCase()} and all descendants:\n- ${objectiveCount} ${objectiveCountLabel}\n- ${krCount} key results\n- ${kpiCount} KPIs\n- related check-ins\n\nThis action cannot be undone.`
+        : `Delete ${itemLabel.toLowerCase()} '${positionName}'?\n\nThis permanently deletes this ${itemLabel.toLowerCase()} and any related descendants or check-ins.\n\nThis action cannot be undone.`;
 
     if (!window.confirm(warning)) {
       return;

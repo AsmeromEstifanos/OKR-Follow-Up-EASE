@@ -263,10 +263,14 @@ export default function DashboardEaseObjectiveCard({
 
   const deleteCurrentObjective = async (): Promise<void> => {
     if (isSaving) return;
+    const kpiCount = keyResults.reduce(
+      (sum, item) => sum + (item.kpis?.length ?? 0),
+      0
+    );
     const warning =
       keyResults.length > 0
-        ? `Delete objective '${objective.title}'? This will also delete ${keyResults.length} key results and related KPIs.`
-        : `Delete objective '${objective.title}'? This action cannot be undone.`;
+        ? `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and all descendants:\n- ${keyResults.length} key results\n- ${kpiCount} KPIs\n- related check-ins\n\nThis action cannot be undone.`
+        : `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and any related check-ins.\n\nThis action cannot be undone.`;
     if (!window.confirm(warning)) return;
 
     setIsSaving(true);

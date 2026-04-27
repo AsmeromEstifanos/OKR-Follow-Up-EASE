@@ -260,7 +260,7 @@ export default function DashboardEaseKpiCard({
 
   const deleteCurrent = async (): Promise<void> => {
     if (isSaving) return;
-    if (!window.confirm(`Delete KPI '${kpi.title}'? Related check-ins will also be deleted.`)) return;
+    if (!window.confirm(`Delete KPI '${kpi.title}'?\n\nThis permanently deletes this KPI and all related check-ins.\n\nThis action cannot be undone.`)) return;
 
     setIsSaving(true);
     setError("");

@@ -210,6 +210,19 @@ export default function BoardViewClient({
                   positionOwner={section.positionOwner}
                   positionOwnerEmail={section.positionOwnerEmail}
                   objectiveCount={section.objectives.length}
+                  krCount={section.objectives.reduce(
+                    (sum, entry) => sum + entry.keyResults.length,
+                    0,
+                  )}
+                  kpiCount={section.objectives.reduce(
+                    (sum, entry) =>
+                      sum +
+                      entry.keyResults.reduce(
+                        (krSum, krEntry) => krSum + krEntry.kpis.length,
+                        0,
+                      ),
+                    0,
+                  )}
                   objectiveWeights={section.objectives.map((entry) => ({
                     key: entry.objective.objectiveKey,
                     label:

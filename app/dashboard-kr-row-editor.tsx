@@ -198,7 +198,11 @@ export default function DashboardKrRowEditor({
 
   const deleteCurrent = async (): Promise<void> => {
     if (isSaving) return;
-    if (!window.confirm(`Delete key result '${keyResult.title}'? Related KPIs and check-ins will also be deleted.`)) {
+    const warning =
+      kpis.length > 0
+        ? `Delete key result '${keyResult.title}'?\n\nThis permanently deletes this key result and all descendants:\n- ${kpis.length} KPIs\n- related check-ins\n\nThis action cannot be undone.`
+        : `Delete key result '${keyResult.title}'?\n\nThis permanently deletes this key result and any related check-ins.\n\nThis action cannot be undone.`;
+    if (!window.confirm(warning)) {
       return;
     }
 

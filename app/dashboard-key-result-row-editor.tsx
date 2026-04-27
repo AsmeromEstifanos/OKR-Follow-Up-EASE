@@ -203,7 +203,7 @@ export default function DashboardKeyResultRowEditor({
 
   const deleteCurrent = async (): Promise<void> => {
     if (isSaving) return;
-    if (!window.confirm(`Delete ${itemLabel.toLowerCase()} '${kpi.title}'? Related check-ins will also be deleted.`)) {
+    if (!window.confirm(`Delete ${itemLabel.toLowerCase()} '${kpi.title}'?\n\nThis permanently deletes this ${itemLabel.toLowerCase()} and all related check-ins.\n\nThis action cannot be undone.`)) {
       return;
     }
 

@@ -321,10 +321,14 @@ export default function DashboardObjectiveRowEditor({
       return;
     }
 
+    const kpiCount = keyResults.reduce(
+      (sum, item) => sum + (item.kpis?.length ?? 0),
+      0
+    );
     const warning =
       keyResults.length > 0
-        ? `Delete ${itemLabel.toLowerCase()} '${objective.title}'? This will also delete ${keyResults.length} ${childLabelPlural.toLowerCase()}.`
-        : `Delete ${itemLabel.toLowerCase()} '${objective.title}'? This action cannot be undone.`;
+        ? `Delete ${itemLabel.toLowerCase()} '${objective.title}'?\n\nThis permanently deletes this ${itemLabel.toLowerCase()} and all descendants:\n- ${keyResults.length} ${childLabelPlural.toLowerCase()}\n- ${kpiCount} KPIs\n- related check-ins\n\nThis action cannot be undone.`
+        : `Delete ${itemLabel.toLowerCase()} '${objective.title}'?\n\nThis permanently deletes this ${itemLabel.toLowerCase()} and any related check-ins.\n\nThis action cannot be undone.`;
 
     if (!window.confirm(warning)) {
       return;

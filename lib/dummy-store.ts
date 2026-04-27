@@ -1891,6 +1891,15 @@ export function deleteVenture(ventureKey: string): boolean {
       )
       .map((keyResult) => keyResult.krKey.toLowerCase()),
   );
+  const removedKpiKeys = new Set(
+    store.kpis
+      .filter(
+        (kpi) =>
+          removedObjectiveKeys.has(kpi.objectiveKey.toLowerCase()) ||
+          removedKrKeys.has(kpi.krKey.toLowerCase()),
+      )
+      .map((kpi) => kpi.kpiKey.toLowerCase()),
+  );
 
   store.config.ventures.splice(index, 1);
   store.objectives = store.objectives.filter(
@@ -1900,10 +1909,14 @@ export function deleteVenture(ventureKey: string): boolean {
   store.keyResults = store.keyResults.filter(
     (keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()),
   );
+  store.kpis = store.kpis.filter(
+    (kpi) => !removedKpiKeys.has(kpi.kpiKey.toLowerCase()),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
     return (
       !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) &&
-      !removedKrKeys.has(checkIn.krKey.toLowerCase())
+      !removedKrKeys.has(checkIn.krKey.toLowerCase()) &&
+      !removedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
   });
 
@@ -2083,6 +2096,15 @@ export function deleteDepartmentFromVenture(
       )
       .map((keyResult) => keyResult.krKey.toLowerCase()),
   );
+  const removedKpiKeys = new Set(
+    store.kpis
+      .filter(
+        (kpi) =>
+          removedObjectiveKeys.has(kpi.objectiveKey.toLowerCase()) ||
+          removedKrKeys.has(kpi.krKey.toLowerCase()),
+      )
+      .map((kpi) => kpi.kpiKey.toLowerCase()),
+  );
 
   venture.departments.splice(index, 1);
   store.objectives = store.objectives.filter(
@@ -2092,10 +2114,14 @@ export function deleteDepartmentFromVenture(
   store.keyResults = store.keyResults.filter(
     (keyResult) => !removedKrKeys.has(keyResult.krKey.toLowerCase()),
   );
+  store.kpis = store.kpis.filter(
+    (kpi) => !removedKpiKeys.has(kpi.kpiKey.toLowerCase()),
+  );
   store.checkIns = store.checkIns.filter((checkIn) => {
     return (
       !removedObjectiveKeys.has(checkIn.objectiveKey.toLowerCase()) &&
-      !removedKrKeys.has(checkIn.krKey.toLowerCase())
+      !removedKrKeys.has(checkIn.krKey.toLowerCase()) &&
+      !removedKpiKeys.has((checkIn.kpiKey ?? "").toLowerCase())
     );
   });
 
