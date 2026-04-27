@@ -322,6 +322,7 @@ export default async function DashboardPage({
         ventures={ventures}
         selectedVentureKey={selectedVenture?.ventureKey}
         selectedVentureName={selectedVenture?.name}
+        selectedVentureOwnerEmail={selectedVenture?.ownerEmail}
         ownerSections={ownerSections}
         adminEmails={adminEmails}
         defaultStartDate={defaultPeriod?.startDate}

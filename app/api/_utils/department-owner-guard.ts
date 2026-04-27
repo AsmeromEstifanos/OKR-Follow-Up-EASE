@@ -29,6 +29,7 @@ function isDepartmentOwner(
       : config.ventures;
 
     return ventures.some((venture) =>
+      includesAssignedOwnerEmail(venture.owner, venture.ownerEmail, signedInEmail) ||
       venture.departments.some((department) => {
         if (normalize(department.name) !== normalizedDepartment) {
           return false;

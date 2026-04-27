@@ -1,6 +1,8 @@
 "use client";
 
+import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
+import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
 import type { Venture } from "@/lib/types";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -55,10 +57,14 @@ export default function DashboardVentureTabs({
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizeEmail(currentUserEmail));
 
   const [ventureName, setVentureName] = useState<string>("");
+  const [ventureOwner, setVentureOwner] = useState<string>("");
+  const [ventureOwnerEmail, setVentureOwnerEmail] = useState<string>("");
   const [isAddingVenture, setIsAddingVenture] = useState<boolean>(false);
   const [isSavingVenture, setIsSavingVenture] = useState<boolean>(false);
   const [editingVentureKey, setEditingVentureKey] = useState<string>("");
   const [editingVentureNameDraft, setEditingVentureNameDraft] = useState<string>("");
+  const [editingVentureOwnerDraft, setEditingVentureOwnerDraft] = useState<string>("");
+  const [editingVentureOwnerEmailDraft, setEditingVentureOwnerEmailDraft] = useState<string>("");
   const [isSavingSelectedVenture, setIsSavingSelectedVenture] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
@@ -79,12 +85,16 @@ export default function DashboardVentureTabs({
   const openAddVenture = (): void => {
     setError("");
     setVentureName("");
+    setVentureOwner("");
+    setVentureOwnerEmail("");
     setIsAddingVenture(true);
   };
 
   const closeAddVenture = (): void => {
     setError("");
     setVentureName("");
+    setVentureOwner("");
+    setVentureOwnerEmail("");
     setIsAddingVenture(false);
   };
 
@@ -92,12 +102,16 @@ export default function DashboardVentureTabs({
     setError("");
     setEditingVentureKey(venture.ventureKey);
     setEditingVentureNameDraft(venture.name);
+    setEditingVentureOwnerDraft(resolveOwnerName(venture.owner, venture.ownerEmail));
+    setEditingVentureOwnerEmailDraft(resolveOwnerEmail(venture.owner, venture.ownerEmail));
   };
 
   const closeEditVenture = (): void => {
     setError("");
     setEditingVentureKey("");
     setEditingVentureNameDraft("");
+    setEditingVentureOwnerDraft("");
+    setEditingVentureOwnerEmailDraft("");
   };
 
   const createVenture = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -118,7 +132,11 @@ export default function DashboardVentureTabs({
         "content-type": "application/json",
         "x-user-email": currentUserEmail
       },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({
+        name,
+        owner: ventureOwner.trim(),
+        ownerEmail: ventureOwnerEmail.trim()
+      })
     });
     const payload = await readJson<Venture & ApiError>(response);
 
@@ -161,7 +179,11 @@ export default function DashboardVentureTabs({
         "content-type": "application/json",
         "x-user-email": currentUserEmail
       },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({
+        name,
+        owner: editingVentureOwnerDraft.trim(),
+        ownerEmail: editingVentureOwnerEmailDraft.trim()
+      })
     });
     const payload = await readJson<ApiError>(response);
 
@@ -291,6 +313,26 @@ export default function DashboardVentureTabs({
             autoFocus
             disabled={isSavingVenture}
           />
+          <OwnerInput
+            id="venture-owner-create"
+            value={ventureOwner}
+            onChange={setVentureOwner}
+            emailValue={ventureOwnerEmail}
+            onEmailChange={setVentureOwnerEmail}
+            multiple
+            showLabel={false}
+            placeholder="Venture owner (optional)"
+            disabled={isSavingVenture}
+            inputClassName="objective-row-input"
+          />
+          <input
+            name="ventureOwnerEmail"
+            value={formatOwnerEmailLabel(ventureOwner, ventureOwnerEmail)}
+            readOnly
+            placeholder="Owner emails"
+            aria-label="Venture owner email"
+            disabled={isSavingVenture}
+          />
           <button className="btn btn-add" type="submit" disabled={isSavingVenture}>
             Add venture
           </button>
@@ -309,6 +351,26 @@ export default function DashboardVentureTabs({
             placeholder="Venture name"
             aria-label="Edit venture name"
             autoFocus
+            disabled={isSavingSelectedVenture}
+          />
+          <OwnerInput
+            id={`venture-owner-edit-${editingVentureKey || "selected"}`}
+            value={editingVentureOwnerDraft}
+            onChange={setEditingVentureOwnerDraft}
+            emailValue={editingVentureOwnerEmailDraft}
+            onEmailChange={setEditingVentureOwnerEmailDraft}
+            multiple
+            showLabel={false}
+            placeholder="Venture owner (optional)"
+            disabled={isSavingSelectedVenture}
+            inputClassName="objective-row-input"
+          />
+          <input
+            name="editingVentureOwnerEmail"
+            value={formatOwnerEmailLabel(editingVentureOwnerDraft, editingVentureOwnerEmailDraft)}
+            readOnly
+            placeholder="Owner emails"
+            aria-label="Edit venture owner email"
             disabled={isSavingSelectedVenture}
           />
           <button className="btn" type="submit" disabled={isSavingSelectedVenture}>

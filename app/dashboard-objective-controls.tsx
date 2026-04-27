@@ -17,6 +17,7 @@ type Props = {
   defaultEndDate?: string;
   defaultCycle: string;
   defaultOwner: string;
+  ventureOwnerEmail?: string;
   positionOwnerEmail?: string;
   adminEmails: string[];
   objectiveTypeOptions: ObjectiveType[];
@@ -92,6 +93,7 @@ export default function DashboardObjectiveControls({
   defaultEndDate,
   defaultCycle,
   defaultOwner,
+  ventureOwnerEmail,
   positionOwnerEmail,
   adminEmails,
   objectiveTypeOptions,
@@ -108,7 +110,13 @@ export default function DashboardObjectiveControls({
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
   const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
-  const canCreate = Boolean(normalizedUserEmail) && (isAdmin || includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail));
+  const canCreate =
+    Boolean(normalizedUserEmail) &&
+    (
+      isAdmin ||
+      includesSerializedOwnerEmail(ventureOwnerEmail, normalizedUserEmail) ||
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
+    );
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [title, setTitle] = useState<string>("");

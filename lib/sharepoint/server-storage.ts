@@ -147,7 +147,9 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
     keyField: "VentureKey",
     columns: [
       { name: "VentureKey", type: "text" },
-      { name: "VentureName", type: "text" }
+      { name: "VentureName", type: "text" },
+      { name: "Owner", type: "text", optional: true },
+      { name: "OwnerEmail", type: "text", optional: true }
     ]
   },
   departments: {
@@ -1105,7 +1107,9 @@ async function loadAtomicCapabilities(
 function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: AtomicCapabilities): AtomicRowSets {
   const ventures = snapshot.ventures.map((venture) => ({
     VentureKey: venture.ventureKey,
-    VentureName: venture.name
+    VentureName: venture.name,
+    Owner: venture.owner ?? "",
+    OwnerEmail: venture.ownerEmail ?? ""
   }));
 
   const departments = snapshot.ventures.flatMap((venture) =>
@@ -1506,7 +1510,7 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
   ];
 
   const [ventureItems, departmentItems, periodItems, objectiveItems, krItems, kpiItems, checkInItems, configItems] = await Promise.all([
-    listItems(config, siteId, listIds.ventures, ["VentureKey", "VentureName"]),
+    listItems(config, siteId, listIds.ventures, ["VentureKey", "VentureName", "Owner", "OwnerEmail"]),
     listItems(config, siteId, listIds.departments, [
       "DepartmentKey",
       "VentureKey",
@@ -1566,6 +1570,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
       return {
         ventureKey,
         name: asString(item.fields?.VentureName),
+        owner: asString(item.fields?.Owner) || undefined,
+        ownerEmail: asOwnerEmail(item.fields?.OwnerEmail, item.fields?.Owner) || undefined,
         departments: []
       } as Venture;
     })

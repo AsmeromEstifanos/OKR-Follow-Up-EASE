@@ -23,6 +23,8 @@ export interface Department {
 export interface Venture {
   ventureKey: string;
   name: string;
+  owner?: string;
+  ownerEmail?: string;
   departments: Department[];
 }
 
@@ -305,6 +307,8 @@ export type CreateCheckInInput = Omit<CheckIn, "checkInAt" | "progressPctSnapsho
 export type CreateVentureInput = {
   ventureKey?: string;
   name: string;
+  owner?: string;
+  ownerEmail?: string;
   departments?: Array<{
     departmentKey?: string;
     name: string;
@@ -313,7 +317,7 @@ export type CreateVentureInput = {
   }>;
 };
 
-export type UpdateVentureInput = Partial<Pick<Venture, "name">>;
+export type UpdateVentureInput = Partial<Pick<Venture, "name" | "owner" | "ownerEmail">>;
 
 export type CreateDepartmentInput = {
   departmentKey?: string;

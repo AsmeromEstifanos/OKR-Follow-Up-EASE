@@ -53,6 +53,7 @@ type BoardOwnerSection = {
 type Props = {
   selectedVentureKey?: string;
   selectedVentureName?: string;
+  selectedVentureOwnerEmail?: string;
   ownerSections: BoardOwnerSection[];
   adminEmails: string[];
   defaultStartDate?: string;
@@ -72,6 +73,7 @@ function normalizeEmail(value: string | undefined): string {
 export default function BoardViewClient({
   selectedVentureKey,
   selectedVentureName,
+  selectedVentureOwnerEmail,
   ownerSections,
   adminEmails,
   defaultStartDate,
@@ -242,6 +244,7 @@ export default function BoardViewClient({
                         defaultEndDate={defaultEndDate}
                         defaultCycle={defaultCycle}
                         defaultOwner={section.positionOwner ?? ""}
+                        ventureOwnerEmail={selectedVentureOwnerEmail}
                         positionOwnerEmail={section.positionOwnerEmail}
                         adminEmails={adminEmails}
                         objectiveTypeOptions={

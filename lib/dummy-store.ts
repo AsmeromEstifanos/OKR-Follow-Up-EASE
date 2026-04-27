@@ -1723,6 +1723,10 @@ export function updateKpiWeightGroup(krKey: string, entries: WeightEntry[]): Kpi
 export function addVenture(input: CreateVentureInput): Venture {
   const store = getStore();
   const name = normalizeName(input.name);
+  const owner = normalizeName(resolveOwnerName(input.owner, input.ownerEmail));
+  const ownerEmail =
+    normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
+    undefined;
 
   if (!name) {
     throw new Error("Venture name is required.");
@@ -1806,6 +1810,8 @@ export function addVenture(input: CreateVentureInput): Venture {
   const venture: Venture = {
     ventureKey,
     name,
+    owner: owner || undefined,
+    ownerEmail,
     departments,
   };
 
@@ -1862,6 +1868,20 @@ export function updateVenture(
         objective.ventureName = name;
       }
     });
+  }
+
+  if (patch.owner !== undefined) {
+    venture.owner =
+      normalizeName(
+        resolveOwnerName(patch.owner, patch.ownerEmail ?? venture.ownerEmail),
+      ) || undefined;
+  }
+
+  if (patch.ownerEmail !== undefined) {
+    venture.ownerEmail =
+      normalizeEmail(
+        resolveOwnerEmail(patch.owner ?? venture.owner, patch.ownerEmail),
+      ) || undefined;
   }
 
   persistStore(store);
