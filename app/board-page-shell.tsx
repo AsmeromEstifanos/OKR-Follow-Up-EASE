@@ -50,6 +50,7 @@ type Props = {
   ventures: Venture[];
   selectedVentureKey?: string;
   selectedVentureName?: string;
+  selectedVentureOwner?: string;
   selectedVentureOwnerEmail?: string;
   ownerSections: BoardOwnerSection[];
   adminEmails: string[];
@@ -65,6 +66,7 @@ export default function BoardPageShell({
   ventures,
   selectedVentureKey,
   selectedVentureName,
+  selectedVentureOwner,
   selectedVentureOwnerEmail,
   ownerSections,
   adminEmails,
@@ -118,6 +120,7 @@ export default function BoardPageShell({
         <BoardViewClient
           selectedVentureKey={selectedVentureKey}
           selectedVentureName={selectedVentureName}
+          selectedVentureOwner={selectedVentureOwner}
           selectedVentureOwnerEmail={selectedVentureOwnerEmail}
           ownerSections={ownerSections}
           adminEmails={adminEmails}

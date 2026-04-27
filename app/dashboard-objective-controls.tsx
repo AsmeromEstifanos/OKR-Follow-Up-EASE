@@ -5,7 +5,12 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
-import { formatOwnerEmailLabel, includesSerializedOwnerEmail, resolveOwnerEmail } from "@/lib/owner";
+import {
+  formatOwnerEmailLabel,
+  includesAssignedOwnerEmail,
+  includesSerializedOwnerEmail,
+  resolveOwnerEmail,
+} from "@/lib/owner";
 import type { CheckInFrequency, MetricType, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,6 +22,7 @@ type Props = {
   defaultEndDate?: string;
   defaultCycle: string;
   defaultOwner: string;
+  ventureOwner?: string;
   ventureOwnerEmail?: string;
   positionOwnerEmail?: string;
   adminEmails: string[];
@@ -93,6 +99,7 @@ export default function DashboardObjectiveControls({
   defaultEndDate,
   defaultCycle,
   defaultOwner,
+  ventureOwner,
   ventureOwnerEmail,
   positionOwnerEmail,
   adminEmails,
@@ -114,7 +121,7 @@ export default function DashboardObjectiveControls({
     Boolean(normalizedUserEmail) &&
     (
       isAdmin ||
-      includesSerializedOwnerEmail(ventureOwnerEmail, normalizedUserEmail) ||
+      includesAssignedOwnerEmail(ventureOwner, ventureOwnerEmail, normalizedUserEmail) ||
       includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
     );
   const [isAdding, setIsAdding] = useState<boolean>(false);
