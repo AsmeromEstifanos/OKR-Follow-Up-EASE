@@ -252,34 +252,31 @@ export default function DashboardEaseObjectiveCard({
       <div className="ease-objective-shell">
         {/* Always-visible header */}
         <div className="ease-objective-top ease-objective-top-static">
-          <div className="ease-objective-main">
-            <div className="ease-objective-heading">
-              <div className="ease-objective-heading-copy">
-                <div className="ease-code-badge">{objectiveCode}</div>
-                {isEditing ? (
-                  <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
-                ) : (
-                  <div className="ease-kr-title-row">
-                    {hasDetails ? (
-                      <button type="button" className="ease-title-btn" onClick={openDetails} title="Click to view details">
-                        <h3><HighlightText text={objective.title} /></h3>
-                      </button>
-                    ) : (
+          {/* Row 1: code badge (left) + RAG dot (right) */}
+          <div className="ease-obj-badge-row">
+            <div className="ease-code-badge">{objectiveCode}</div>
+            {!isEditing && <RagDot rag={objective.rag} />}
+          </div>
+          {/* Row 2: title (left) + progress ring (right) */}
+          <div className="ease-obj-title-row">
+            <div className="ease-obj-title-copy">
+              {isEditing ? (
+                <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
+              ) : (
+                <div className="ease-kr-title-row">
+                  {hasDetails ? (
+                    <button type="button" className="ease-title-btn" onClick={openDetails} title="Click to view details">
                       <h3><HighlightText text={objective.title} /></h3>
-                    )}
-                    {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
-                  </div>
-                )}
-              </div>
-              <div className="ease-card-head-side">
-                {!isEditing && <RagDot rag={objective.rag} />}
-                <span className={statusChipClass(isEditing ? status : objective.status)}>
-                  {formatStatus(isEditing ? status : objective.status)}
-                </span>
-                <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
-                  <span>{Math.round(progressValue)}%</span>
+                    </button>
+                  ) : (
+                    <h3><HighlightText text={objective.title} /></h3>
+                  )}
+                  {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
                 </div>
-              </div>
+              )}
+            </div>
+            <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
+              <span>{Math.round(progressValue)}%</span>
             </div>
           </div>
         </div>
@@ -290,16 +287,14 @@ export default function DashboardEaseObjectiveCard({
               <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
               <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
               <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
+              <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
             </div>
           )}
           {!isEditing && (
-            <div className="ease-objective-metrics">
-              <div className="ease-progress-bar ease-progress-bar-large"><span style={{ width: `${progressValue}%` }} /></div>
-              <div className="ease-footer-line">
-                <span>Weight: {displayWeight}</span>
-                <span>Due Date: {formatDate(objective.dueDate)}</span>
-                <span>Last Updated: {formatDate(objective.lastCheckinAt)}</span>
-              </div>
+            <div className="ease-footer-line">
+              <span>Weight: {displayWeight}</span>
+              <span>Due Date: {formatDate(objective.dueDate)}</span>
+              <span>Last Updated: {formatDate(objective.lastCheckinAt)}</span>
             </div>
           )}
           {isEditing && (
