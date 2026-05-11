@@ -3289,6 +3289,18 @@ textarea {
   flex-shrink: 0;
 }
 
+/* Clickable card header area */
+.ease-card-head-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ease-card-head-clickable:focus-visible {
+  outline: 2px solid #8cb7de;
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
 /* Chevron collapse button on cards */
 .card-chevron-btn {
   display: inline-flex;

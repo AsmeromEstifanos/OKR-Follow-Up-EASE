@@ -336,7 +336,14 @@ export default function DashboardEaseKrCard({
 
   return (
     <article className="ease-kr-card">
-      <div className="ease-kr-head">
+      <div
+        className={`ease-kr-head${!isEditing ? " ease-card-head-clickable" : ""}`}
+        onClick={!isEditing ? () => setIsBodyOpen((v) => !v) : undefined}
+        role={!isEditing ? "button" : undefined}
+        tabIndex={!isEditing ? 0 : undefined}
+        onKeyDown={!isEditing ? (e) => { if (e.key === "Enter" || e.key === " ") setIsBodyOpen((v) => !v); } : undefined}
+        aria-expanded={!isEditing ? showBody : undefined}
+      >
         <div className="ease-kr-main">
           <div className="ease-code-badge">{codeValue}</div>
           {isEditing ? (
@@ -354,13 +361,13 @@ export default function DashboardEaseKrCard({
                 <button
                   type="button"
                   className="ease-title-btn"
-                  onClick={openDetails}
+                  onClick={(e) => { e.stopPropagation(); openDetails(); }}
                   title="Click to view details"
                 >
                   <h4><HighlightText text={keyResult.title} /></h4>
                 </button>
               ) : (
-                <h4><HighlightText text={keyResult.title} /></h4>
+                <h4 onClick={(e) => e.stopPropagation()}><HighlightText text={keyResult.title} /></h4>
               )}
               {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
             </div>
@@ -371,7 +378,7 @@ export default function DashboardEaseKrCard({
           <div className="ease-progress-ring ease-progress-ring-kr" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
             <span>{Math.round(progressValue)}%</span>
           </div>
-          <button type="button" className="card-chevron-btn" onClick={() => setIsBodyOpen((v) => !v)} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
+          <button type="button" className="card-chevron-btn" onClick={(e) => { e.stopPropagation(); setIsBodyOpen((v) => !v); }} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
             <ChevronIcon open={showBody} />
           </button>
         </div>
