@@ -23,7 +23,7 @@ import type {
   ObjectiveType,
   OkrCycle,
 } from "@/lib/types";
-import { useMemo, type CSSProperties, Fragment } from "react";
+import { useMemo, useState, type CSSProperties, Fragment } from "react";
 
 type BoardKpiData = {
   kpi: Kpi;
@@ -95,6 +95,7 @@ export default function BoardViewClient({
     appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
   const positionLabel = "Position";
   const normalizedUserEmail = normalizeEmail(currentUserEmail);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const boardColorVars = useMemo(
     () =>
@@ -109,34 +110,117 @@ export default function BoardViewClient({
   );
 
   const filteredSections = useMemo(() => {
-    if (!showAssignedOnly || !normalizedUserEmail) {
-      return ownerSections;
+    const needle = searchQuery.trim().toLowerCase();
+
+    function matchesSearch(text: string | undefined | null): boolean {
+      if (!needle) return true;
+      return (text ?? "").toLowerCase().includes(needle);
     }
 
-    return ownerSections
+    function kpiMatchesSearch(kpi: BoardKpiData["kpi"]): boolean {
+      return matchesSearch(kpi.title) || matchesSearch(kpi.owner);
+    }
+
+    function krMatchesSearch(kr: BoardKrData["keyResult"]): boolean {
+      return matchesSearch(kr.title) || matchesSearch(kr.owner);
+    }
+
+    function objectiveMatchesSearch(obj: BoardObjectiveData["objective"]): boolean {
+      return (
+        matchesSearch(obj.title) ||
+        matchesSearch(obj.description) ||
+        matchesSearch(obj.owner) ||
+        matchesSearch(obj.department) ||
+        matchesSearch(obj.strategicTheme)
+      );
+    }
+
+    let sections = ownerSections;
+
+    if (showAssignedOnly && normalizedUserEmail) {
+      sections = sections
+        .map((section) => {
+          const matchedObjectives = section.objectives
+            .map((objectiveEntry) => {
+              const objectiveMatches = includesAssignedOwnerEmail(
+                objectiveEntry.objective.owner,
+                objectiveEntry.objective.ownerEmail,
+                normalizedUserEmail,
+              );
+
+              const matchedKeyResults = objectiveEntry.keyResults
+                .map((krEntry) => {
+                  const krMatches = includesAssignedOwnerEmail(
+                    krEntry.keyResult.owner,
+                    krEntry.keyResult.ownerEmail,
+                    normalizedUserEmail,
+                  );
+
+                  const matchedKpis = krEntry.kpis.filter((item) =>
+                    includesAssignedOwnerEmail(
+                      item.kpi.owner,
+                      item.kpi.ownerEmail,
+                      normalizedUserEmail,
+                    ),
+                  );
+
+                  if (!krMatches && matchedKpis.length === 0) {
+                    return null;
+                  }
+
+                  return {
+                    ...krEntry,
+                    kpis: krMatches ? krEntry.kpis : matchedKpis,
+                  };
+                })
+                .filter((entry): entry is BoardKrData => Boolean(entry));
+
+              if (!objectiveMatches && matchedKeyResults.length === 0) {
+                return null;
+              }
+
+              return {
+                ...objectiveEntry,
+                keyResults: objectiveMatches
+                  ? objectiveEntry.keyResults
+                  : matchedKeyResults,
+              };
+            })
+            .filter((entry): entry is BoardObjectiveData => Boolean(entry));
+
+          const sectionMatches = includesSerializedOwnerEmail(
+            section.positionOwnerEmail,
+            normalizedUserEmail,
+          );
+
+          if (!sectionMatches && matchedObjectives.length === 0) {
+            return null;
+          }
+
+          return {
+            ...section,
+            objectives: matchedObjectives,
+          };
+        })
+        .filter((entry): entry is BoardOwnerSection => Boolean(entry));
+    }
+
+    if (!needle) return sections;
+
+    return sections
       .map((section) => {
+        const sectionNameMatches = matchesSearch(section.positionName) || matchesSearch(section.positionOwner);
+
         const matchedObjectives = section.objectives
           .map((objectiveEntry) => {
-            const objectiveMatches = includesAssignedOwnerEmail(
-              objectiveEntry.objective.owner,
-              objectiveEntry.objective.ownerEmail,
-              normalizedUserEmail,
-            );
+            const objMatches = objectiveMatchesSearch(objectiveEntry.objective);
 
             const matchedKeyResults = objectiveEntry.keyResults
               .map((krEntry) => {
-                const krMatches = includesAssignedOwnerEmail(
-                  krEntry.keyResult.owner,
-                  krEntry.keyResult.ownerEmail,
-                  normalizedUserEmail,
-                );
+                const krMatches = krMatchesSearch(krEntry.keyResult);
 
                 const matchedKpis = krEntry.kpis.filter((item) =>
-                  includesAssignedOwnerEmail(
-                    item.kpi.owner,
-                    item.kpi.ownerEmail,
-                    normalizedUserEmail,
-                  ),
+                  kpiMatchesSearch(item.kpi),
                 );
 
                 if (!krMatches && matchedKpis.length === 0) {
@@ -150,41 +234,58 @@ export default function BoardViewClient({
               })
               .filter((entry): entry is BoardKrData => Boolean(entry));
 
-            if (!objectiveMatches && matchedKeyResults.length === 0) {
+            if (!objMatches && matchedKeyResults.length === 0) {
               return null;
             }
 
             return {
               ...objectiveEntry,
-              keyResults: objectiveMatches
-                ? objectiveEntry.keyResults
-                : matchedKeyResults,
+              keyResults: objMatches ? objectiveEntry.keyResults : matchedKeyResults,
             };
           })
           .filter((entry): entry is BoardObjectiveData => Boolean(entry));
 
-        const sectionMatches = includesSerializedOwnerEmail(
-          section.positionOwnerEmail,
-          normalizedUserEmail,
-        );
-
-        if (!sectionMatches && matchedObjectives.length === 0) {
+        if (!sectionNameMatches && matchedObjectives.length === 0) {
           return null;
         }
 
         return {
           ...section,
-          objectives: matchedObjectives,
+          objectives: sectionNameMatches ? section.objectives : matchedObjectives,
         };
       })
       .filter((entry): entry is BoardOwnerSection => Boolean(entry));
-  }, [normalizedUserEmail, ownerSections, showAssignedOnly]);
+  }, [normalizedUserEmail, ownerSections, showAssignedOnly, searchQuery]);
+
+  const isSearching = searchQuery.trim().length > 0;
 
   return (
     <>
       <div className="section-header">
         <div className="section-header-left">
           <h2>OKR Board View</h2>
+        </div>
+        <div className="board-search-wrap">
+          <input
+            type="search"
+            className="board-search-input"
+            placeholder="Search objectives, KRs, owners…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search OKRs"
+          />
+          {isSearching && (
+            <span className="board-search-count">
+              {filteredSections.reduce(
+                (sum, s) =>
+                  sum +
+                  s.objectives.length +
+                  s.objectives.reduce((ks, o) => ks + o.keyResults.length, 0),
+                0,
+              )}{" "}
+              result{filteredSections.reduce((sum, s) => sum + s.objectives.length + s.objectives.reduce((ks, o) => ks + o.keyResults.length, 0), 0) !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
       </div>
       {filteredSections.length === 0 ? (
@@ -245,7 +346,7 @@ export default function BoardViewClient({
                       entry.objective.objectiveCode ?? entry.objective.title,
                     weight: entry.objective.baselineValue,
                   }))}
-                  forcedOpen={allSectionsOpen}
+                  forcedOpen={allSectionsOpen || isSearching}
                   adminEmails={adminEmails}
                 >
                   <div className="board-group-title-wrap">
@@ -293,7 +394,7 @@ export default function BoardViewClient({
                             key={entry.objective.objectiveKey}
                             objective={entry.objective}
                             keyResults={entry.keyResults}
-                            forcedKrSectionOpen={allSectionsOpen}
+                            forcedKrSectionOpen={allSectionsOpen || isSearching}
                             positionOwnerEmail={section.positionOwnerEmail}
                             adminEmails={adminEmails}
                             objectiveTypeOptions={
