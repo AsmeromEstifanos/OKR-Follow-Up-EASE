@@ -3279,3 +3279,46 @@ textarea {
   margin-left: 2rem;
   background: var(--kpi-card-bg, #f0f5ff);
 }
+
+/* RAG dot on objective cards */
+.ease-rag-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Chevron collapse button on cards */
+.card-chevron-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #8a9299;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.card-chevron-btn:hover {
+  background: #e8edf1;
+  color: #3d5166;
+}
+
+.card-chevron-btn:focus-visible {
+  outline: 2px solid #8cb7de;
+  outline-offset: 2px;
+}
+
+/* Collapsible body wrapper for objective cards */
+.ease-objective-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}

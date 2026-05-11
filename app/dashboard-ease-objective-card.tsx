@@ -6,6 +6,7 @@ import DashboardKrControls from "@/app/dashboard-kr-controls";
 import OwnerInput from "@/app/owner-input";
 import WeightGroupControls from "@/app/weight-group-controls";
 import useCurrentUserEmail from "@/app/use-current-user-email";
+import { useSearchQuery } from "@/app/search-context";
 import { apiPath } from "@/lib/base-path";
 import {
   formatOwnerEmailLabel,
@@ -15,8 +16,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import { useSearchQuery } from "@/app/search-context";
-import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle, Rag } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -35,6 +35,7 @@ type Props = {
   objective: Objective;
   keyResults: KeyResultRowData[];
   forcedKrSectionOpen?: boolean;
+  forcedBodyOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
   objectiveTypeOptions: ObjectiveType[];
@@ -87,46 +88,46 @@ function clampPercent(value: number): number {
 }
 
 function normalizeWeightValue(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
+  if (!Number.isFinite(value)) return 0;
   return value;
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(text) as T; } catch { return null; }
+}
+
+function ChevronIcon({ open }: { open: boolean }): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      style={{ transition: "transform 0.18s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+      <polyline points="2,5 7,10 12,5" />
+    </svg>
+  );
+}
+
+function RagDot({ rag }: { rag: Rag }): JSX.Element {
+  const color = rag === "Green" ? "#22c55e" : rag === "Amber" ? "#f59e0b" : "#ef4444";
+  return (
+    <span className="ease-rag-dot" style={{ background: color }} title={`RAG: ${rag}`} aria-label={`RAG: ${rag}`} />
+  );
 }
 
 function HighlightText({ text }: { text: string }): JSX.Element {
   const query = useSearchQuery().trim().toLowerCase();
   if (!query) return <>{text}</>;
-
   const parts: React.ReactNode[] = [];
   let remaining = text;
   let key = 0;
-
   while (remaining.length > 0) {
     const idx = remaining.toLowerCase().indexOf(query);
-    if (idx === -1) {
-      parts.push(<span key={key++}>{remaining}</span>);
-      break;
-    }
+    if (idx === -1) { parts.push(<span key={key++}>{remaining}</span>); break; }
     if (idx > 0) parts.push(<span key={key++}>{remaining.slice(0, idx)}</span>);
-    parts.push(
-      <mark key={key++} className="search-highlight">
-        {remaining.slice(idx, idx + query.length)}
-      </mark>
-    );
+    parts.push(<mark key={key++} className="search-highlight">{remaining.slice(idx, idx + query.length)}</mark>);
     remaining = remaining.slice(idx + query.length);
   }
-
   return <>{parts}</>;
 }
 
@@ -134,6 +135,7 @@ export default function DashboardEaseObjectiveCard({
   objective,
   keyResults,
   forcedKrSectionOpen,
+  forcedBodyOpen,
   positionOwnerEmail,
   adminEmails,
   objectiveTypeOptions,
@@ -146,23 +148,21 @@ export default function DashboardEaseObjectiveCard({
   const router = useRouter();
   const signedInEmail = useCurrentUserEmail();
   const normalizedUserEmail = normalizeEmail(signedInEmail);
-  const isAdmin = adminEmails.map((entry) => normalizeEmail(entry)).includes(normalizedUserEmail);
+  const isAdmin = adminEmails.map((e) => normalizeEmail(e)).includes(normalizedUserEmail);
   const canEdit =
     Boolean(normalizedUserEmail) &&
-    (
-      isAdmin ||
+    (isAdmin ||
       includesAssignedOwnerEmail(objective.owner, objective.ownerEmail, normalizedUserEmail) ||
-      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail)
-    );
+      includesSerializedOwnerEmail(positionOwnerEmail, normalizedUserEmail));
 
   const objectiveCode = objective.objectiveCode ?? objective.objectiveKey;
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasDetails = !!(objective.notes?.trim() || objective.blockers?.trim() || objective.comment?.trim() || objective.keyRisksDependency?.trim());
-
   const openDetails = (): void => { dialogRef.current?.showModal(); };
   const closeDetails = (): void => { dialogRef.current?.close(); };
 
+  const [isBodyOpen, setIsBodyOpen] = useState(true);
   const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -202,11 +202,14 @@ export default function DashboardEaseObjectiveCard({
   }, [objective, objectiveCode]);
 
   useEffect(() => {
-    if (typeof forcedKrSectionOpen === "boolean") {
-      setIsKrSectionOpen(forcedKrSectionOpen);
-    }
+    if (typeof forcedKrSectionOpen === "boolean") setIsKrSectionOpen(forcedKrSectionOpen);
   }, [forcedKrSectionOpen]);
 
+  useEffect(() => {
+    if (typeof forcedBodyOpen === "boolean") setIsBodyOpen(forcedBodyOpen);
+  }, [forcedBodyOpen]);
+
+  const showBody = isBodyOpen || isEditing;
   const progressValue = clampPercent(objective.progressPct);
   const displayWeight = normalizeWeightValue(objective.baselineValue);
 
@@ -232,128 +235,51 @@ export default function DashboardEaseObjectiveCard({
 
   const saveEdit = async (): Promise<void> => {
     if (isSaving) return;
-    if (!title.trim()) {
-      setError("Objective title is required.");
-      return;
-    }
-
+    if (!title.trim()) { setError("Objective title is required."); return; }
     const baseline = Number(baselineValue);
-    if (!Number.isFinite(baseline)) {
-      setError("Weight must be numeric.");
-      return;
-    }
-
-    if (baseline < 0 || baseline > 1) {
-      setError("Weight must be between 0 and 1.");
-      return;
-    }
-
-    if (!dueDate) {
-      setError("Due date is required.");
-      return;
-    }
-
-    setIsSaving(true);
-    setError("");
-
+    if (!Number.isFinite(baseline)) { setError("Weight must be numeric."); return; }
+    if (baseline < 0 || baseline > 1) { setError("Weight must be between 0 and 1."); return; }
+    if (!dueDate) { setError("Due date is required."); return; }
+    setIsSaving(true); setError("");
     const response = await fetch(apiPath(`/api/objectives/${encodeURIComponent(objective.objectiveKey)}`), {
       method: "PATCH",
-      headers: {
-        "content-type": "application/json",
-        "x-user-email": signedInEmail
-      },
-      body: JSON.stringify({
-        objectiveCode: code.trim(),
-        title: title.trim(),
-        owner: owner.trim(),
-        ownerEmail: ownerEmail.trim(),
-        objectiveType,
-        okrCycle,
-        metricType,
-        baselineValue: baseline,
-        status,
-        dueDate,
-        endDate: dueDate,
-        checkInFrequency,
-        blockers: blockers.trim(),
-        comment: comment.trim(),
-        keyRisksDependency: keyRisksDependency.trim(),
-        notes: notes.trim()
-      })
+      headers: { "content-type": "application/json", "x-user-email": signedInEmail },
+      body: JSON.stringify({ objectiveCode: code.trim(), title: title.trim(), owner: owner.trim(), ownerEmail: ownerEmail.trim(), objectiveType, okrCycle, metricType, baselineValue: baseline, status, dueDate, endDate: dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), keyRisksDependency: keyRisksDependency.trim(), notes: notes.trim() })
     });
-
-    if (!response.ok) {
-      const payload = await readJson<ApiError>(response);
-      setError(payload?.error ?? "Failed to update objective.");
-      setIsSaving(false);
-      return;
-    }
-
-    setIsSaving(false);
-    setIsEditing(false);
-    router.refresh();
+    if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to update objective."); setIsSaving(false); return; }
+    setIsSaving(false); setIsEditing(false); router.refresh();
   };
 
   const deleteCurrentObjective = async (): Promise<void> => {
     if (isSaving) return;
-    const kpiCount = keyResults.reduce(
-      (sum, item) => sum + (item.kpis?.length ?? 0),
-      0
-    );
-    const warning =
-      keyResults.length > 0
-        ? `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and all descendants:\n- ${keyResults.length} key results\n- ${kpiCount} KPIs\n- related check-ins\n\nThis action cannot be undone.`
-        : `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and any related check-ins.\n\nThis action cannot be undone.`;
+    const kpiCount = keyResults.reduce((sum, item) => sum + (item.kpis?.length ?? 0), 0);
+    const warning = keyResults.length > 0
+      ? `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and all descendants:\n- ${keyResults.length} key results\n- ${kpiCount} KPIs\n- related check-ins\n\nThis action cannot be undone.`
+      : `Delete objective '${objective.title}'?\n\nThis permanently deletes this objective and any related check-ins.\n\nThis action cannot be undone.`;
     if (!window.confirm(warning)) return;
-
-    setIsSaving(true);
-    setError("");
-
+    setIsSaving(true); setError("");
     const response = await fetch(apiPath(`/api/objectives/${encodeURIComponent(objective.objectiveKey)}`), {
-      method: "DELETE",
-      headers: {
-        "x-user-email": signedInEmail
-      }
+      method: "DELETE", headers: { "x-user-email": signedInEmail }
     });
-
-    if (!response.ok) {
-      const payload = await readJson<ApiError>(response);
-      setError(payload?.error ?? "Failed to delete objective.");
-      setIsSaving(false);
-      return;
-    }
-
-    setIsSaving(false);
-    setIsEditing(false);
-    router.refresh();
+    if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to delete objective."); setIsSaving(false); return; }
+    setIsSaving(false); setIsEditing(false); router.refresh();
   };
 
   return (
     <article className="ease-objective-card">
       <div className="ease-objective-shell">
+        {/* Always-visible header */}
         <div className="ease-objective-top ease-objective-top-static">
           <div className="ease-objective-main">
             <div className="ease-objective-heading">
               <div className="ease-objective-heading-copy">
                 <div className="ease-code-badge">{objectiveCode}</div>
                 {isEditing ? (
-                  <textarea
-                    className="objective-row-input ease-title-textarea"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Objective"
-                    autoFocus
-                    disabled={isSaving}
-                  />
+                  <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
                 ) : (
                   <div className="ease-kr-title-row">
                     {hasDetails ? (
-                      <button
-                        type="button"
-                        className="ease-title-btn"
-                        onClick={openDetails}
-                        title="Click to view details"
-                      >
+                      <button type="button" className="ease-title-btn" onClick={(e) => { e.stopPropagation(); openDetails(); }} title="Click to view details">
                         <h3><HighlightText text={objective.title} /></h3>
                       </button>
                     ) : (
@@ -364,50 +290,61 @@ export default function DashboardEaseObjectiveCard({
                 )}
               </div>
               <div className="ease-card-head-side">
-                <span className={statusChipClass(isEditing ? status : objective.status)}>{formatStatus(isEditing ? status : objective.status)}</span>
+                {!isEditing && <RagDot rag={objective.rag} />}
+                <span className={statusChipClass(isEditing ? status : objective.status)}>
+                  {formatStatus(isEditing ? status : objective.status)}
+                </span>
                 <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
                   <span>{Math.round(progressValue)}%</span>
                 </div>
+                <button type="button" className="card-chevron-btn" onClick={() => setIsBodyOpen((v) => !v)} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
+                  <ChevronIcon open={showBody} />
+                </button>
               </div>
             </div>
-            {!isEditing ? (
+          </div>
+        </div>
+
+        {/* Collapsible body */}
+        {showBody && (
+          <div className="ease-objective-body">
+            {!isEditing && (
               <div className="ease-objective-chip-row">
                 <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
                 <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
               </div>
-            ) : null}
-            {!isEditing ? (
+            )}
+            {!isEditing && (
               <div className="ease-objective-metrics">
-                <div className="ease-progress-bar ease-progress-bar-large">
-                  <span style={{ width: `${progressValue}%` }} />
-                </div>
+                <div className="ease-progress-bar ease-progress-bar-large"><span style={{ width: `${progressValue}%` }} /></div>
                 <div className="ease-footer-line">
                   <span>Weight: {displayWeight}</span>
                   <span>Due Date: {formatDate(objective.dueDate)}</span>
                   <span>Last Updated: {formatDate(objective.lastCheckinAt)}</span>
                 </div>
               </div>
-            ) : (
+            )}
+            {isEditing && (
               <div className="ease-edit-grid">
-                <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
+                <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} />
                 <OwnerInput id={`ease-objective-owner-${objective.objectiveKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
-                <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(event) => setObjectiveType(event.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(event) => setOkrCycle(event.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(e) => setObjectiveType(e.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(e) => setOkrCycle(e.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
-                <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
-                <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} /></div>
-                <div className="field ease-edit-span"><label>Key Risks/Dependency</label><textarea value={keyRisksDependency} onChange={(event) => setKeyRisksDependency(event.target.value)} disabled={isSaving} /></div>
-                <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(e) => setCheckInFrequency(e.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(e) => setComment(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Key Risks/Dependency</label><textarea value={keyRisksDependency} onChange={(e) => setKeyRisksDependency(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isSaving} /></div>
               </div>
             )}
-            {canEdit ? (
+            {canEdit && (
               <div className="ease-card-actions">
                 {isEditing ? (
                   <>
@@ -419,17 +356,13 @@ export default function DashboardEaseObjectiveCard({
                   <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit Objective</button>
                 )}
               </div>
-            ) : null}
+            )}
             {error ? <p className="message danger">{error}</p> : null}
           </div>
-        </div>
+        )}
 
-        {/* Details popup */}
-        <dialog
-          ref={dialogRef}
-          className="okr-details-dialog"
-          onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}
-        >
+        {/* Details popup — always in DOM */}
+        <dialog ref={dialogRef} className="okr-details-dialog" onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}>
           <div className="okr-details-inner">
             <div className="okr-details-header">
               <div>
@@ -439,61 +372,48 @@ export default function DashboardEaseObjectiveCard({
               <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
             </div>
             <div className="okr-details-meta">
+              <RagDot rag={objective.rag} />
               <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
               <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
               <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
             </div>
-            <EaseCardDetailBlocks
-              note={objective.notes ?? objective.description}
-              blockers={objective.blockers}
-              comment={objective.comment}
-              keyRisksDependency={objective.keyRisksDependency}
-            />
+            <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />
             {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
               <p className="meta">No additional details.</p>
             ) : null}
           </div>
         </dialog>
 
-        <div className="ease-kr-section">
-          <div className="ease-subsection-head">
-            <button
-              type="button"
-              className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`}
-              aria-expanded={isKrSectionOpen}
-              onClick={() => setIsKrSectionOpen((current) => !current)}
-            >
-              <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
-              <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
-            </button>
-            <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-          </div>
-          {isKrSectionOpen ? (
-            <div className="ease-kr-list">
-              {keyResults.length > 0 ? (
-                <WeightGroupControls
-                  title="Key Result Weights"
-                  actionLabel="Edit KR Weights"
-                  requestPath={`/api/objectives/${encodeURIComponent(objective.objectiveKey)}/key-results/weights`}
-                  items={keyResults.map((item) => ({
-                    key: item.keyResult.krKey,
-                    label: item.keyResult.krCode ?? item.keyResult.title,
-                    weight: normalizeWeightValue(item.keyResult.baselineValue)
-                  }))}
-                  canEdit={canEdit}
-                  emptyMessage="No key results to weight yet."
-                />
-              ) : null}
-              {keyResults.length === 0 ? (
-                <p className="meta">No key results for this objective yet.</p>
-              ) : (
-                keyResults.map((item) => (
-                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt} forcedKpiSectionOpen={forcedKrSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-                ))
-              )}
+        {/* KR section — only when body is open */}
+        {showBody && (
+          <div className="ease-kr-section">
+            <div className="ease-subsection-head">
+              <button type="button" className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`} aria-expanded={isKrSectionOpen} onClick={() => setIsKrSectionOpen((v) => !v)}>
+                <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
+                <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
+              </button>
+              <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
             </div>
-          ) : null}
-        </div>
+            {isKrSectionOpen && (
+              <div className="ease-kr-list">
+                {keyResults.length > 0 ? (
+                  <WeightGroupControls title="Key Result Weights" actionLabel="Edit KR Weights" requestPath={`/api/objectives/${encodeURIComponent(objective.objectiveKey)}/key-results/weights`}
+                    items={keyResults.map((item) => ({ key: item.keyResult.krKey, label: item.keyResult.krCode ?? item.keyResult.title, weight: normalizeWeightValue(item.keyResult.baselineValue) }))}
+                    canEdit={canEdit} emptyMessage="No key results to weight yet." />
+                ) : null}
+                {keyResults.length === 0 ? (
+                  <p className="meta">No key results for this objective yet.</p>
+                ) : (
+                  keyResults.map((item) => (
+                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt}
+                      forcedKpiSectionOpen={forcedKrSectionOpen} forcedBodyOpen={forcedKrSectionOpen}
+                      positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

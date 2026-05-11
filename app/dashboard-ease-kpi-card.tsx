@@ -17,10 +17,21 @@ import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+function ChevronIcon({ open }: { open: boolean }): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      style={{ transition: "transform 0.18s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+      <polyline points="2,5 7,10 12,5" />
+    </svg>
+  );
+}
+
 type Props = {
   kpi: Kpi;
   latestUpdateNotes?: string;
   latestUpdatedAt?: string | null;
+  forcedBodyOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
   metricTypeOptions: MetricType[];
@@ -137,6 +148,7 @@ export default function DashboardEaseKpiCard({
   kpi,
   latestUpdateNotes,
   latestUpdatedAt,
+  forcedBodyOpen,
   positionOwnerEmail,
   adminEmails,
   metricTypeOptions,
@@ -158,6 +170,7 @@ export default function DashboardEaseKpiCard({
   const codeValue = kpi.kpiCode ?? kpi.kpiKey;
   const effectiveNotes = kpi.notes || latestUpdateNotes || "";
 
+  const [isBodyOpen, setIsBodyOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -183,6 +196,10 @@ export default function DashboardEaseKpiCard({
   const closeDetails = (): void => { dialogRef.current?.close(); };
 
   useEffect(() => {
+    if (typeof forcedBodyOpen === "boolean") setIsBodyOpen(forcedBodyOpen);
+  }, [forcedBodyOpen]);
+
+  useEffect(() => {
     setCode(codeValue);
     setTitle(kpi.title);
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
@@ -199,6 +216,7 @@ export default function DashboardEaseKpiCard({
     setNotes(effectiveNotes);
   }, [kpi, codeValue, effectiveNotes]);
 
+  const showBody = isBodyOpen || isEditing;
   const progressValue = deriveProgressPct(Number(targetValue), Number(currentValue), kpi.progressPct);
   const displayWeight = normalizeWeightValue(kpi.baselineValue);
 
@@ -356,124 +374,131 @@ export default function DashboardEaseKpiCard({
           <div className="ease-progress-ring ease-progress-ring-kpi" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
             <span>{Math.round(progressValue)}%</span>
           </div>
+          <button type="button" className="card-chevron-btn" onClick={() => setIsBodyOpen((v) => !v)} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
+            <ChevronIcon open={showBody} />
+          </button>
         </div>
       </div>
-      {!isEditing ? (
-        <div className="ease-kpi-meta">
-          <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"}</span>
-          <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
-          <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
-          <span className="ease-chip ease-chip-neutral">{getQuarterLabel(kpi.dueDate)}</span>
-        </div>
-      ) : null}
-      <div className="ease-progress-bar">
-        <span style={{ width: `${progressValue}%` }} />
-      </div>
-      {isEditing ? (
-        <div className="ease-edit-grid">
-          <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
-          <OwnerInput
-            id={`ease-kpi-owner-${kpi.kpiKey}`}
-            label="Owner (optional)"
-            value={owner}
-            onChange={setOwner}
-            emailValue={ownerEmail}
-            onEmailChange={setOwnerEmail}
-            multiple
-            disabled={isSaving}
-            className="ease-edit-span"
-          />
-          <div className="field ease-edit-span">
-            <label>Owner Email</label>
-            <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
+      {showBody && (
+        <>
+          {!isEditing ? (
+            <div className="ease-kpi-meta">
+              <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"}</span>
+              <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
+              <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
+              <span className="ease-chip ease-chip-neutral">{getQuarterLabel(kpi.dueDate)}</span>
+            </div>
+          ) : null}
+          <div className="ease-progress-bar">
+            <span style={{ width: `${progressValue}%` }} />
           </div>
-          <div className="field">
-            <label>Metric Type</label>
-            <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>
-              {metricTypeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Weight</label>
-            <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field">
-            <label>Target Value</label>
-            <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field">
-            <label>Current Value</label>
-            <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field">
-            <label>Progress %</label>
-            <input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled />
-          </div>
-          <div className="field">
-            <label>Status</label>
-            <select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>
-              {keyResultStatusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Due Date</label>
-            <input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field">
-            <label>Check-in Frequency</label>
-            <select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>
-              {checkInFrequencyOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field ease-edit-span">
-            <label>Blockers</label>
-            <textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field ease-edit-span">
-            <label>Comment</label>
-            <textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} />
-          </div>
-          <div className="field ease-edit-span">
-            <label>Notes</label>
-            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} />
-          </div>
-        </div>
-      ) : (
-        <div className="ease-footer-line">
-          <span>Progress: {readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
-          <span>Weight: {readMetricValue(displayWeight)}</span>
-          <span>Due Date: {formatDate(kpi.dueDate)}</span>
-          <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
-        </div>
-      )}
-      {canEdit ? (
-        <div className="ease-card-actions">
           {isEditing ? (
-            <>
-              <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
-              <button className="btn btn-danger" type="button" onClick={() => void deleteCurrent()} disabled={isSaving}>Delete</button>
-              <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
-            </>
+            <div className="ease-edit-grid">
+              <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
+              <OwnerInput
+                id={`ease-kpi-owner-${kpi.kpiKey}`}
+                label="Owner (optional)"
+                value={owner}
+                onChange={setOwner}
+                emailValue={ownerEmail}
+                onEmailChange={setOwnerEmail}
+                multiple
+                disabled={isSaving}
+                className="ease-edit-span"
+              />
+              <div className="field ease-edit-span">
+                <label>Owner Email</label>
+                <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
+              </div>
+              <div className="field">
+                <label>Metric Type</label>
+                <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>
+                  {metricTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Weight</label>
+                <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field">
+                <label>Target Value</label>
+                <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field">
+                <label>Current Value</label>
+                <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field">
+                <label>Progress %</label>
+                <input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled />
+              </div>
+              <div className="field">
+                <label>Status</label>
+                <select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>
+                  {keyResultStatusOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Due Date</label>
+                <input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field">
+                <label>Check-in Frequency</label>
+                <select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>
+                  {checkInFrequencyOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field ease-edit-span">
+                <label>Blockers</label>
+                <textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field ease-edit-span">
+                <label>Comment</label>
+                <textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} />
+              </div>
+              <div className="field ease-edit-span">
+                <label>Notes</label>
+                <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} />
+              </div>
+            </div>
           ) : (
-            <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit KPI</button>
+            <div className="ease-footer-line">
+              <span>Progress: {readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
+              <span>Weight: {readMetricValue(displayWeight)}</span>
+              <span>Due Date: {formatDate(kpi.dueDate)}</span>
+              <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
+            </div>
           )}
-        </div>
-      ) : null}
-      {error ? <p className="message danger">{error}</p> : null}
+          {canEdit ? (
+            <div className="ease-card-actions">
+              {isEditing ? (
+                <>
+                  <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
+                  <button className="btn btn-danger" type="button" onClick={() => void deleteCurrent()} disabled={isSaving}>Delete</button>
+                  <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
+                </>
+              ) : (
+                <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit KPI</button>
+              )}
+            </div>
+          ) : null}
+          {error ? <p className="message danger">{error}</p> : null}
+        </>
+      )}
 
-      {/* Details popup */}
+      {/* Details popup — always in DOM */}
       <dialog
         ref={dialogRef}
         className="okr-details-dialog"

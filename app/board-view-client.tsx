@@ -280,6 +280,13 @@ export default function BoardViewClient({
             </span>
           )}
         </div>
+        <DashboardDepartmentControls
+          selectedVentureKey={selectedVentureKey}
+          selectedVentureOwner={selectedVentureOwner}
+          selectedVentureOwnerEmail={selectedVentureOwnerEmail}
+          adminEmails={adminEmails}
+          compact
+        />
       </div>
       {filteredSections.length === 0 ? (
         <div className="board-empty-state">
@@ -388,6 +395,7 @@ export default function BoardViewClient({
                             objective={entry.objective}
                             keyResults={entry.keyResults}
                             forcedKrSectionOpen={allSectionsOpen || isSearching}
+                            forcedBodyOpen={allSectionsOpen || isSearching}
                             positionOwnerEmail={section.positionOwnerEmail}
                             adminEmails={adminEmails}
                             objectiveTypeOptions={
@@ -479,15 +487,6 @@ export default function BoardViewClient({
               </section>
             );
           })}
-          <div className="board-bottom-actions">
-            <DashboardDepartmentControls
-              selectedVentureKey={selectedVentureKey}
-              selectedVentureOwner={selectedVentureOwner}
-              selectedVentureOwnerEmail={selectedVentureOwnerEmail}
-              adminEmails={adminEmails}
-              compact
-            />
-          </div>
         </div>
       )}
     </>
