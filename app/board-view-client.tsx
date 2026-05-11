@@ -395,7 +395,6 @@ export default function BoardViewClient({
                             objective={entry.objective}
                             keyResults={entry.keyResults}
                             forcedKrSectionOpen={allSectionsOpen || isSearching}
-                            forcedBodyOpen={allSectionsOpen || isSearching}
                             positionOwnerEmail={section.positionOwnerEmail}
                             adminEmails={adminEmails}
                             objectiveTypeOptions={
