@@ -230,7 +230,7 @@ export default function BoardViewClient({
 
                 return {
                   ...krEntry,
-                  kpis: krMatches ? krEntry.kpis : matchedKpis,
+                  kpis: matchedKpis,
                 };
               })
               .filter((entry): entry is BoardKrData => Boolean(entry));
@@ -241,7 +241,7 @@ export default function BoardViewClient({
 
             return {
               ...objectiveEntry,
-              keyResults: objMatches ? objectiveEntry.keyResults : matchedKeyResults,
+              keyResults: matchedKeyResults,
             };
           })
           .filter((entry): entry is BoardObjectiveData => Boolean(entry));
@@ -252,7 +252,7 @@ export default function BoardViewClient({
 
         return {
           ...section,
-          objectives: sectionNameMatches ? section.objectives : matchedObjectives,
+          objectives: matchedObjectives,
         };
       })
       .filter((entry): entry is BoardOwnerSection => Boolean(entry));
