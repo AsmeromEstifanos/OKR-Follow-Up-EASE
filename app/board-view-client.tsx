@@ -24,7 +24,7 @@ import type {
   ObjectiveType,
   OkrCycle,
 } from "@/lib/types";
-import { useMemo, useState, type CSSProperties, Fragment } from "react";
+import { useMemo, type CSSProperties, Fragment } from "react";
 
 type BoardKpiData = {
   kpi: Kpi;
@@ -67,6 +67,7 @@ type Props = {
   currentUserEmail?: string;
   showAssignedOnly: boolean;
   allSectionsOpen: boolean;
+  searchQuery: string;
 };
 
 function normalizeEmail(value: string | undefined): string {
@@ -88,6 +89,7 @@ export default function BoardViewClient({
   currentUserEmail,
   showAssignedOnly,
   allSectionsOpen,
+  searchQuery,
 }: Props): JSX.Element {
   const labels = appProfile.labels;
   const objectiveLabel =
@@ -96,7 +98,6 @@ export default function BoardViewClient({
     appProfile.key === "ease-okr" ? "Objectives" : labels.midLevelPlural;
   const positionLabel = "Position";
   const normalizedUserEmail = normalizeEmail(currentUserEmail);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const boardColorVars = useMemo(
     () =>
@@ -266,16 +267,6 @@ export default function BoardViewClient({
       <div className="section-header">
         <div className="section-header-left">
           <h2>OKR Board View</h2>
-        </div>
-        <div className="board-search-wrap">
-          <input
-            type="search"
-            className="board-search-input"
-            placeholder="Search objectives, KRs, owners…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search OKRs"
-          />
           {isSearching && (
             <span className="board-search-count">
               {filteredSections.reduce(

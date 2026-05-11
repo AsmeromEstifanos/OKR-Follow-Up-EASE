@@ -63,6 +63,24 @@ type Props = {
 
 const ASSIGNED_ONLY_STORAGE_KEY = "ease-okr-board-assigned-only";
 
+function ExpandAllIcon(): JSX.Element {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="2.5,4.5 7.5,9.5 12.5,4.5" />
+      <polyline points="2.5,8.5 7.5,13.5 12.5,8.5" />
+    </svg>
+  );
+}
+
+function CollapseAllIcon(): JSX.Element {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="2.5,10.5 7.5,5.5 12.5,10.5" />
+      <polyline points="2.5,6.5 7.5,1.5 12.5,6.5" />
+    </svg>
+  );
+}
+
 export default function BoardPageShell({
   showVentureTabs,
   ventures,
@@ -81,6 +99,7 @@ export default function BoardPageShell({
   const currentUserEmail = useCurrentUserEmail();
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
   const [allSectionsOpen, setAllSectionsOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -102,31 +121,45 @@ export default function BoardPageShell({
     );
   }, [showAssignedOnly]);
 
-  const toolbar = currentUserEmail ? (
-      <div className="board-visibility-filters">
+  const toolbar = (
+    <div className="board-visibility-filters">
+      <div className="board-search-wrap">
+        <input
+          type="search"
+          className="board-search-input board-search-input-toolbar"
+          placeholder="Search objectives, KRs, owners…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search OKRs"
+        />
+      </div>
+      {currentUserEmail ? (
         <label className="ios-switch-field">
           <span className="ios-switch-label">Assigned To Me</span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={showAssignedOnly}
-          className={`ios-switch ${showAssignedOnly ? "is-on" : ""}`}
-          onClick={() => setShowAssignedOnly((current) => !current)}
-        >
-          <span className="ios-switch-track" aria-hidden="true">
-            <span className="ios-switch-thumb" />
-          </span>
-        </button>
-      </label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showAssignedOnly}
+            className={`ios-switch ${showAssignedOnly ? "is-on" : ""}`}
+            onClick={() => setShowAssignedOnly((current) => !current)}
+          >
+            <span className="ios-switch-track" aria-hidden="true">
+              <span className="ios-switch-thumb" />
+            </span>
+          </button>
+        </label>
+      ) : null}
       <button
         type="button"
-        className="tab-btn"
+        className="tab-btn tab-btn-icon"
+        title={allSectionsOpen ? "Collapse All" : "Expand All"}
+        aria-label={allSectionsOpen ? "Collapse All" : "Expand All"}
         onClick={() => setAllSectionsOpen((current) => !current)}
       >
-        {allSectionsOpen ? "Collapse All" : "Expand All"}
+        {allSectionsOpen ? <CollapseAllIcon /> : <ExpandAllIcon />}
       </button>
     </div>
-  ) : null;
+  );
 
   return (
     <>
@@ -137,7 +170,9 @@ export default function BoardPageShell({
           adminEmails={adminEmails}
           trailingContent={toolbar}
         />
-      ) : null}
+      ) : (
+        <div className="board-standalone-toolbar">{toolbar}</div>
+      )}
       <section className="section">
         <BoardViewClient
           selectedVentureKey={selectedVentureKey}
@@ -154,6 +189,7 @@ export default function BoardPageShell({
           currentUserEmail={currentUserEmail}
           showAssignedOnly={showAssignedOnly}
           allSectionsOpen={allSectionsOpen}
+          searchQuery={searchQuery}
         />
       </section>
     </>

@@ -800,6 +800,12 @@ a {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.board-search-input-toolbar {
+  width: 16rem;
+  font-size: 0.82rem;
+  padding: 0.28rem 0.7rem;
+}
+
 .board-search-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
@@ -813,6 +819,21 @@ a {
   font-size: 0.8rem;
   color: #64748b;
   white-space: nowrap;
+}
+
+.tab-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.45rem;
+}
+
+.board-standalone-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface, #f8f9fa);
 }
 
 /* Search highlight */
