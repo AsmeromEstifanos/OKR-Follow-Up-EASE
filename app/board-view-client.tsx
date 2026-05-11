@@ -5,6 +5,7 @@ import DashboardObjectiveControls from "@/app/dashboard-objective-controls";
 import DashboardPositionRowControls from "@/app/dashboard-position-row-controls";
 import DashboardObjectiveRowEditor from "@/app/dashboard-objective-row-editor";
 import DashboardEaseObjectiveCard from "@/app/dashboard-ease-objective-card";
+import { SearchContext } from "@/app/search-context";
 import { appProfile } from "@/lib/app-profile";
 import {
   includesAssignedOwnerEmail,
@@ -260,6 +261,7 @@ export default function BoardViewClient({
   const isSearching = searchQuery.trim().length > 0;
 
   return (
+    <SearchContext.Provider value={searchQuery}>
     <>
       <div className="section-header">
         <div className="section-header-left">
@@ -498,5 +500,6 @@ export default function BoardViewClient({
         </div>
       )}
     </>
+    </SearchContext.Provider>
   );
 }

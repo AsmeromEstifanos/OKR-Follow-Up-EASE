@@ -815,6 +815,107 @@ a {
   white-space: nowrap;
 }
 
+/* Search highlight */
+mark.search-highlight {
+  background: #fef08a;
+  color: inherit;
+  border-radius: 0.15rem;
+  padding: 0 0.06rem;
+}
+
+/* Clickable title button */
+.ease-title-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.ease-title-btn:hover h3,
+.ease-title-btn:hover h4,
+.ease-title-btn:focus-visible h3,
+.ease-title-btn:focus-visible h4 {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.18rem;
+}
+
+.ease-kr-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ease-has-details-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.75;
+}
+
+/* Details dialog */
+.okr-details-dialog {
+  border: none;
+  border-radius: 0.85rem;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  padding: 0;
+  max-width: 540px;
+  width: calc(100% - 2rem);
+  background: #fff;
+}
+
+.okr-details-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.okr-details-inner {
+  padding: 1.5rem;
+}
+
+.okr-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.okr-details-title {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.okr-details-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+}
+
+.okr-details-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+}
+
+.okr-details-close:hover {
+  background: #f1f5f9;
+  color: var(--ink);
+}
+
 .ios-switch-field {
   display: inline-flex;
   align-items: center;

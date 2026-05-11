@@ -15,9 +15,10 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
+import { useSearchQuery } from "@/app/search-context";
 import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type KeyResultRowData = {
   keyResult: KeyResult;
@@ -103,6 +104,32 @@ async function readJson<T>(response: Response): Promise<T | null> {
   }
 }
 
+function HighlightText({ text }: { text: string }): JSX.Element {
+  const query = useSearchQuery().trim().toLowerCase();
+  if (!query) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let key = 0;
+
+  while (remaining.length > 0) {
+    const idx = remaining.toLowerCase().indexOf(query);
+    if (idx === -1) {
+      parts.push(<span key={key++}>{remaining}</span>);
+      break;
+    }
+    if (idx > 0) parts.push(<span key={key++}>{remaining.slice(0, idx)}</span>);
+    parts.push(
+      <mark key={key++} className="search-highlight">
+        {remaining.slice(idx, idx + query.length)}
+      </mark>
+    );
+    remaining = remaining.slice(idx + query.length);
+  }
+
+  return <>{parts}</>;
+}
+
 export default function DashboardEaseObjectiveCard({
   objective,
   keyResults,
@@ -129,6 +156,12 @@ export default function DashboardEaseObjectiveCard({
     );
 
   const objectiveCode = objective.objectiveCode ?? objective.objectiveKey;
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const hasDetails = !!(objective.notes?.trim() || objective.blockers?.trim() || objective.comment?.trim() || objective.keyRisksDependency?.trim());
+
+  const openDetails = (): void => { dialogRef.current?.showModal(); };
+  const closeDetails = (): void => { dialogRef.current?.close(); };
 
   const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -313,16 +346,22 @@ export default function DashboardEaseObjectiveCard({
                     disabled={isSaving}
                   />
                 ) : (
-                  <h3>{objective.title}</h3>
+                  <div className="ease-kr-title-row">
+                    {hasDetails ? (
+                      <button
+                        type="button"
+                        className="ease-title-btn"
+                        onClick={openDetails}
+                        title="Click to view details"
+                      >
+                        <h3><HighlightText text={objective.title} /></h3>
+                      </button>
+                    ) : (
+                      <h3><HighlightText text={objective.title} /></h3>
+                    )}
+                    {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
+                  </div>
                 )}
-                {!isEditing ? (
-                  <EaseCardDetailBlocks
-                    note={notes}
-                    blockers={blockers}
-                    comment={comment}
-                    keyRisksDependency={keyRisksDependency}
-                  />
-                ) : null}
               </div>
               <div className="ease-card-head-side">
                 <span className={statusChipClass(isEditing ? status : objective.status)}>{formatStatus(isEditing ? status : objective.status)}</span>
@@ -384,6 +423,38 @@ export default function DashboardEaseObjectiveCard({
             {error ? <p className="message danger">{error}</p> : null}
           </div>
         </div>
+
+        {/* Details popup */}
+        <dialog
+          ref={dialogRef}
+          className="okr-details-dialog"
+          onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}
+        >
+          <div className="okr-details-inner">
+            <div className="okr-details-header">
+              <div>
+                <div className="ease-code-badge">{objectiveCode}</div>
+                <h3 className="okr-details-title">{objective.title}</h3>
+              </div>
+              <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+            </div>
+            <div className="okr-details-meta">
+              <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
+              <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
+              <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
+            </div>
+            <EaseCardDetailBlocks
+              note={objective.notes ?? objective.description}
+              blockers={objective.blockers}
+              comment={objective.comment}
+              keyRisksDependency={objective.keyRisksDependency}
+            />
+            {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
+              <p className="meta">No additional details.</p>
+            ) : null}
+          </div>
+        </dialog>
+
         <div className="ease-kr-section">
           <div className="ease-subsection-head">
             <button

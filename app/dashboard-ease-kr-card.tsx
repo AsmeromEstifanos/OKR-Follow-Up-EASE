@@ -6,6 +6,7 @@ import DashboardKeyResultControls from "@/app/dashboard-key-result-controls";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import WeightGroupControls from "@/app/weight-group-controls";
+import { useSearchQuery } from "@/app/search-context";
 import { apiPath } from "@/lib/base-path";
 import {
   formatOwnerEmailLabel,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/owner";
 import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type KpiRowData = {
   kpi: Kpi;
@@ -104,6 +105,32 @@ async function readJson<T>(response: Response): Promise<T | null> {
   }
 }
 
+function HighlightText({ text }: { text: string }): JSX.Element {
+  const query = useSearchQuery().trim().toLowerCase();
+  if (!query) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let key = 0;
+
+  while (remaining.length > 0) {
+    const idx = remaining.toLowerCase().indexOf(query);
+    if (idx === -1) {
+      parts.push(<span key={key++}>{remaining}</span>);
+      break;
+    }
+    if (idx > 0) parts.push(<span key={key++}>{remaining.slice(0, idx)}</span>);
+    parts.push(
+      <mark key={key++} className="search-highlight">
+        {remaining.slice(idx, idx + query.length)}
+      </mark>
+    );
+    remaining = remaining.slice(idx + query.length);
+  }
+
+  return <>{parts}</>;
+}
+
 export default function DashboardEaseKrCard({
   keyResult,
   kpis,
@@ -146,6 +173,8 @@ export default function DashboardEaseKrCard({
   const [comment, setComment] = useState(keyResult.comment ?? "");
   const [notes, setNotes] = useState(keyResult.notes ?? "");
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
     setCode(codeValue);
     setTitle(keyResult.title);
@@ -169,6 +198,16 @@ export default function DashboardEaseKrCard({
 
   const progressValue = clampPercent(keyResult.progressPct);
   const displayWeight = normalizeWeightValue(keyResult.baselineValue);
+
+  const hasDetails = !!(keyResult.notes?.trim() || keyResult.blockers?.trim() || keyResult.comment?.trim());
+
+  const openDetails = (): void => {
+    dialogRef.current?.showModal();
+  };
+
+  const closeDetails = (): void => {
+    dialogRef.current?.close();
+  };
 
   const cancelEdit = (): void => {
     setIsEditing(false);
@@ -292,11 +331,22 @@ export default function DashboardEaseKrCard({
               disabled={isSaving}
             />
           ) : (
-            <h4>{keyResult.title}</h4>
+            <div className="ease-kr-title-row">
+              {hasDetails ? (
+                <button
+                  type="button"
+                  className="ease-title-btn"
+                  onClick={openDetails}
+                  title="Click to view details"
+                >
+                  <h4><HighlightText text={keyResult.title} /></h4>
+                </button>
+              ) : (
+                <h4><HighlightText text={keyResult.title} /></h4>
+              )}
+              {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
+            </div>
           )}
-          {!isEditing ? (
-            <EaseCardDetailBlocks note={notes} blockers={blockers} comment={comment} />
-          ) : null}
         </div>
         <div className="ease-card-head-side">
           <span className={statusChipClass(isEditing ? status : keyResult.status)}>{formatStatus(isEditing ? status : keyResult.status)}</span>
@@ -352,6 +402,33 @@ export default function DashboardEaseKrCard({
         </div>
       ) : null}
       {error ? <p className="message danger">{error}</p> : null}
+
+      {/* Details popup */}
+      <dialog
+        ref={dialogRef}
+        className="okr-details-dialog"
+        onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}
+      >
+        <div className="okr-details-inner">
+          <div className="okr-details-header">
+            <div>
+              <div className="ease-code-badge">{codeValue}</div>
+              <h4 className="okr-details-title">{keyResult.title}</h4>
+            </div>
+            <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+          </div>
+          <div className="okr-details-meta">
+            <span className={statusChipClass(keyResult.status)}>{formatStatus(keyResult.status)}</span>
+            <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
+            <span className="ease-chip ease-chip-neutral">Due: {formatDate(keyResult.dueDate)}</span>
+          </div>
+          <EaseCardDetailBlocks note={keyResult.notes} blockers={keyResult.blockers} comment={keyResult.comment} />
+          {!keyResult.notes?.trim() && !keyResult.blockers?.trim() && !keyResult.comment?.trim() ? (
+            <p className="meta">No additional details.</p>
+          ) : null}
+        </div>
+      </dialog>
+
       <div className="ease-kpi-section">
         <div className="ease-subsection-head">
           <button
