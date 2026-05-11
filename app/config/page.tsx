@@ -80,6 +80,49 @@ function normalizeColorValue(value: string, fallback: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
 }
 
+function ChevronIcon({ open }: { open: boolean }): JSX.Element {
+  return (
+    <svg
+      width="16" height="16" viewBox="0 0 16 16"
+      fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ transition: "transform 0.2s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+    >
+      <polyline points="3,6 8,11 13,6" />
+    </svg>
+  );
+}
+
+function ConfigSection({
+  title,
+  summary,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  summary?: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}): JSX.Element {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <section className={`config-accordion${isOpen ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className="config-accordion-head"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+      >
+        <span className="config-accordion-title">{title}</span>
+        {summary ? <span className="config-accordion-summary">{summary}</span> : null}
+        <ChevronIcon open={isOpen} />
+      </button>
+      {isOpen ? <div className="config-accordion-body">{children}</div> : null}
+    </section>
+  );
+}
+
 function OptionEditor({
   title,
   options,
@@ -552,307 +595,311 @@ export default function ConfigPage(): JSX.Element {
   }
 
   return (
-    <div>
-      <h1 className="page-title">Configuration</h1>
-      <p className="subtitle">Manage admins, dropdown options, board colors, RAG ranges, ventures, and departments.</p>
+    <div className="config-page">
+      <div className="config-page-header">
+        <h1 className="page-title">Configuration</h1>
+        {message ? <p className="message">{message}</p> : null}
+        {error ? <p className="message danger">{error}</p> : null}
+        {state === "loading" ? <p className="meta">Refreshing...</p> : null}
+      </div>
 
-      <section className="section">
-        <h2>Admin Users</h2>
-        <div className="config-grid">
-          <OwnerInput
-            id="adminEmail"
-            label="Admin Email"
-            value={adminEmailDraft}
-            onChange={(value) => {
-              setAdminEmailDraft(value);
-              setAdminDisplayNameDraft("");
-            }}
-            selectValue="email"
-            onSelectUser={(user) => {
-              setAdminDisplayNameDraft(user?.displayName ?? "");
-            }}
-            placeholder="Type name or email"
-            disabled={isBusy}
-          />
-        </div>
-        <div className="actions">
-          <button className="btn btn-add" type="button" onClick={() => void addAdmin()} disabled={isBusy}>
-            Add Admin
-          </button>
-        </div>
-        <div className="config-checklist">
-          {admins.length === 0 ? <p className="meta">No admin users configured yet.</p> : null}
-          {admins.map((admin) => (
-            <div key={admin.email} className="config-inline-row">
-              <span>
-                {admin.displayName ? `${admin.displayName} ` : ""}
-                <span className="meta">({admin.email})</span>
-              </span>
-              <button className="btn btn-danger" type="button" onClick={() => void removeAdmin(admin.email)} disabled={isBusy}>
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>Dropdown Field Options</h2>
-        <div className="config-option-grid">
-          <OptionEditor
-            title="Objective Type"
-            options={objectiveTypes}
-            addValue={objectiveTypeDraft}
-            disabled={isBusy}
-            onAddValueChange={setObjectiveTypeDraft}
-            onAdd={() => {
-              setObjectiveTypes((current) => addOption(current, objectiveTypeDraft));
-              setObjectiveTypeDraft("");
-            }}
-            onRemove={(value) => setObjectiveTypes((current) => removeOption(current, value))}
-          />
-          <OptionEditor
-            title="Objective Health"
-            options={objectiveStatuses}
-            addValue={objectiveStatusDraft}
-            disabled={isBusy}
-            onAddValueChange={setObjectiveStatusDraft}
-            onAdd={() => {
-              setObjectiveStatuses((current) => addOption(current, objectiveStatusDraft));
-              setObjectiveStatusDraft("");
-            }}
-            onRemove={(value) => setObjectiveStatuses((current) => removeOption(current, value))}
-          />
-          <OptionEditor
-            title="OKR Cycle"
-            options={objectiveCycles}
-            addValue={objectiveCycleDraft}
-            disabled={isBusy}
-            onAddValueChange={setObjectiveCycleDraft}
-            onAdd={() => {
-              setObjectiveCycles((current) => addOption(current, objectiveCycleDraft));
-              setObjectiveCycleDraft("");
-            }}
-            onRemove={(value) => setObjectiveCycles((current) => removeOption(current, value))}
-          />
-          <OptionEditor
-            title="KR Metric Type"
-            options={keyResultMetricTypes}
-            addValue={krMetricTypeDraft}
-            disabled={isBusy}
-            onAddValueChange={setKrMetricTypeDraft}
-            onAdd={() => {
-              setKeyResultMetricTypes((current) => addOption(current, krMetricTypeDraft));
-              setKrMetricTypeDraft("");
-            }}
-            onRemove={(value) => setKeyResultMetricTypes((current) => removeOption(current, value))}
-          />
-          <OptionEditor
-            title="KR Status"
-            options={keyResultStatuses}
-            addValue={krStatusDraft}
-            disabled={isBusy}
-            onAddValueChange={setKrStatusDraft}
-            onAdd={() => {
-              setKeyResultStatuses((current) => addOption(current, krStatusDraft));
-              setKrStatusDraft("");
-            }}
-            onRemove={(value) => setKeyResultStatuses((current) => removeOption(current, value))}
-          />
-          <OptionEditor
-            title="Check-in Frequency"
-            options={checkInFrequencies}
-            addValue={checkInFrequencyDraft}
-            disabled={isBusy}
-            onAddValueChange={setCheckInFrequencyDraft}
-            onAdd={() => {
-              setCheckInFrequencies((current) => addOption(current, checkInFrequencyDraft));
-              setCheckInFrequencyDraft("");
-            }}
-            onRemove={(value) => setCheckInFrequencies((current) => removeOption(current, value))}
-          />
-        </div>
-        <div className="actions">
-          <button className="btn" type="button" onClick={() => void saveFieldOptions()} disabled={isBusy}>
-            Save Dropdown Config
-          </button>
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>Board Card Colors</h2>
-        <div className="config-color-grid">
-          {BOARD_COLOR_FIELDS.map((field) => (
-            <article
-              key={field.key}
-              className="config-color-card"
-              style={{ "--preview-color": boardCardColors[field.key] } as CSSProperties}
-            >
-              <div className="config-color-card-top">
-                <div>
-                  <h3 className="config-option-title">{field.label}</h3>
-                  <p className="meta">{field.helper}</p>
-                </div>
-                <div className="config-color-swatch" aria-hidden="true" />
-              </div>
-              <label className="field">
-                <span>Pick Color</span>
-                <input
-                  className="config-color-picker"
-                  type="color"
-                  value={normalizeColorValue(boardCardColors[field.key], DEFAULT_BOARD_CARD_COLORS[field.key])}
-                  onChange={(event) =>
-                    setBoardCardColors((current) => ({
-                      ...current,
-                      [field.key]: event.target.value
-                    }))
-                  }
-                  disabled={isBusy}
-                />
-              </label>
-              <label className="field">
-                <span>Hex Value</span>
-                <input
-                  value={boardCardColors[field.key]}
-                  onChange={(event) =>
-                    setBoardCardColors((current) => ({
-                      ...current,
-                      [field.key]: event.target.value
-                    }))
-                  }
-                  disabled={isBusy}
-                />
-              </label>
-            </article>
-          ))}
-        </div>
-        <div className="config-board-preview" style={boardColorPreviewStyle}>
-          <div className="config-board-preview-department">
-            <div className="config-board-preview-title">Department / OKR</div>
-            <div className="config-board-preview-objective">Objective</div>
-            <div className="config-board-preview-kr">Key Result</div>
-            <div className="config-board-preview-kpi">KPI</div>
-          </div>
-        </div>
-        <div className="actions">
-          <button className="tab-btn" type="button" onClick={() => setBoardCardColors(DEFAULT_BOARD_CARD_COLORS)} disabled={isBusy}>
-            Reset Defaults
-          </button>
-          <button className="btn" type="button" onClick={() => void saveBoardCardColors()} disabled={isBusy}>
-            Save Board Colors
-          </button>
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>RAG Definition</h2>
-        <div className="config-grid">
-          <div className="field">
-            <label htmlFor="greenMin">Green Min (%)</label>
-            <input id="greenMin" type="number" value={greenMin} onChange={(event) => setGreenMin(event.target.value)} disabled={isBusy} />
-          </div>
-          <div className="field">
-            <label htmlFor="amberMin">Amber Min (%)</label>
-            <input id="amberMin" type="number" value={amberMin} onChange={(event) => setAmberMin(event.target.value)} disabled={isBusy} />
-          </div>
-        </div>
-        <p className="meta">{ragPreview}</p>
-        <div className="actions">
-          <button className="btn" type="button" onClick={() => void saveRagConfig()} disabled={isBusy}>
-            Save RAG
-          </button>
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>Ventures</h2>
-        <div className="config-grid">
-          <div className="field">
-            <label htmlFor="ventureName">Venture Name</label>
-            <input
-              id="ventureName"
-              value={ventureName}
-              onChange={(event) => setVentureName(event.target.value)}
-              placeholder="New Venture"
+      <div className="config-accordion-list">
+        <ConfigSection
+          title="Admin Users"
+          summary={<span className="config-summary-chip">{admins.length} admin{admins.length !== 1 ? "s" : ""}</span>}
+        >
+          <div className="config-grid">
+            <OwnerInput
+              id="adminEmail"
+              label="Admin Email"
+              value={adminEmailDraft}
+              onChange={(value) => {
+                setAdminEmailDraft(value);
+                setAdminDisplayNameDraft("");
+              }}
+              selectValue="email"
+              onSelectUser={(user) => {
+                setAdminDisplayNameDraft(user?.displayName ?? "");
+              }}
+              placeholder="Type name or email"
               disabled={isBusy}
             />
           </div>
-        </div>
-        <div className="actions">
-          <button className="btn btn-add" type="button" onClick={() => void addVenture()} disabled={isBusy}>
-            Add Venture
-          </button>
-        </div>
+          <div className="actions">
+            <button className="btn btn-add" type="button" onClick={() => void addAdmin()} disabled={isBusy}>
+              Add Admin
+            </button>
+          </div>
+          <div className="config-checklist">
+            {admins.length === 0 ? <p className="meta">No admin users configured yet.</p> : null}
+            {admins.map((admin) => (
+              <div key={admin.email} className="config-inline-row">
+                <span>
+                  {admin.displayName ? `${admin.displayName} ` : ""}
+                  <span className="meta">({admin.email})</span>
+                </span>
+                <button className="btn btn-danger" type="button" onClick={() => void removeAdmin(admin.email)} disabled={isBusy}>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </ConfigSection>
 
-        {!config ? (
-          <p className="meta">Loading...</p>
-        ) : config.ventures.length === 0 ? (
-          <p className="meta">No ventures configured yet.</p>
-        ) : (
-          <div className="venture-grid">
-            {config.ventures.map((venture) => (
-              <article className="venture-card" key={venture.ventureKey}>
-                <div className="row-between">
+        <ConfigSection
+          title="Dropdown Field Options"
+          summary={<span className="config-summary-chip">6 categories</span>}
+        >
+          <div className="config-option-grid">
+            <OptionEditor
+              title="Objective Type"
+              options={objectiveTypes}
+              addValue={objectiveTypeDraft}
+              disabled={isBusy}
+              onAddValueChange={setObjectiveTypeDraft}
+              onAdd={() => {
+                setObjectiveTypes((current) => addOption(current, objectiveTypeDraft));
+                setObjectiveTypeDraft("");
+              }}
+              onRemove={(value) => setObjectiveTypes((current) => removeOption(current, value))}
+            />
+            <OptionEditor
+              title="Objective Health"
+              options={objectiveStatuses}
+              addValue={objectiveStatusDraft}
+              disabled={isBusy}
+              onAddValueChange={setObjectiveStatusDraft}
+              onAdd={() => {
+                setObjectiveStatuses((current) => addOption(current, objectiveStatusDraft));
+                setObjectiveStatusDraft("");
+              }}
+              onRemove={(value) => setObjectiveStatuses((current) => removeOption(current, value))}
+            />
+            <OptionEditor
+              title="OKR Cycle"
+              options={objectiveCycles}
+              addValue={objectiveCycleDraft}
+              disabled={isBusy}
+              onAddValueChange={setObjectiveCycleDraft}
+              onAdd={() => {
+                setObjectiveCycles((current) => addOption(current, objectiveCycleDraft));
+                setObjectiveCycleDraft("");
+              }}
+              onRemove={(value) => setObjectiveCycles((current) => removeOption(current, value))}
+            />
+            <OptionEditor
+              title="KR Metric Type"
+              options={keyResultMetricTypes}
+              addValue={krMetricTypeDraft}
+              disabled={isBusy}
+              onAddValueChange={setKrMetricTypeDraft}
+              onAdd={() => {
+                setKeyResultMetricTypes((current) => addOption(current, krMetricTypeDraft));
+                setKrMetricTypeDraft("");
+              }}
+              onRemove={(value) => setKeyResultMetricTypes((current) => removeOption(current, value))}
+            />
+            <OptionEditor
+              title="KR Status"
+              options={keyResultStatuses}
+              addValue={krStatusDraft}
+              disabled={isBusy}
+              onAddValueChange={setKrStatusDraft}
+              onAdd={() => {
+                setKeyResultStatuses((current) => addOption(current, krStatusDraft));
+                setKrStatusDraft("");
+              }}
+              onRemove={(value) => setKeyResultStatuses((current) => removeOption(current, value))}
+            />
+            <OptionEditor
+              title="Check-in Frequency"
+              options={checkInFrequencies}
+              addValue={checkInFrequencyDraft}
+              disabled={isBusy}
+              onAddValueChange={setCheckInFrequencyDraft}
+              onAdd={() => {
+                setCheckInFrequencies((current) => addOption(current, checkInFrequencyDraft));
+                setCheckInFrequencyDraft("");
+              }}
+              onRemove={(value) => setCheckInFrequencies((current) => removeOption(current, value))}
+            />
+          </div>
+          <div className="actions">
+            <button className="btn" type="button" onClick={() => void saveFieldOptions()} disabled={isBusy}>
+              Save Dropdown Config
+            </button>
+          </div>
+        </ConfigSection>
+
+        <ConfigSection
+          title="Board Card Colors"
+          summary={
+            <span className="config-color-summary">
+              {BOARD_COLOR_FIELDS.map((f) => (
+                <span key={f.key} className="config-color-dot" style={{ background: boardCardColors[f.key] }} title={f.label} />
+              ))}
+            </span>
+          }
+        >
+          <div className="config-color-grid">
+            {BOARD_COLOR_FIELDS.map((field) => (
+              <article
+                key={field.key}
+                className="config-color-card"
+                style={{ "--preview-color": boardCardColors[field.key] } as CSSProperties}
+              >
+                <div className="config-color-card-top">
                   <div>
-                    <h3>{venture.name}</h3>
+                    <h3 className="config-option-title">{field.label}</h3>
+                    <p className="meta">{field.helper}</p>
                   </div>
-                  <button className="btn btn-danger" type="button" onClick={() => void removeVenture(venture.ventureKey)} disabled={isBusy}>
-                    Delete
-                  </button>
+                  <div className="config-color-swatch" aria-hidden="true" />
                 </div>
-
-                <h4>Departments</h4>
-                {venture.departments.length === 0 ? (
-                  <p className="meta">No departments yet.</p>
-                ) : (
-                  <ul className="dept-list">
-                    {venture.departments.map((department) => (
-                      <li key={department.departmentKey}>
-                        <span>{department.name}</span>
-                        <button
-                          className="btn btn-danger"
-                          type="button"
-                          onClick={() => void removeDepartment(venture.ventureKey, department.departmentKey)}
-                          disabled={isBusy}
-                        >
-                          Delete
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <div className="config-grid">
-                  <div className="field">
-                    <label htmlFor={`department-name-${venture.ventureKey}`}>Department Name</label>
-                    <input
-                      id={`department-name-${venture.ventureKey}`}
-                      value={departmentNameByVenture[venture.ventureKey] ?? ""}
-                      onChange={(event) =>
-                        setDepartmentNameByVenture((previous) => ({
-                          ...previous,
-                          [venture.ventureKey]: event.target.value
-                        }))
-                      }
-                      placeholder="Department Name"
-                      disabled={isBusy}
-                    />
-                  </div>
-                </div>
-                <div className="actions">
-                  <button className="btn btn-add" type="button" onClick={() => void addDepartment(venture.ventureKey)} disabled={isBusy}>
-                    Add Department
-                  </button>
-                </div>
+                <label className="field">
+                  <span>Pick Color</span>
+                  <input
+                    className="config-color-picker"
+                    type="color"
+                    value={normalizeColorValue(boardCardColors[field.key], DEFAULT_BOARD_CARD_COLORS[field.key])}
+                    onChange={(event) =>
+                      setBoardCardColors((current) => ({ ...current, [field.key]: event.target.value }))
+                    }
+                    disabled={isBusy}
+                  />
+                </label>
+                <label className="field">
+                  <span>Hex Value</span>
+                  <input
+                    value={boardCardColors[field.key]}
+                    onChange={(event) =>
+                      setBoardCardColors((current) => ({ ...current, [field.key]: event.target.value }))
+                    }
+                    disabled={isBusy}
+                  />
+                </label>
               </article>
             ))}
           </div>
-        )}
-      </section>
+          <div className="config-board-preview" style={boardColorPreviewStyle}>
+            <div className="config-board-preview-department">
+              <div className="config-board-preview-title">Department / OKR</div>
+              <div className="config-board-preview-objective">Objective</div>
+              <div className="config-board-preview-kr">Key Result</div>
+              <div className="config-board-preview-kpi">KPI</div>
+            </div>
+          </div>
+          <div className="actions">
+            <button className="tab-btn" type="button" onClick={() => setBoardCardColors(DEFAULT_BOARD_CARD_COLORS)} disabled={isBusy}>
+              Reset Defaults
+            </button>
+            <button className="btn" type="button" onClick={() => void saveBoardCardColors()} disabled={isBusy}>
+              Save Board Colors
+            </button>
+          </div>
+        </ConfigSection>
 
-      {message ? <p className="message">{message}</p> : null}
-      {error ? <p className="message danger">{error}</p> : null}
-      {state === "loading" ? <p className="meta">Refreshing configuration...</p> : null}
+        <ConfigSection
+          title="RAG Definition"
+          summary={<span className="config-summary-chip">Green ≥ {greenMin}% · Amber ≥ {amberMin}%</span>}
+        >
+          <div className="config-grid">
+            <div className="field">
+              <label htmlFor="greenMin">Green Min (%)</label>
+              <input id="greenMin" type="number" value={greenMin} onChange={(event) => setGreenMin(event.target.value)} disabled={isBusy} />
+            </div>
+            <div className="field">
+              <label htmlFor="amberMin">Amber Min (%)</label>
+              <input id="amberMin" type="number" value={amberMin} onChange={(event) => setAmberMin(event.target.value)} disabled={isBusy} />
+            </div>
+          </div>
+          <p className="meta">{ragPreview}</p>
+          <div className="actions">
+            <button className="btn" type="button" onClick={() => void saveRagConfig()} disabled={isBusy}>
+              Save RAG
+            </button>
+          </div>
+        </ConfigSection>
+
+        <ConfigSection
+          title="Ventures & Departments"
+          summary={<span className="config-summary-chip">{config?.ventures.length ?? 0} venture{(config?.ventures.length ?? 0) !== 1 ? "s" : ""}</span>}
+        >
+          <div className="config-grid">
+            <div className="field">
+              <label htmlFor="ventureName">Venture Name</label>
+              <input
+                id="ventureName"
+                value={ventureName}
+                onChange={(event) => setVentureName(event.target.value)}
+                placeholder="New Venture"
+                disabled={isBusy}
+              />
+            </div>
+          </div>
+          <div className="actions">
+            <button className="btn btn-add" type="button" onClick={() => void addVenture()} disabled={isBusy}>
+              Add Venture
+            </button>
+          </div>
+          {!config ? (
+            <p className="meta">Loading...</p>
+          ) : config.ventures.length === 0 ? (
+            <p className="meta">No ventures configured yet.</p>
+          ) : (
+            <div className="venture-grid">
+              {config.ventures.map((venture) => (
+                <article className="venture-card" key={venture.ventureKey}>
+                  <div className="row-between">
+                    <div><h3>{venture.name}</h3></div>
+                    <button className="btn btn-danger" type="button" onClick={() => void removeVenture(venture.ventureKey)} disabled={isBusy}>
+                      Delete
+                    </button>
+                  </div>
+                  <h4>Departments</h4>
+                  {venture.departments.length === 0 ? (
+                    <p className="meta">No departments yet.</p>
+                  ) : (
+                    <ul className="dept-list">
+                      {venture.departments.map((department) => (
+                        <li key={department.departmentKey}>
+                          <span>{department.name}</span>
+                          <button
+                            className="btn btn-danger"
+                            type="button"
+                            onClick={() => void removeDepartment(venture.ventureKey, department.departmentKey)}
+                            disabled={isBusy}
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="config-grid">
+                    <div className="field">
+                      <label htmlFor={`department-name-${venture.ventureKey}`}>Department Name</label>
+                      <input
+                        id={`department-name-${venture.ventureKey}`}
+                        value={departmentNameByVenture[venture.ventureKey] ?? ""}
+                        onChange={(event) =>
+                          setDepartmentNameByVenture((previous) => ({ ...previous, [venture.ventureKey]: event.target.value }))
+                        }
+                        placeholder="Department Name"
+                        disabled={isBusy}
+                      />
+                    </div>
+                  </div>
+                  <div className="actions">
+                    <button className="btn btn-add" type="button" onClick={() => void addDepartment(venture.ventureKey)} disabled={isBusy}>
+                      Add Department
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </ConfigSection>
+      </div>
     </div>
   );
 }

@@ -2640,6 +2640,98 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* Config page accordion */
+.config-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.config-page-header {
+  margin-bottom: 1.25rem;
+}
+
+.config-page-header .page-title {
+  margin-bottom: 0.25rem;
+}
+
+.config-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.config-accordion {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.config-accordion-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.config-accordion-head:hover {
+  background: #f8fafc;
+}
+
+.config-accordion-title {
+  flex: 1;
+}
+
+.config-accordion-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.config-accordion-body {
+  padding: 0 1.1rem 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.config-accordion-body .actions {
+  margin-top: 1rem;
+}
+
+.config-summary-chip {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  white-space: nowrap;
+}
+
+.config-color-summary {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.config-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+
+/* existing config-grid */
 .config-grid {
   margin-top: 0.85rem;
   display: grid;
