@@ -376,7 +376,11 @@ export default function DashboardEaseObjectiveCard({
             </div>
             <div className="okr-details-header-actions">
               {!isDialogEditing && canEdit && (
-                <button type="button" className="tab-btn" onClick={() => setIsDialogEditing(true)} disabled={isSaving}>Edit</button>
+                <button type="button" className="okr-details-edit-btn" onClick={() => setIsDialogEditing(true)} disabled={isSaving} aria-label="Edit">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M10.5 1.5l3 3L4 14H1v-3L10.5 1.5z" />
+                  </svg>
+                </button>
               )}
               <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
             </div>

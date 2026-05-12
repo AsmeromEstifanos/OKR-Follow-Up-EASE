@@ -959,21 +959,33 @@ mark.search-highlight {
   border-top: 1px solid var(--line);
 }
 
-.okr-details-close {
+.okr-details-close,
+.okr-details-edit-btn {
   background: none;
   border: none;
   cursor: pointer;
   color: #64748b;
-  font-size: 1.1rem;
   line-height: 1;
-  padding: 0.2rem 0.4rem;
+  padding: 0.3rem;
   border-radius: 0.35rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.okr-details-close:hover {
+.okr-details-close {
+  font-size: 1.1rem;
+}
+
+.okr-details-close:hover,
+.okr-details-edit-btn:hover {
   background: #f1f5f9;
   color: var(--ink);
+}
+
+.okr-details-edit-btn:hover {
+  color: var(--accent);
 }
 
 .ios-switch-field {
