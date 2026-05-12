@@ -249,39 +249,24 @@ export default function DashboardEaseObjectiveCard({
 
   return (
     <article className="ease-objective-card">
-      <div className="ease-objective-shell">
-        {/* Always-visible header */}
-        <div className="ease-objective-top ease-objective-top-static">
-          {/* Row 1: code badge (left) + RAG dot (right) */}
-          <div className="ease-obj-badge-row">
-            <div className="ease-code-badge">{objectiveCode}</div>
-            {!isEditing && <RagDot rag={objective.rag} />}
-          </div>
-          {/* Row 2: title (left) + progress ring (right) */}
-          <div className="ease-obj-title-row">
-            <div className="ease-obj-title-copy">
-              {isEditing ? (
-                <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
+      {/* 2-column layout: content left, sidebar right */}
+      <div className="ease-objective-layout">
+        <div className="ease-objective-content">
+          <div className="ease-code-badge">{objectiveCode}</div>
+          {isEditing ? (
+            <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
+          ) : (
+            <div className="ease-kr-title-row">
+              {hasDetails ? (
+                <button type="button" className="ease-title-btn" onClick={openDetails} title="Click to view details">
+                  <h3><HighlightText text={objective.title} /></h3>
+                </button>
               ) : (
-                <div className="ease-kr-title-row">
-                  {hasDetails ? (
-                    <button type="button" className="ease-title-btn" onClick={openDetails} title="Click to view details">
-                      <h3><HighlightText text={objective.title} /></h3>
-                    </button>
-                  ) : (
-                    <h3><HighlightText text={objective.title} /></h3>
-                  )}
-                  {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
-                </div>
+                <h3><HighlightText text={objective.title} /></h3>
               )}
+              {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
             </div>
-            <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
-              <span>{Math.round(progressValue)}%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="ease-objective-body">
+          )}
           {!isEditing && (
             <div className="ease-objective-chip-row">
               <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
@@ -330,59 +315,66 @@ export default function DashboardEaseObjectiveCard({
             </div>
           )}
           {error ? <p className="message danger">{error}</p> : null}
+          <div className="ease-kr-section">
+            <div className="ease-subsection-head">
+              <button type="button" className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`} aria-expanded={isKrSectionOpen} onClick={() => setIsKrSectionOpen((v) => !v)}>
+                <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
+                <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
+              </button>
+              <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+            </div>
+            {isKrSectionOpen && (
+              <div className="ease-kr-list">
+                {keyResults.length > 0 ? (
+                  <WeightGroupControls title="Key Result Weights" actionLabel="Edit KR Weights" requestPath={`/api/objectives/${encodeURIComponent(objective.objectiveKey)}/key-results/weights`}
+                    items={keyResults.map((item) => ({ key: item.keyResult.krKey, label: item.keyResult.krCode ?? item.keyResult.title, weight: normalizeWeightValue(item.keyResult.baselineValue) }))}
+                    canEdit={canEdit} emptyMessage="No key results to weight yet." />
+                ) : null}
+                {keyResults.length === 0 ? (
+                  <p className="meta">No key results for this objective yet.</p>
+                ) : (
+                  keyResults.map((item) => (
+                    <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt}
+                      forcedKpiSectionOpen={forcedKrSectionOpen} forcedBodyOpen={forcedKrSectionOpen}
+                      positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Details popup */}
-        <dialog ref={dialogRef} className="okr-details-dialog" onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}>
-          <div className="okr-details-inner">
-            <div className="okr-details-header">
-              <div>
-                <div className="ease-code-badge">{objectiveCode}</div>
-                <h3 className="okr-details-title">{objective.title}</h3>
-              </div>
-              <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
-            </div>
-            <div className="okr-details-meta">
-              <RagDot rag={objective.rag} />
-              <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
-              <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
-              <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
-            </div>
-            <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />
-            {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
-              <p className="meta">No additional details.</p>
-            ) : null}
+        {/* Right sidebar: RAG dot top, progress ring below */}
+        <div className="ease-objective-sidebar">
+          {!isEditing && <RagDot rag={objective.rag} />}
+          <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
+            <span>{Math.round(progressValue)}%</span>
           </div>
-        </dialog>
-
-        <div className="ease-kr-section">
-          <div className="ease-subsection-head">
-            <button type="button" className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`} aria-expanded={isKrSectionOpen} onClick={() => setIsKrSectionOpen((v) => !v)}>
-              <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
-              <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
-            </button>
-            <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-          </div>
-          {isKrSectionOpen && (
-            <div className="ease-kr-list">
-              {keyResults.length > 0 ? (
-                <WeightGroupControls title="Key Result Weights" actionLabel="Edit KR Weights" requestPath={`/api/objectives/${encodeURIComponent(objective.objectiveKey)}/key-results/weights`}
-                  items={keyResults.map((item) => ({ key: item.keyResult.krKey, label: item.keyResult.krCode ?? item.keyResult.title, weight: normalizeWeightValue(item.keyResult.baselineValue) }))}
-                  canEdit={canEdit} emptyMessage="No key results to weight yet." />
-              ) : null}
-              {keyResults.length === 0 ? (
-                <p className="meta">No key results for this objective yet.</p>
-              ) : (
-                keyResults.map((item) => (
-                  <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt}
-                    forcedKpiSectionOpen={forcedKrSectionOpen} forcedBodyOpen={forcedKrSectionOpen}
-                    positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-                ))
-              )}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Details popup */}
+      <dialog ref={dialogRef} className="okr-details-dialog" onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}>
+        <div className="okr-details-inner">
+          <div className="okr-details-header">
+            <div>
+              <div className="ease-code-badge">{objectiveCode}</div>
+              <h3 className="okr-details-title">{objective.title}</h3>
+            </div>
+            <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+          </div>
+          <div className="okr-details-meta">
+            <RagDot rag={objective.rag} />
+            <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
+            <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
+            <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
+          </div>
+          <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />
+          {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
+            <p className="meta">No additional details.</p>
+          ) : null}
+        </div>
+      </dialog>
     </article>
   );
 }

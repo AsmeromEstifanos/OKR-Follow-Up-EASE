@@ -1339,12 +1339,6 @@ mark.search-highlight {
   gap: 1rem;
 }
 
-.ease-objective-top {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
 .ease-kr-head,
 .ease-kpi-head {
   display: flex;
@@ -1352,23 +1346,27 @@ mark.search-highlight {
   gap: 1rem;
 }
 
-.ease-objective-top-static {
-  cursor: default;
-}
-
-/* Objective card: row 1 — badge left, RAG dot right */
-.ease-obj-badge-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* Objective card: row 2 — title left, progress ring right */
-.ease-obj-title-row {
-  display: flex;
-  align-items: flex-start;
+/* Objective card: 2-column layout */
+.ease-objective-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
-  justify-content: space-between;
+  align-items: start;
+}
+
+.ease-objective-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ease-objective-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .ease-obj-title-copy {
@@ -1440,7 +1438,7 @@ mark.search-highlight {
   flex: 1 1 auto;
 }
 
-.ease-obj-title-copy h3,
+.ease-objective-content h3,
 .ease-kr-main h4,
 .ease-kpi-title-block h5 {
   margin: 0;
@@ -1449,7 +1447,7 @@ mark.search-highlight {
   font-weight: 500;
 }
 
-.ease-obj-title-copy h3 {
+.ease-objective-content h3 {
   font-size: 1rem;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -1903,13 +1901,16 @@ mark.search-highlight {
     gap: 0.6rem;
   }
 
-  .ease-obj-title-copy,
+  .ease-objective-layout {
+    gap: 0.75rem;
+  }
+
   .ease-kr-main,
   .ease-kpi-title-block {
     width: 100%;
   }
 
-  .ease-obj-title-copy h3 {
+  .ease-objective-content h3 {
     font-size: 0.84rem;
     line-height: 1.2;
   }
