@@ -1369,6 +1369,29 @@ mark.search-highlight {
   flex-shrink: 0;
 }
 
+/* KR and KPI cards: 2-column layout */
+.ease-kr-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.ease-kr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ease-kr-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .ease-obj-title-copy {
   flex: 1 1 auto;
   min-width: 0;
@@ -1439,8 +1462,8 @@ mark.search-highlight {
 }
 
 .ease-objective-content h3,
-.ease-kr-main h4,
-.ease-kpi-title-block h5 {
+.ease-kr-content h4,
+.ease-kr-content h5 {
   margin: 0;
   color: #172122;
   line-height: 1.15;
@@ -1453,13 +1476,13 @@ mark.search-highlight {
   overflow-wrap: anywhere;
 }
 
-.ease-kr-main h4 {
+.ease-kr-content h4 {
   font-size: 0.9rem;
   max-width: 100%;
   overflow-wrap: anywhere;
 }
 
-.ease-kpi-title-block h5 {
+.ease-kr-content h5 {
   font-size: 0.82rem;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -1915,12 +1938,12 @@ mark.search-highlight {
     line-height: 1.2;
   }
 
-  .ease-kr-main h4 {
+  .ease-kr-content h4 {
     font-size: 0.78rem;
     line-height: 1.2;
   }
 
-  .ease-kpi-title-block h5 {
+  .ease-kr-content h5 {
     font-size: 0.74rem;
     line-height: 1.2;
   }
