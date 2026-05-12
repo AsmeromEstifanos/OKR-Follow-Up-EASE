@@ -886,8 +886,10 @@ mark.search-highlight {
   border-radius: 0.85rem;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
   padding: 0;
-  max-width: 540px;
+  max-width: 700px;
   width: calc(100% - 2rem);
+  max-height: 90vh;
+  overflow-y: auto;
   background: #fff;
 }
 
@@ -907,10 +909,35 @@ mark.search-highlight {
   margin-bottom: 1rem;
 }
 
+.okr-details-title-area {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.okr-details-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .okr-details-title {
   margin: 0.35rem 0 0;
   font-size: 1rem;
   line-height: 1.4;
+}
+
+.okr-details-title-input {
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.okr-details-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+  align-items: center;
 }
 
 .okr-details-meta {
@@ -918,6 +945,18 @@ mark.search-highlight {
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-bottom: 1.1rem;
+}
+
+.okr-dialog-edit-grid {
+  margin-top: 0.75rem;
+}
+
+.okr-dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 .okr-details-close {

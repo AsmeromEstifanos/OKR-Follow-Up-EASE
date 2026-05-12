@@ -170,6 +170,7 @@ export default function DashboardEaseKrCard({
 
   const [isBodyOpen, setIsBodyOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDialogEditing, setIsDialogEditing] = useState(false);
   const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -219,16 +220,9 @@ export default function DashboardEaseKrCard({
 
   const hasDetails = !!(keyResult.notes?.trim() || keyResult.blockers?.trim() || keyResult.comment?.trim());
 
-  const openDetails = (): void => {
-    dialogRef.current?.showModal();
-  };
-
-  const closeDetails = (): void => {
-    dialogRef.current?.close();
-  };
-
   const cancelEdit = (): void => {
     setIsEditing(false);
+    setIsDialogEditing(false);
     setError("");
     setCode(codeValue);
     setTitle(keyResult.title);
@@ -242,6 +236,16 @@ export default function DashboardEaseKrCard({
     setBlockers(keyResult.blockers ?? "");
     setComment(keyResult.comment ?? "");
     setNotes(keyResult.notes ?? "");
+  };
+
+  const openDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.showModal();
+  };
+
+  const closeDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.close();
   };
 
   const saveEdit = async (): Promise<void> => {
@@ -301,6 +305,8 @@ export default function DashboardEaseKrCard({
 
     setIsSaving(false);
     setIsEditing(false);
+    setIsDialogEditing(false);
+    dialogRef.current?.close();
     router.refresh();
   };
 
@@ -331,6 +337,8 @@ export default function DashboardEaseKrCard({
 
     setIsSaving(false);
     setIsEditing(false);
+    setIsDialogEditing(false);
+    dialogRef.current?.close();
     router.refresh();
   };
 
@@ -488,21 +496,68 @@ export default function DashboardEaseKrCard({
       >
         <div className="okr-details-inner">
           <div className="okr-details-header">
-            <div>
+            <div className="okr-details-title-area">
               <div className="ease-code-badge">{codeValue}</div>
-              <h4 className="okr-details-title">{keyResult.title}</h4>
+              {isDialogEditing ? (
+                <textarea
+                  className="objective-row-input ease-title-textarea okr-details-title-input"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={isSaving}
+                  autoFocus
+                />
+              ) : (
+                <h4 className="okr-details-title">{keyResult.title}</h4>
+              )}
             </div>
-            <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+            <div className="okr-details-header-actions">
+              {!isDialogEditing && canEdit && (
+                <button type="button" className="tab-btn" onClick={() => setIsDialogEditing(true)} disabled={isSaving}>Edit</button>
+              )}
+              <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+            </div>
           </div>
-          <div className="okr-details-meta">
-            <span className={statusChipClass(keyResult.status)}>{formatStatus(keyResult.status)}</span>
-            <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
-            <span className="ease-chip ease-chip-neutral">Due: {formatDate(keyResult.dueDate)}</span>
-          </div>
-          <EaseCardDetailBlocks note={keyResult.notes} blockers={keyResult.blockers} comment={keyResult.comment} />
-          {!keyResult.notes?.trim() && !keyResult.blockers?.trim() && !keyResult.comment?.trim() ? (
-            <p className="meta">No additional details.</p>
-          ) : null}
+
+          {isDialogEditing ? (
+            <>
+              <div className="ease-edit-grid okr-dialog-edit-grid">
+                <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} placeholder="KR Code" />
+                <OwnerInput id={`dialog-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
+                <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
+                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
+                <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(e) => setCheckInFrequency(e.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(e) => setComment(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isSaving} /></div>
+              </div>
+              {error ? <p className="message danger">{error}</p> : null}
+              <div className="okr-dialog-actions">
+                <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
+                <button className="btn btn-danger" type="button" onClick={() => void deleteCurrent()} disabled={isSaving}>Delete</button>
+                <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="okr-details-fields">
+                <span className={statusChipClass(keyResult.status)}>{formatStatus(keyResult.status)}</span>
+                <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
+                <span className="ease-chip ease-chip-neutral">Due: {formatDate(keyResult.dueDate)}</span>
+                <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
+                <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
+                <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
+                <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>
+              </div>
+              <EaseCardDetailBlocks note={keyResult.notes} blockers={keyResult.blockers} comment={keyResult.comment} />
+              {!keyResult.notes?.trim() && !keyResult.blockers?.trim() && !keyResult.comment?.trim() ? (
+                <p className="meta">No additional details.</p>
+              ) : null}
+            </>
+          )}
         </div>
       </dialog>
     </article>

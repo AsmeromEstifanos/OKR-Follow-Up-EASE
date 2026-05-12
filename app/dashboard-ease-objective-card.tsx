@@ -147,11 +147,10 @@ export default function DashboardEaseObjectiveCard({
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasDetails = !!(objective.notes?.trim() || objective.blockers?.trim() || objective.comment?.trim() || objective.keyRisksDependency?.trim());
-  const openDetails = (): void => { dialogRef.current?.showModal(); };
-  const closeDetails = (): void => { dialogRef.current?.close(); };
 
   const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDialogEditing, setIsDialogEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState(objectiveCode);
@@ -197,6 +196,7 @@ export default function DashboardEaseObjectiveCard({
 
   const cancelEdit = (): void => {
     setIsEditing(false);
+    setIsDialogEditing(false);
     setError("");
     setCode(objectiveCode);
     setTitle(objective.title);
@@ -215,6 +215,9 @@ export default function DashboardEaseObjectiveCard({
     setNotes(objective.notes ?? objective.description ?? "");
   };
 
+  const openDetails = (): void => { cancelEdit(); dialogRef.current?.showModal(); };
+  const closeDetails = (): void => { cancelEdit(); dialogRef.current?.close(); };
+
   const saveEdit = async (): Promise<void> => {
     if (isSaving) return;
     if (!title.trim()) { setError("Objective title is required."); return; }
@@ -229,7 +232,7 @@ export default function DashboardEaseObjectiveCard({
       body: JSON.stringify({ objectiveCode: code.trim(), title: title.trim(), owner: owner.trim(), ownerEmail: ownerEmail.trim(), objectiveType, okrCycle, metricType, baselineValue: baseline, status, dueDate, endDate: dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), keyRisksDependency: keyRisksDependency.trim(), notes: notes.trim() })
     });
     if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to update objective."); setIsSaving(false); return; }
-    setIsSaving(false); setIsEditing(false); router.refresh();
+    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); router.refresh();
   };
 
   const deleteCurrentObjective = async (): Promise<void> => {
@@ -244,7 +247,7 @@ export default function DashboardEaseObjectiveCard({
       method: "DELETE", headers: { "x-user-email": signedInEmail }
     });
     if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to delete objective."); setIsSaving(false); return; }
-    setIsSaving(false); setIsEditing(false); router.refresh();
+    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); router.refresh();
   };
 
   return (
@@ -357,22 +360,72 @@ export default function DashboardEaseObjectiveCard({
       <dialog ref={dialogRef} className="okr-details-dialog" onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}>
         <div className="okr-details-inner">
           <div className="okr-details-header">
-            <div>
+            <div className="okr-details-title-area">
               <div className="ease-code-badge">{objectiveCode}</div>
-              <h3 className="okr-details-title">{objective.title}</h3>
+              {isDialogEditing ? (
+                <textarea
+                  className="objective-row-input ease-title-textarea okr-details-title-input"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={isSaving}
+                  autoFocus
+                />
+              ) : (
+                <h3 className="okr-details-title">{objective.title}</h3>
+              )}
             </div>
-            <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+            <div className="okr-details-header-actions">
+              {!isDialogEditing && canEdit && (
+                <button type="button" className="tab-btn" onClick={() => setIsDialogEditing(true)} disabled={isSaving}>Edit</button>
+              )}
+              <button type="button" className="okr-details-close" onClick={closeDetails} aria-label="Close">✕</button>
+            </div>
           </div>
-          <div className="okr-details-meta">
-            <RagDot rag={objective.rag} />
-            <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
-            <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
-            <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
-          </div>
-          <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />
-          {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
-            <p className="meta">No additional details.</p>
-          ) : null}
+
+          {isDialogEditing ? (
+            <>
+              <div className="ease-edit-grid okr-dialog-edit-grid">
+                <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} placeholder="Objective Code" />
+                <OwnerInput id={`dialog-obj-owner-${objective.objectiveKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
+                <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
+                <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(e) => setObjectiveType(e.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(e) => setOkrCycle(e.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
+                <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(e) => setCheckInFrequency(e.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(e) => setComment(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Key Risks/Dependency</label><textarea value={keyRisksDependency} onChange={(e) => setKeyRisksDependency(e.target.value)} disabled={isSaving} /></div>
+                <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isSaving} /></div>
+              </div>
+              {error ? <p className="message danger">{error}</p> : null}
+              <div className="okr-dialog-actions">
+                <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
+                <button className="btn btn-danger" type="button" onClick={() => void deleteCurrentObjective()} disabled={isSaving}>Delete</button>
+                <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="okr-details-fields">
+                <RagDot rag={objective.rag} />
+                <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
+                <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
+                <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
+                <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
+                <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
+                <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
+                <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>
+              </div>
+              <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />
+              {!objective.notes?.trim() && !objective.description?.trim() && !objective.blockers?.trim() && !objective.comment?.trim() && !objective.keyRisksDependency?.trim() ? (
+                <p className="meta">No additional details.</p>
+              ) : null}
+            </>
+          )}
         </div>
       </dialog>
     </article>
