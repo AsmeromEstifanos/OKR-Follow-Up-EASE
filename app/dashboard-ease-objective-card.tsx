@@ -357,7 +357,7 @@ export default function DashboardEaseObjectiveCard({
       </div>
 
       {/* Details popup */}
-      <dialog ref={dialogRef} className="okr-details-dialog" onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}>
+      <dialog ref={dialogRef} className="okr-details-dialog" >
         <div className="okr-details-inner">
           <div className="okr-details-header">
             <div className="okr-details-title-area">

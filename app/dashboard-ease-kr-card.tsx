@@ -492,7 +492,6 @@ export default function DashboardEaseKrCard({
       <dialog
         ref={dialogRef}
         className="okr-details-dialog"
-        onClick={(e) => { if (e.target === e.currentTarget) closeDetails(); }}
       >
         <div className="okr-details-inner">
           <div className="okr-details-header">
