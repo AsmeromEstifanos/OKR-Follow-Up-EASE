@@ -335,25 +335,23 @@ export default function DashboardEaseKrCard({
   };
 
   return (
-    <article className="ease-kr-card">
+    <article
+      className="ease-kr-card"
+      onClick={!isEditing ? () => setIsBodyOpen((v) => !v) : undefined}
+      style={!isEditing ? { cursor: "pointer" } : undefined}
+    >
       <div className="ease-kr-layout">
         {/* Left: all content */}
         <div className="ease-kr-content">
-          {/* Clickable header: badge + title */}
-          <div
-            className={!isEditing ? "ease-card-head-clickable" : undefined}
-            onClick={!isEditing ? () => setIsBodyOpen((v) => !v) : undefined}
-            role={!isEditing ? "button" : undefined}
-            tabIndex={!isEditing ? 0 : undefined}
-            onKeyDown={!isEditing ? (e) => { if (e.key === "Enter" || e.key === " ") setIsBodyOpen((v) => !v); } : undefined}
-            aria-expanded={!isEditing ? showBody : undefined}
-          >
+          {/* Header: badge + title */}
+          <div className="ease-kr-header">
             <div className="ease-code-badge">{codeValue}</div>
             {isEditing ? (
               <textarea
                 className="objective-row-input ease-title-textarea"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
+                onClick={(e) => e.stopPropagation()}
                 placeholder="Key Result"
                 autoFocus
                 disabled={isSaving}
@@ -387,9 +385,6 @@ export default function DashboardEaseKrCard({
                     <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
                     <span className="ease-chip ease-chip-neutral">{getQuarterLabel(keyResult.dueDate)}</span>
                   </div>
-                  <div className="ease-progress-bar">
-                    <span style={{ width: `${progressValue}%` }} />
-                  </div>
                   <div className="ease-footer-line">
                     <span>Weight: {displayWeight}</span>
                     <span>Due Date: {formatDate(keyResult.dueDate)}</span>
@@ -397,7 +392,7 @@ export default function DashboardEaseKrCard({
                   </div>
                 </>
               ) : (
-                <div className="ease-edit-grid">
+                <div className="ease-edit-grid" onClick={(e) => e.stopPropagation()}>
                   <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
                   <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                   <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
@@ -416,12 +411,12 @@ export default function DashboardEaseKrCard({
                 <div className="ease-card-actions">
                   {isEditing ? (
                     <>
-                      <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
-                      <button className="btn btn-danger" type="button" onClick={() => void deleteCurrent()} disabled={isSaving}>Delete</button>
-                      <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
+                      <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); void saveEdit(); }} disabled={isSaving}>Save</button>
+                      <button className="btn btn-danger" type="button" onClick={(e) => { e.stopPropagation(); void deleteCurrent(); }} disabled={isSaving}>Delete</button>
+                      <button className="tab-btn" type="button" onClick={(e) => { e.stopPropagation(); cancelEdit(); }} disabled={isSaving}>Cancel</button>
                     </>
                   ) : (
-                    <button className="tab-btn" type="button" onClick={(event) => { event.stopPropagation(); setIsEditing(true); }} disabled={isSaving}>Edit Key Result</button>
+                    <button className="tab-btn" type="button" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} disabled={isSaving}>Edit Key Result</button>
                   )}
                 </div>
               ) : null}
@@ -429,58 +424,57 @@ export default function DashboardEaseKrCard({
             </>
           )}
 
-          {showBody && (
-            <div className="ease-kpi-section">
-              <div className="ease-subsection-head">
-                <button
-                  className={`ease-section-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
-                  type="button"
-                  onClick={() => setIsKpiSectionOpen((current) => !current)}
-                  aria-expanded={isKpiSectionOpen}
-                >
-                  <span className="ease-section-toggle-indicator" aria-hidden="true">{isKpiSectionOpen ? "v" : ">"}</span>
-                  <span className="ease-section-toggle-label">KPIs ({kpis.length})</span>
-                </button>
-                <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-              </div>
-              {isKpiSectionOpen ? (
-                <div className="ease-kpi-list">
-                  {kpis.length > 0 ? (
-                    <WeightGroupControls
-                      title="KPI Weights"
-                      actionLabel="Edit KPI Weights"
-                      requestPath={`/api/krs/${encodeURIComponent(keyResult.krKey)}/kpis/weights`}
-                      items={kpis.map((item) => ({
-                        key: item.kpi.kpiKey,
-                        label: item.kpi.kpiCode ?? item.kpi.title,
-                        weight: normalizeWeightValue(item.kpi.baselineValue)
-                      }))}
-                      canEdit={canEdit}
-                      emptyMessage="No KPIs to weight yet."
-                    />
-                  ) : null}
-                  {kpis.length === 0 ? (
-                    <p className="meta">No KPIs for this key result yet.</p>
-                  ) : (
-                    kpis.map((item) => (
-                      <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} forcedBodyOpen={forcedKpiSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
-                    ))
-                  )}
-                </div>
-              ) : null}
+          {/* KPI section always visible so toggle shows even when card is collapsed */}
+          <div className="ease-kpi-section" onClick={(e) => e.stopPropagation()}>
+            <div className="ease-subsection-head">
+              <button
+                className={`ease-section-toggle ${isKpiSectionOpen ? "is-open" : ""}`}
+                type="button"
+                onClick={() => setIsKpiSectionOpen((current) => !current)}
+                aria-expanded={isKpiSectionOpen}
+              >
+                <span className="ease-section-toggle-indicator" aria-hidden="true">{isKpiSectionOpen ? "v" : ">"}</span>
+                <span className="ease-section-toggle-label">KPIs ({kpis.length})</span>
+              </button>
+              <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
             </div>
-          )}
+            {isKpiSectionOpen ? (
+              <div className="ease-kpi-list">
+                {kpis.length > 0 ? (
+                  <WeightGroupControls
+                    title="KPI Weights"
+                    actionLabel="Edit KPI Weights"
+                    requestPath={`/api/krs/${encodeURIComponent(keyResult.krKey)}/kpis/weights`}
+                    items={kpis.map((item) => ({
+                      key: item.kpi.kpiKey,
+                      label: item.kpi.kpiCode ?? item.kpi.title,
+                      weight: normalizeWeightValue(item.kpi.baselineValue)
+                    }))}
+                    canEdit={canEdit}
+                    emptyMessage="No KPIs to weight yet."
+                  />
+                ) : null}
+                {kpis.length === 0 ? (
+                  <p className="meta">No KPIs for this key result yet.</p>
+                ) : (
+                  kpis.map((item) => (
+                    <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} forcedBodyOpen={forcedKpiSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Right sidebar: status chip, progress ring, chevron */}
-        <div className="ease-kr-sidebar">
+        <div className="ease-kr-sidebar" onClick={(e) => e.stopPropagation()}>
           <span className={statusChipClass(isEditing ? status : keyResult.status)}>
             {formatStatus(isEditing ? status : keyResult.status)}
           </span>
           <div className="ease-progress-ring ease-progress-ring-kr" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
             <span>{Math.round(progressValue)}%</span>
           </div>
-          <button type="button" className="card-chevron-btn" onClick={() => setIsBodyOpen((v) => !v)} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
+          <button type="button" className="card-chevron-btn" onClick={(e) => { e.stopPropagation(); setIsBodyOpen((v) => !v); }} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
             <ChevronIcon open={showBody} />
           </button>
         </div>
