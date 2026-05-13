@@ -260,13 +260,9 @@ export default function DashboardEaseObjectiveCard({
             <textarea className="objective-row-input ease-title-textarea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Objective" autoFocus disabled={isSaving} />
           ) : (
             <div className="ease-kr-title-row">
-              {hasDetails ? (
-                <button type="button" className="ease-title-btn" onClick={openDetails} title="Click to view details">
-                  <h3><HighlightText text={objective.title} /></h3>
-                </button>
-              ) : (
+              <button type="button" className="ease-title-btn" onClick={openDetails}>
                 <h3><HighlightText text={objective.title} /></h3>
-              )}
+              </button>
               {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
             </div>
           )}
@@ -304,20 +300,6 @@ export default function DashboardEaseObjectiveCard({
               <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isSaving} /></div>
             </div>
           )}
-          {canEdit && (
-            <div className="ease-card-actions">
-              {isEditing ? (
-                <>
-                  <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
-                  <button className="btn btn-danger" type="button" onClick={() => void deleteCurrentObjective()} disabled={isSaving}>Delete</button>
-                  <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
-                </>
-              ) : (
-                <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit Objective</button>
-              )}
-            </div>
-          )}
-          {error ? <p className="message danger">{error}</p> : null}
           <div className="ease-kr-section">
             <div className="ease-subsection-head">
               <button type="button" className={`ease-section-toggle ${isKrSectionOpen ? "is-open" : ""}`} aria-expanded={isKrSectionOpen} onClick={() => setIsKrSectionOpen((v) => !v)}>

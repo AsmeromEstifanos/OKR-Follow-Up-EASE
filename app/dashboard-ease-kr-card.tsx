@@ -366,18 +366,13 @@ export default function DashboardEaseKrCard({
               />
             ) : (
               <div className="ease-kr-title-row">
-                {hasDetails ? (
-                  <button
-                    type="button"
-                    className="ease-title-btn"
-                    onClick={(e) => { e.stopPropagation(); openDetails(); }}
-                    title="Click to view details"
-                  >
-                    <h4><HighlightText text={keyResult.title} /></h4>
-                  </button>
-                ) : (
-                  <h4 onClick={(e) => e.stopPropagation()}><HighlightText text={keyResult.title} /></h4>
-                )}
+                <button
+                  type="button"
+                  className="ease-title-btn"
+                  onClick={(e) => { e.stopPropagation(); openDetails(); }}
+                >
+                  <h4><HighlightText text={keyResult.title} /></h4>
+                </button>
                 {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
               </div>
             )}
@@ -415,20 +410,6 @@ export default function DashboardEaseKrCard({
                   <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
                 </div>
               )}
-              {canEdit ? (
-                <div className="ease-card-actions">
-                  {isEditing ? (
-                    <>
-                      <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); void saveEdit(); }} disabled={isSaving}>Save</button>
-                      <button className="btn btn-danger" type="button" onClick={(e) => { e.stopPropagation(); void deleteCurrent(); }} disabled={isSaving}>Delete</button>
-                      <button className="tab-btn" type="button" onClick={(e) => { e.stopPropagation(); cancelEdit(); }} disabled={isSaving}>Cancel</button>
-                    </>
-                  ) : (
-                    <button className="tab-btn" type="button" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} disabled={isSaving}>Edit Key Result</button>
-                  )}
-                </div>
-              ) : null}
-              {error ? <p className="message danger">{error}</p> : null}
             </>
           )}
 

@@ -367,18 +367,13 @@ export default function DashboardEaseKpiCard({
               />
             ) : (
               <div className="ease-kr-title-row">
-                {hasDetails ? (
-                  <button
-                    type="button"
-                    className="ease-title-btn"
-                    onClick={(e) => { e.stopPropagation(); openDetails(); }}
-                    title="Click to view details"
-                  >
-                    <h5><HighlightText text={kpi.title} /></h5>
-                  </button>
-                ) : (
-                  <h5 onClick={(e) => e.stopPropagation()}><HighlightText text={kpi.title} /></h5>
-                )}
+                <button
+                  type="button"
+                  className="ease-title-btn"
+                  onClick={(e) => { e.stopPropagation(); openDetails(); }}
+                >
+                  <h5><HighlightText text={kpi.title} /></h5>
+                </button>
                 {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
               </div>
             )}
@@ -422,20 +417,6 @@ export default function DashboardEaseKpiCard({
                   <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
                 </div>
               )}
-              {canEdit ? (
-                <div className="ease-card-actions">
-                  {isEditing ? (
-                    <>
-                      <button className="btn" type="button" onClick={() => void saveEdit()} disabled={isSaving}>Save</button>
-                      <button className="btn btn-danger" type="button" onClick={() => void deleteCurrent()} disabled={isSaving}>Delete</button>
-                      <button className="tab-btn" type="button" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
-                    </>
-                  ) : (
-                    <button className="tab-btn" type="button" onClick={() => setIsEditing(true)} disabled={isSaving}>Edit KPI</button>
-                  )}
-                </div>
-              ) : null}
-              {error ? <p className="message danger">{error}</p> : null}
             </>
           )}
         </div>
