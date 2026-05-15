@@ -96,7 +96,7 @@ jobs:
             mkdir -p /tmp/okr-follow-up-deploy/extracted
 
             tar -xzf /tmp/okr-follow-up-deploy/deploy.tgz -C /tmp/okr-follow-up-deploy/extracted
-            find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "tmp" ! -name "logs" -exec rm -rf {} +
+            find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "tmp" ! -name "logs" ! -name "node_modules" -exec rm -rf {} +
 
             cp -R /tmp/okr-follow-up-deploy/extracted/. "$APP_DIR"
             cd "$APP_DIR"
