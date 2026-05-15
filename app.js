@@ -22,9 +22,11 @@ app
   .then(() => {
     http
       .createServer((req, res) => {
+        const originalUrl = req.url;
         if (basePath && req.url && !req.url.startsWith(basePath)) {
           req.url = basePath + (req.url === "/" ? "" : req.url);
         }
+        console.log(`[req] ${originalUrl} -> ${req.url}`);
         void handle(req, res);
       })
       .listen(port, host, () => {
