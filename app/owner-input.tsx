@@ -1,7 +1,10 @@
 "use client";
 
 import { apiPath } from "@/lib/base-path";
+import { ownerSuggestionScopes } from "@/lib/auth/msal-client";
+import { acquireGraphTokenSilent } from "@/lib/sharepoint/graph-client";
 import { parseAssignedOwners, serializeAssignedOwners } from "@/lib/owner";
+import { useMsal } from "@azure/msal-react";
 import { useEffect, useMemo, useState } from "react";
 
 type UserSuggestion = {
@@ -92,6 +95,18 @@ function saveCachedSuggestions(users: UserSuggestion[]): void {
   }
 }
 
+function mergeUserSuggestions(existing: UserSuggestion[], incoming: UserSuggestion[]): UserSuggestion[] {
+  const merged = new Map<string, UserSuggestion>();
+  [...existing, ...incoming].forEach((user) => {
+    const key = (user.principalName || user.mail).toLowerCase();
+    if (key && !isDummySuggestion(user)) {
+      merged.set(key, user);
+    }
+  });
+
+  return Array.from(merged.values()).sort((left, right) => left.displayName.localeCompare(right.displayName));
+}
+
 export default function OwnerInput({
   id,
   label = "Owner",
@@ -108,6 +123,7 @@ export default function OwnerInput({
   className = "",
   inputClassName = ""
 }: Props): JSX.Element {
+  const { instance, accounts } = useMsal();
   const [allUsers, setAllUsers] = useState<UserSuggestion[]>([]);
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -241,6 +257,62 @@ export default function OwnerInput({
         .slice(0, MAX_SUGGESTIONS)
     );
   }, [allUsers, queryValue]);
+
+  useEffect(() => {
+    const query = queryValue.trim();
+    if (query.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      const account = instance.getActiveAccount() ?? accounts[0] ?? null;
+      const headers = new Headers();
+
+      void acquireGraphTokenSilent(instance, ownerSuggestionScopes, account)
+        .then((token) => {
+          headers.set("Authorization", `Bearer ${token}`);
+        })
+        .catch(() => undefined)
+        .then(() => {
+          return fetch(apiPath(`/api/users/suggest?q=${encodeURIComponent(query)}`), {
+            cache: "no-store",
+            headers,
+            signal: controller.signal
+          });
+        })
+        .then(async (response) => {
+          if (!response.ok) {
+            return [] as UserSuggestion[];
+          }
+
+          const payload = (await response.json()) as unknown;
+          if (!Array.isArray(payload)) {
+            return [] as UserSuggestion[];
+          }
+
+          return payload.filter(isUserSuggestion).filter((user) => !isDummySuggestion(user));
+        })
+        .then((users) => {
+          if (users.length === 0) {
+            return;
+          }
+
+          setAllUsers((current) => {
+            const merged = mergeUserSuggestions(current, users);
+            saveCachedSuggestions(merged);
+            return merged;
+          });
+          setSuggestions(users.slice(0, MAX_SUGGESTIONS));
+        })
+        .catch(() => undefined);
+    }, 250);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [accounts, instance, queryValue]);
 
   useEffect(() => {
     // Keep local typed value visible even when there are no suggestions.

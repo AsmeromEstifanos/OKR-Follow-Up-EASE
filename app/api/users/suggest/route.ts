@@ -110,19 +110,53 @@ async function acquireGraphAppToken(): Promise<string> {
   return payload.access_token;
 }
 
-async function fetchTenantUsers(): Promise<UserSuggestion[]> {
-  const cached = cache.__okrTenantUsers;
-  const now = Date.now();
-  if (cached && cached.expiresAt > now) {
-    return cached.value;
+function buildUsersUrl(query: string, limit: number): string {
+  const params = new URLSearchParams({
+    "$select": "displayName,mail,userPrincipalName,accountEnabled",
+    "$top": String(limit)
+  });
+
+  const trimmed = query.trim();
+  if (trimmed) {
+    const escaped = trimmed.replace(/'/g, "''");
+    params.set(
+      "$filter",
+      `startswith(displayName,'${escaped}') or startswith(mail,'${escaped}') or startswith(userPrincipalName,'${escaped}')`
+    );
   }
 
-  const token = await acquireGraphAppToken();
+  return `https://graph.microsoft.com/v1.0/users?${params.toString()}`;
+}
+
+function mapGraphUsers(pageUsers: GraphUser[]): UserSuggestion[] {
   const users: UserSuggestion[] = [];
-  let nextUrl = "https://graph.microsoft.com/v1.0/users?$select=displayName,mail,userPrincipalName,accountEnabled&$top=999";
+
+  pageUsers.forEach((user) => {
+    if (user.accountEnabled === false) {
+      return;
+    }
+
+    const principalName = firstNonEmpty(user.userPrincipalName, user.mail);
+    if (!principalName) {
+      return;
+    }
+
+    users.push({
+      displayName: firstNonEmpty(user.displayName, principalName),
+      principalName,
+      mail: firstNonEmpty(user.mail, principalName)
+    });
+  });
+
+  return users;
+}
+
+async function fetchUsersWithToken(token: string, query = "", pageLimit = 5): Promise<UserSuggestion[]> {
+  const users: UserSuggestion[] = [];
+  let nextUrl = buildUsersUrl(query, query ? 20 : 999);
   let pageCount = 0;
 
-  while (nextUrl && pageCount < 5) {
+  while (nextUrl && pageCount < pageLimit) {
     const response = await fetch(nextUrl, {
       method: "GET",
       headers: {
@@ -138,28 +172,24 @@ async function fetchTenantUsers(): Promise<UserSuggestion[]> {
     }
 
     const payload = (await response.json()) as GraphUsersResponse;
-    const pageUsers = payload.value ?? [];
+    users.push(...mapGraphUsers(payload.value ?? []));
 
-    pageUsers.forEach((user) => {
-      if (user.accountEnabled === false) {
-        return;
-      }
-
-      const principalName = firstNonEmpty(user.userPrincipalName, user.mail);
-      if (!principalName) {
-        return;
-      }
-
-      users.push({
-        displayName: firstNonEmpty(user.displayName, principalName),
-        principalName,
-        mail: firstNonEmpty(user.mail, principalName)
-      });
-    });
-
-    nextUrl = payload["@odata.nextLink"] ?? "";
+    nextUrl = query ? "" : payload["@odata.nextLink"] ?? "";
     pageCount += 1;
   }
+
+  return users;
+}
+
+async function fetchTenantUsers(): Promise<UserSuggestion[]> {
+  const cached = cache.__okrTenantUsers;
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const token = await acquireGraphAppToken();
+  const users = await fetchUsersWithToken(token);
 
   const deduped = Array.from(
     new Map(users.map((entry) => [entry.principalName.toLowerCase(), entry])).values()
@@ -171,6 +201,20 @@ async function fetchTenantUsers(): Promise<UserSuggestion[]> {
   };
 
   return deduped;
+}
+
+async function searchTenantUsers(query: string, bearerToken?: string): Promise<UserSuggestion[]> {
+  if (bearerToken) {
+    try {
+      return await fetchUsersWithToken(bearerToken, query, 1);
+    } catch {
+      // Fall through to the app-only token when the signed-in user's token
+      // does not have directory search permission.
+    }
+  }
+
+  const token = await acquireGraphAppToken();
+  return fetchUsersWithToken(token, query, 1);
 }
 
 function mergeSuggestions(...groups: UserSuggestion[][]): UserSuggestion[] {
@@ -196,9 +240,10 @@ function mergeSuggestions(...groups: UserSuggestion[][]): UserSuggestion[] {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const query = (request.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
   const includeAll = request.nextUrl.searchParams.get("all") === "1";
+  const bearerToken = firstNonEmpty(request.headers.get("authorization")?.replace(/^Bearer\s+/i, ""));
 
   try {
-    const users = await fetchTenantUsers();
+    const users = query ? await searchTenantUsers(query, bearerToken) : await fetchTenantUsers();
     const catalog = mergeSuggestions(users);
     const filtered = query
       ? catalog.filter((user) => {

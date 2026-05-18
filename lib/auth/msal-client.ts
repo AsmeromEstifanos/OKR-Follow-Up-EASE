@@ -2,7 +2,7 @@ import { type AccountInfo, type PopupRequest, PublicClientApplication } from "@a
 
 const DEFAULT_CLIENT_ID = "00000000-0000-0000-0000-000000000000";
 const DEFAULT_AUTHORITY = "https://login.microsoftonline.com/common";
-const DEFAULT_SCOPES = ["openid", "profile", "email", "User.Read", "Sites.Read.All"];
+const DEFAULT_SCOPES = ["openid", "profile", "email", "User.Read", "User.ReadBasic.All", "Sites.Read.All"];
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   return values.find((value) => Boolean(value && value.trim().length > 0))?.trim();
@@ -105,3 +105,4 @@ export const loginRequest: PopupRequest = {
 };
 
 export const sharePointProbeScopes = ["Sites.Read.All"];
+export const ownerSuggestionScopes = ["User.ReadBasic.All"];
