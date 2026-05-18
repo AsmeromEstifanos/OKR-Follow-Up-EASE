@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseAssignedOwners } from "@/lib/owner";
-import { listAuthLogUsers, listRoleAssignments, loadSharePointSnapshot } from "@/lib/sharepoint/server-storage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -205,90 +203,9 @@ async function fetchTenantUsers(): Promise<UserSuggestion[]> {
   return deduped;
 }
 
-async function searchTenantUsers(query: string, bearerToken?: string): Promise<UserSuggestion[]> {
-  if (bearerToken) {
-    try {
-      return await fetchUsersWithToken(bearerToken, query, 1);
-    } catch {
-      // Fall through to the app-only token when the signed-in user's token
-      // does not have directory search permission.
-    }
-  }
-
+async function searchTenantUsers(query: string): Promise<UserSuggestion[]> {
   const token = await acquireGraphAppToken();
   return fetchUsersWithToken(token, query, 1);
-}
-
-function toUserSuggestion(name: string, email: string): UserSuggestion | null {
-  const displayName = firstNonEmpty(name, email);
-  const principalName = firstNonEmpty(email, displayName);
-  if (!displayName || !principalName) {
-    return null;
-  }
-
-  return {
-    displayName,
-    principalName,
-    mail: email || principalName
-  };
-}
-
-function addOwnerSuggestions(
-  suggestions: UserSuggestion[],
-  owner?: string,
-  ownerEmail?: string
-): void {
-  parseAssignedOwners(owner, ownerEmail).forEach((entry) => {
-    const suggestion = toUserSuggestion(entry.name, entry.email);
-    if (suggestion) {
-      suggestions.push(suggestion);
-    }
-  });
-}
-
-async function fetchAppKnownUsers(): Promise<UserSuggestion[]> {
-  const suggestions: UserSuggestion[] = [];
-
-  const [snapshot, roleAssignments, authLogUsers] = await Promise.all([
-    loadSharePointSnapshot().catch(() => null),
-    listRoleAssignments().catch(() => []),
-    listAuthLogUsers().catch(() => [])
-  ]);
-
-  snapshot?.ventures.forEach((venture) => {
-    addOwnerSuggestions(suggestions, venture.owner, venture.ownerEmail);
-    venture.departments.forEach((department) => {
-      addOwnerSuggestions(suggestions, department.owner, department.ownerEmail);
-    });
-  });
-
-  snapshot?.content.objectives.forEach((objective) => {
-    addOwnerSuggestions(suggestions, objective.owner, objective.ownerEmail);
-  });
-
-  snapshot?.content.keyResults.forEach((keyResult) => {
-    addOwnerSuggestions(suggestions, keyResult.owner, keyResult.ownerEmail);
-  });
-
-  snapshot?.content.kpis.forEach((kpi) => {
-    addOwnerSuggestions(suggestions, kpi.owner, kpi.ownerEmail);
-  });
-
-  roleAssignments.forEach((entry) => {
-    const suggestion = toUserSuggestion(entry.displayName ?? "", entry.userEmail);
-    if (suggestion) {
-      suggestions.push(suggestion);
-    }
-  });
-
-  authLogUsers.forEach((entry) => {
-    const suggestion = toUserSuggestion(entry.displayName ?? "", entry.userEmail);
-    if (suggestion) {
-      suggestions.push(suggestion);
-    }
-  });
-
-  return suggestions;
 }
 
 function mergeSuggestions(...groups: UserSuggestion[][]): UserSuggestion[] {
@@ -312,38 +229,33 @@ function mergeSuggestions(...groups: UserSuggestion[][]): UserSuggestion[] {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const query = (request.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
+  const query = (request.nextUrl.searchParams.get("q") ?? "").trim();
+  const normalizedQuery = query.toLowerCase();
   const includeAll = request.nextUrl.searchParams.get("all") === "1";
-  const bearerToken = firstNonEmpty(request.headers.get("authorization")?.replace(/^Bearer\s+/i, ""));
 
   try {
-    const appKnownUsers = await fetchAppKnownUsers();
-    const users = query ? await searchTenantUsers(query, bearerToken).catch(() => []) : await fetchTenantUsers().catch(() => []);
-    const catalog = mergeSuggestions(appKnownUsers, users);
-    const filtered = query
+    const users = query ? await searchTenantUsers(query) : await fetchTenantUsers();
+    const catalog = mergeSuggestions(users);
+    const filtered = normalizedQuery
       ? catalog.filter((user) => {
           return (
-            user.displayName.toLowerCase().includes(query) ||
-            user.principalName.toLowerCase().includes(query) ||
-            user.mail.toLowerCase().includes(query)
+            user.displayName.toLowerCase().includes(normalizedQuery) ||
+            user.principalName.toLowerCase().includes(normalizedQuery) ||
+            user.mail.toLowerCase().includes(normalizedQuery)
           );
         })
       : catalog;
 
     return NextResponse.json(includeAll ? filtered : filtered.slice(0, 20));
-  } catch {
-    const cachedUsers = mergeSuggestions(await fetchAppKnownUsers().catch(() => []), cache.__okrTenantUsers?.value ?? []);
-    const catalog = mergeSuggestions(cachedUsers);
-    const filtered = query
-      ? catalog.filter((user) => {
-          return (
-            user.displayName.toLowerCase().includes(query) ||
-            user.principalName.toLowerCase().includes(query) ||
-            user.mail.toLowerCase().includes(query)
-          );
-        })
-      : catalog;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Azure AD user suggestions failed.";
 
-    return NextResponse.json(includeAll ? filtered : filtered.slice(0, 20));
+    return NextResponse.json(
+      {
+        error: "Azure AD user suggestions are unavailable.",
+        detail: message
+      },
+      { status: 502 }
+    );
   }
 }

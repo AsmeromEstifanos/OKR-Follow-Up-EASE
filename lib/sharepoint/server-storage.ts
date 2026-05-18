@@ -2211,35 +2211,6 @@ export async function appendAuthLogEntry(userEmail: string, displayName?: string
   };
 }
 
-export async function listAuthLogUsers(): Promise<Array<{ userEmail: string; displayName?: string }>> {
-  const config = getStorageConfig();
-  if (!config.enabled) {
-    return [];
-  }
-
-  const { siteId, listIds } = await ensureAtomicTargets(config);
-  const items = await listItems(config, siteId, listIds.authLogs, ["UserEmail", "DisplayName"]);
-  const users = new Map<string, { userEmail: string; displayName?: string }>();
-
-  items.forEach((item) => {
-    const userEmail = asString(item.fields?.UserEmail).trim().toLowerCase();
-    const displayName = asString(item.fields?.DisplayName).trim();
-    if (!userEmail) {
-      return;
-    }
-
-    const existing = users.get(userEmail);
-    if (!existing || (!existing.displayName && displayName)) {
-      users.set(userEmail, {
-        userEmail,
-        ...(displayName ? { displayName } : {})
-      });
-    }
-  });
-
-  return Array.from(users.values());
-}
-
 export async function appendActivityLogEntry(input: {
   userEmail: string;
   activityName: string;
