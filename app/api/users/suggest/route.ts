@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseAssignedOwners } from "@/lib/owner";
+import { listAuthLogUsers, listRoleAssignments, loadSharePointSnapshot } from "@/lib/sharepoint/server-storage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -217,6 +219,78 @@ async function searchTenantUsers(query: string, bearerToken?: string): Promise<U
   return fetchUsersWithToken(token, query, 1);
 }
 
+function toUserSuggestion(name: string, email: string): UserSuggestion | null {
+  const displayName = firstNonEmpty(name, email);
+  const principalName = firstNonEmpty(email, displayName);
+  if (!displayName || !principalName) {
+    return null;
+  }
+
+  return {
+    displayName,
+    principalName,
+    mail: email || principalName
+  };
+}
+
+function addOwnerSuggestions(
+  suggestions: UserSuggestion[],
+  owner?: string,
+  ownerEmail?: string
+): void {
+  parseAssignedOwners(owner, ownerEmail).forEach((entry) => {
+    const suggestion = toUserSuggestion(entry.name, entry.email);
+    if (suggestion) {
+      suggestions.push(suggestion);
+    }
+  });
+}
+
+async function fetchAppKnownUsers(): Promise<UserSuggestion[]> {
+  const suggestions: UserSuggestion[] = [];
+
+  const [snapshot, roleAssignments, authLogUsers] = await Promise.all([
+    loadSharePointSnapshot().catch(() => null),
+    listRoleAssignments().catch(() => []),
+    listAuthLogUsers().catch(() => [])
+  ]);
+
+  snapshot?.ventures.forEach((venture) => {
+    addOwnerSuggestions(suggestions, venture.owner, venture.ownerEmail);
+    venture.departments.forEach((department) => {
+      addOwnerSuggestions(suggestions, department.owner, department.ownerEmail);
+    });
+  });
+
+  snapshot?.content.objectives.forEach((objective) => {
+    addOwnerSuggestions(suggestions, objective.owner, objective.ownerEmail);
+  });
+
+  snapshot?.content.keyResults.forEach((keyResult) => {
+    addOwnerSuggestions(suggestions, keyResult.owner, keyResult.ownerEmail);
+  });
+
+  snapshot?.content.kpis.forEach((kpi) => {
+    addOwnerSuggestions(suggestions, kpi.owner, kpi.ownerEmail);
+  });
+
+  roleAssignments.forEach((entry) => {
+    const suggestion = toUserSuggestion(entry.displayName ?? "", entry.userEmail);
+    if (suggestion) {
+      suggestions.push(suggestion);
+    }
+  });
+
+  authLogUsers.forEach((entry) => {
+    const suggestion = toUserSuggestion(entry.displayName ?? "", entry.userEmail);
+    if (suggestion) {
+      suggestions.push(suggestion);
+    }
+  });
+
+  return suggestions;
+}
+
 function mergeSuggestions(...groups: UserSuggestion[][]): UserSuggestion[] {
   const merged = new Map<string, UserSuggestion>();
   groups.flat().forEach((entry) => {
@@ -243,8 +317,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const bearerToken = firstNonEmpty(request.headers.get("authorization")?.replace(/^Bearer\s+/i, ""));
 
   try {
-    const users = query ? await searchTenantUsers(query, bearerToken) : await fetchTenantUsers();
-    const catalog = mergeSuggestions(users);
+    const appKnownUsers = await fetchAppKnownUsers();
+    const users = query ? await searchTenantUsers(query, bearerToken).catch(() => []) : await fetchTenantUsers().catch(() => []);
+    const catalog = mergeSuggestions(appKnownUsers, users);
     const filtered = query
       ? catalog.filter((user) => {
           return (
@@ -257,7 +332,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(includeAll ? filtered : filtered.slice(0, 20));
   } catch {
-    const cachedUsers = cache.__okrTenantUsers?.value ?? [];
+    const cachedUsers = mergeSuggestions(await fetchAppKnownUsers().catch(() => []), cache.__okrTenantUsers?.value ?? []);
     const catalog = mergeSuggestions(cachedUsers);
     const filtered = query
       ? catalog.filter((user) => {
