@@ -1,10 +1,7 @@
 "use client";
 
 import { apiPath } from "@/lib/base-path";
-import { ownerSuggestionScopes } from "@/lib/auth/msal-client";
-import { acquireGraphTokenSilent } from "@/lib/sharepoint/graph-client";
 import { parseAssignedOwners, serializeAssignedOwners } from "@/lib/owner";
-import { useMsal } from "@azure/msal-react";
 import { useEffect, useMemo, useState } from "react";
 
 type UserSuggestion = {
@@ -123,7 +120,6 @@ export default function OwnerInput({
   className = "",
   inputClassName = ""
 }: Props): JSX.Element {
-  const { instance, accounts } = useMsal();
   const [allUsers, setAllUsers] = useState<UserSuggestion[]>([]);
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -266,21 +262,10 @@ export default function OwnerInput({
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
-      const account = instance.getActiveAccount() ?? accounts[0] ?? null;
-      const headers = new Headers();
-
-      void acquireGraphTokenSilent(instance, ownerSuggestionScopes, account)
-        .then((token) => {
-          headers.set("Authorization", `Bearer ${token}`);
-        })
-        .catch(() => undefined)
-        .then(() => {
-          return fetch(apiPath(`/api/users/suggest?q=${encodeURIComponent(query)}`), {
-            cache: "no-store",
-            headers,
-            signal: controller.signal
-          });
-        })
+      void fetch(apiPath(`/api/users/suggest?q=${encodeURIComponent(query)}`), {
+        cache: "no-store",
+        signal: controller.signal
+      })
         .then(async (response) => {
           if (!response.ok) {
             return [] as UserSuggestion[];
@@ -312,7 +297,7 @@ export default function OwnerInput({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [accounts, instance, queryValue]);
+  }, [queryValue]);
 
   useEffect(() => {
     // Keep local typed value visible even when there are no suggestions.
