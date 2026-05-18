@@ -22,3 +22,6 @@ pnpm-debug.log*
 
 # local SharePoint MCP auth cache
 sharepoint_admin_mcp/.token_cache.bin
+deploy-manual.tgz
+deploy-prod.tgz
+debug.log

@@ -1,4 +1,6 @@
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const next = require("next");
 
 const port = Number(process.env.PORT || process.env.APP_PORT || 3000);
@@ -14,6 +16,15 @@ if (!basePath) {
   }
 }
 
+const logPath = path.join(__dirname, "debug.log");
+function debug(msg) {
+  try {
+    fs.appendFileSync(logPath, `${new Date().toISOString()} ${msg}\n`);
+  } catch (_e) {}
+}
+
+debug(`STARTUP basePath=${basePath || "(none)"} port=${port}`);
+
 const app = next({ dev, hostname: host, port });
 const handle = app.getRequestHandler();
 
@@ -23,17 +34,23 @@ app
     http
       .createServer((req, res) => {
         const originalUrl = req.url;
-        if (basePath && req.url && !req.url.startsWith(basePath)) {
-          req.url = basePath + (req.url === "/" ? "" : req.url);
+        if (basePath && req.url) {
+          if (req.url === basePath) {
+            req.url = "/";
+          } else if (req.url.startsWith(basePath + "/")) {
+            req.url = req.url.slice(basePath.length);
+          } else if (req.url.startsWith(basePath + "?")) {
+            req.url = "/" + req.url.slice(basePath.length + 1);
+          }
         }
-        console.log(`[req] ${originalUrl} -> ${req.url}`);
+        debug(`[req] ${req.method} ${originalUrl} -> ${req.url}`);
         void handle(req, res);
       })
       .listen(port, host, () => {
-        console.log(`OKR app running on http://${host}:${port} (basePath: ${basePath || "none"})`);
+        debug(`READY http://${host}:${port}`);
       });
   })
   .catch((error) => {
-    console.error("Failed to start Next.js server", error);
+    debug(`FATAL ${error && error.stack ? error.stack : String(error)}`);
     process.exit(1);
   });

@@ -13,6 +13,7 @@ const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  skipTrailingSlashRedirect: true,
   ...(basePath ? { basePath } : {}),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "0.1.4",
