@@ -32,6 +32,16 @@ type WindowWithSharePointTracking = Window & {
   __okrSharePointOperationOrder?: string[];
 };
 
+function isLoaderExcludedApiPath(normalizedPath: string): boolean {
+  return (
+    normalizedPath === "/api/ai" ||
+    normalizedPath.startsWith("/api/ai/") ||
+    normalizedPath.startsWith("/api/users/suggest") ||
+    normalizedPath.startsWith("/api/codes/") ||
+    normalizedPath.startsWith("/api/operation-progress/")
+  );
+}
+
 function getRequestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") {
     return input;
@@ -56,9 +66,7 @@ function shouldTrackSharePointRequest(rawUrl: string): boolean {
     }
 
     return (
-      !normalizedPath.startsWith("/api/users/suggest") &&
-      !normalizedPath.startsWith("/api/codes/") &&
-      !normalizedPath.startsWith("/api/operation-progress/")
+      !isLoaderExcludedApiPath(normalizedPath)
     );
   }
 
@@ -70,11 +78,7 @@ function shouldTrackSharePointRequest(rawUrl: string): boolean {
         return false;
       }
 
-      if (
-        normalizedPath.startsWith("/api/users/suggest") ||
-        normalizedPath.startsWith("/api/codes/") ||
-        normalizedPath.startsWith("/api/operation-progress/")
-      ) {
+      if (isLoaderExcludedApiPath(normalizedPath)) {
         return false;
       }
 
@@ -112,7 +116,7 @@ function shouldAttachOperationProgress(rawUrl: string, method: string): boolean 
     }
 
     const normalizedPath = stripBasePath(parsed.pathname);
-    return normalizedPath.startsWith("/api/") && !normalizedPath.startsWith("/api/operation-progress/");
+    return normalizedPath.startsWith("/api/") && !isLoaderExcludedApiPath(normalizedPath);
   } catch {
     return false;
   }
