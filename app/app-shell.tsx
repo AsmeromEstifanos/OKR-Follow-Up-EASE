@@ -1,5 +1,6 @@
 "use client";
 
+import AiGlobalChat from "@/app/ai-global-chat";
 import AuthButtons from "@/app/auth-buttons";
 import AuthGate from "@/app/auth-gate";
 import SharePointActivityLoader from "@/app/sharepoint-activity-loader";
@@ -148,6 +149,12 @@ export default function AppShell({ children }: Props): JSX.Element {
 
     const claims = activeAccount.idTokenClaims as { preferred_username?: unknown; email?: unknown; name?: unknown } | undefined;
     return getPrincipalName(activeAccount.username, claims?.preferred_username, claims?.email, claims?.name);
+  }, [activeAccount]);
+
+  const displayName = useMemo(() => {
+    if (!activeAccount) return "";
+    const claims = activeAccount.idTokenClaims as { name?: unknown } | undefined;
+    return typeof claims?.name === "string" && claims.name.trim() ? claims.name.trim() : "";
   }, [activeAccount]);
 
   const mainClassName = `ln-main ${isMobile ? "ln-main-mobile" : "ln-main-collapsed"}`;
@@ -381,6 +388,7 @@ export default function AppShell({ children }: Props): JSX.Element {
       </main>
 
       <SharePointActivityLoader />
+      {isAuthenticated && <AiGlobalChat userEmail={currentUserEmail ?? undefined} userName={displayName || undefined} />}
     </div>
   );
 }

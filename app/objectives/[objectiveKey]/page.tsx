@@ -2,6 +2,7 @@ import { getConfig, getObjectiveWithContext, listObjectives } from "@/lib/store"
 import { formatOwnerLabel } from "@/lib/owner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AiSummaryPanel from "@/app/ai-summary-panel";
 import KeyResultEditControls from "./key-result-edit-controls";
 import ObjectiveEditControls from "./objective-edit-controls";
 
@@ -100,6 +101,8 @@ export default async function ObjectiveDetailPage({ params }: Props): Promise<JS
           </div>
         </article>
       </section>
+
+      <AiSummaryPanel objectiveKey={objective.objectiveKey} objectiveTitle={objective.title} />
 
       <section className="section">
         <div className="section-header">
