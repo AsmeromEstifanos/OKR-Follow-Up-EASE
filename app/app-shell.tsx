@@ -2,6 +2,7 @@
 
 import AiGlobalChat from "@/app/ai-global-chat";
 import AuthButtons from "@/app/auth-buttons";
+import NotificationBell from "@/app/notification-bell";
 import AuthGate from "@/app/auth-gate";
 import SharePointActivityLoader from "@/app/sharepoint-activity-loader";
 import useSharePointConnection from "@/app/use-sharepoint-connection";
@@ -359,8 +360,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.4"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.4"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.0"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.0"}
             </div>
           ) : null}
         </div>
@@ -381,7 +382,10 @@ export default function AppShell({ children }: Props): JSX.Element {
       ) : null}
 
       <main className={mainClassName}>
-        <TopAppTabs />
+        <div className="ln-topbar">
+          <TopAppTabs />
+          {currentUserEmail && <NotificationBell userEmail={currentUserEmail} />}
+        </div>
         <AuthGate>
           <div className="layout">{children}</div>
         </AuthGate>

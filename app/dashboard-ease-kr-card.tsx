@@ -1,5 +1,6 @@
 "use client";
 
+import ChatIconButton from "@/app/chat-icon-button";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKpiCard from "@/app/dashboard-ease-kpi-card";
 import DashboardKeyResultControls from "@/app/dashboard-key-result-controls";
@@ -463,6 +464,7 @@ export default function DashboardEaseKrCard({
           <div className="ease-progress-ring ease-progress-ring-kr" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
             <span>{Math.round(progressValue)}%</span>
           </div>
+          <ChatIconButton entityType="kr" entityKey={keyResult.krKey} entityLabel={keyResult.title} />
           <button type="button" className="card-chevron-btn" onClick={(e) => { e.stopPropagation(); setIsBodyOpen((v) => !v); }} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
             <ChevronIcon open={showBody} />
           </button>

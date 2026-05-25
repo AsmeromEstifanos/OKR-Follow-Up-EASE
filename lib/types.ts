@@ -327,3 +327,23 @@ export type CreateDepartmentInput = {
 };
 
 export type UpdateDepartmentInput = Partial<Pick<Department, "name" | "owner" | "ownerEmail">>;
+
+export interface Comment {
+  commentKey: string;
+  entityType: "objective" | "kr";
+  entityKey: string;
+  authorEmail: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+export type CreateCommentInput = {
+  entityType: string;
+  entityKey: string;
+  authorEmail: string;
+  authorName: string;
+  body: string;
+  entityTitle?: string;
+  mentionedEmails?: string[];
+};

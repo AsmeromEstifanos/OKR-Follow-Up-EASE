@@ -1,5 +1,6 @@
 "use client";
 
+import ChatIconButton from "@/app/chat-icon-button";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKrCard from "@/app/dashboard-ease-kr-card";
 import DashboardKrControls from "@/app/dashboard-kr-controls";
@@ -335,6 +336,7 @@ export default function DashboardEaseObjectiveCard({
           <div className="ease-progress-ring ease-progress-ring-objective" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
             <span>{Math.round(progressValue)}%</span>
           </div>
+          <ChatIconButton entityType="objective" entityKey={objective.objectiveKey} entityLabel={objective.title} />
         </div>
       </div>
 

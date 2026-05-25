@@ -46,8 +46,12 @@ import {
 import {
   appendActivityLogEntry,
   appendAuthLogEntry,
+  appendComment,
   ensureSharePointStore,
   getSharePointStorageStatus,
+  listCommentCounts,
+  listComments,
+  removeComment,
   setRoleAssignment,
   deleteRoleAssignment,
   listRoleAssignments,
@@ -63,7 +67,9 @@ import type {
   AuthLogEntry,
   BoardCardColors,
   CheckIn,
+  Comment,
   CreateCheckInInput,
+  CreateCommentInput,
   CreateDepartmentInput,
   CreateKeyResultInput,
   CreateKpiInput,
@@ -664,4 +670,32 @@ export async function logUserActivity(input: {
     ...input,
     userEmail: normalized
   });
+}
+
+export async function getComments(entityType: string, entityKey: string): Promise<Comment[]> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return [];
+  return listComments(entityType, entityKey);
+}
+
+export async function getCommentCounts(): Promise<
+  Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }>
+> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return {};
+  return listCommentCounts();
+}
+
+export async function createComment(input: CreateCommentInput): Promise<Comment | null> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) {
+    throw new Error("SharePoint storage is not enabled.");
+  }
+  return appendComment(input);
+}
+
+export async function deleteComment(commentKey: string): Promise<boolean> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return false;
+  return removeComment(commentKey);
 }
