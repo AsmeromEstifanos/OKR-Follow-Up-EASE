@@ -675,6 +675,7 @@ async function ensureAtomicTargets(config: SharePointStorageConfig): Promise<Ato
   const listIds = {} as Record<AtomicListName, string>;
 
   for (const listName of Object.keys(LIST_DEFS) as AtomicListName[]) {
+    if (listName === "comments") continue;
     listIds[listName] = await ensureList(config, siteId, buildListName(config, listName), LIST_DEFS[listName]);
   }
 
@@ -2287,41 +2288,51 @@ export async function appendActivityLogEntry(input: {
   };
 }
 
+async function ensureCommentListId(config: SharePointStorageConfig, siteId: string): Promise<string> {
+  const listName = buildListName(config, "comments");
+  return ensureList(config, siteId, listName, LIST_DEFS.comments);
+}
+
 export async function listComments(entityType: string, entityKey: string): Promise<Comment[]> {
   const config = getStorageConfig();
   if (!config.enabled) return [];
 
-  const { siteId, listIds } = await ensureAtomicTargets(config);
-  const filter = `fields/EntityType eq '${entityType.replace(/'/g, "''")}' and fields/EntityKey eq '${entityKey.replace(/'/g, "''")}'`;
-  let items: GraphListItem[];
-
   try {
-    items = await listItems(config, siteId, listIds.comments, ["CommentKey", "EntityType", "EntityKey", "AuthorEmail", "AuthorName", "Body", "CreatedAt"], { filter });
-  } catch {
-    items = await listItems(config, siteId, listIds.comments, ["CommentKey", "EntityType", "EntityKey", "AuthorEmail", "AuthorName", "Body", "CreatedAt"]);
-    items = items.filter(
-      (item) =>
-        asString(item.fields?.EntityType).trim() === entityType &&
-        asString(item.fields?.EntityKey).trim() === entityKey
-    );
-  }
+    const siteId = await resolveSiteId(config);
+    const listId = await ensureCommentListId(config, siteId);
+    const filter = `fields/EntityType eq '${entityType.replace(/'/g, "''")}' and fields/EntityKey eq '${entityKey.replace(/'/g, "''")}'`;
+    let items: GraphListItem[];
 
-  return items
-    .map((item) => {
-      const commentKey = asString(item.fields?.CommentKey).trim();
-      if (!commentKey) return null;
-      return {
-        commentKey,
-        entityType: asString(item.fields?.EntityType) as Comment["entityType"],
-        entityKey: asString(item.fields?.EntityKey),
-        authorEmail: asString(item.fields?.AuthorEmail),
-        authorName: asString(item.fields?.AuthorName),
-        body: asString(item.fields?.Body),
-        createdAt: asString(item.fields?.CreatedAt)
-      } as Comment;
-    })
-    .filter((c): c is Comment => Boolean(c))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    try {
+      items = await listItems(config, siteId, listId, ["CommentKey", "EntityType", "EntityKey", "AuthorEmail", "AuthorName", "Body", "CreatedAt"], { filter });
+    } catch {
+      items = await listItems(config, siteId, listId, ["CommentKey", "EntityType", "EntityKey", "AuthorEmail", "AuthorName", "Body", "CreatedAt"]);
+      items = items.filter(
+        (item) =>
+          asString(item.fields?.EntityType).trim() === entityType &&
+          asString(item.fields?.EntityKey).trim() === entityKey
+      );
+    }
+
+    return items
+      .map((item) => {
+        const commentKey = asString(item.fields?.CommentKey).trim();
+        if (!commentKey) return null;
+        return {
+          commentKey,
+          entityType: asString(item.fields?.EntityType) as Comment["entityType"],
+          entityKey: asString(item.fields?.EntityKey),
+          authorEmail: asString(item.fields?.AuthorEmail),
+          authorName: asString(item.fields?.AuthorName),
+          body: asString(item.fields?.Body),
+          createdAt: asString(item.fields?.CreatedAt)
+        } as Comment;
+      })
+      .filter((c): c is Comment => Boolean(c))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  } catch {
+    return [];
+  }
 }
 
 export async function listCommentCounts(): Promise<
@@ -2330,30 +2341,35 @@ export async function listCommentCounts(): Promise<
   const config = getStorageConfig();
   if (!config.enabled) return {};
 
-  const { siteId, listIds } = await ensureAtomicTargets(config);
-  const items = await listItems(config, siteId, listIds.comments, ["EntityType", "EntityKey", "AuthorName", "Body", "CreatedAt"]);
+  try {
+    const siteId = await resolveSiteId(config);
+    const listId = await ensureCommentListId(config, siteId);
+    const items = await listItems(config, siteId, listId, ["EntityType", "EntityKey", "AuthorName", "Body", "CreatedAt"]);
 
-  const counts: Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }> = {};
-  for (const item of items) {
-    const entityType = asString(item.fields?.EntityType).trim();
-    const entityKey = asString(item.fields?.EntityKey).trim();
-    if (!entityType || !entityKey) continue;
-    const id = `${entityType}::${entityKey}`;
-    const createdAt = asString(item.fields?.CreatedAt);
-    const body = asString(item.fields?.Body);
-    const author = asString(item.fields?.AuthorName);
-    if (!counts[id]) {
-      counts[id] = { count: 0, latestAt: "", latestBody: "", latestAuthor: "", timestamps: [] };
+    const counts: Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }> = {};
+    for (const item of items) {
+      const entityType = asString(item.fields?.EntityType).trim();
+      const entityKey = asString(item.fields?.EntityKey).trim();
+      if (!entityType || !entityKey) continue;
+      const id = `${entityType}::${entityKey}`;
+      const createdAt = asString(item.fields?.CreatedAt);
+      const body = asString(item.fields?.Body);
+      const author = asString(item.fields?.AuthorName);
+      if (!counts[id]) {
+        counts[id] = { count: 0, latestAt: "", latestBody: "", latestAuthor: "", timestamps: [] };
+      }
+      counts[id].count += 1;
+      counts[id].timestamps.push(createdAt);
+      if (!counts[id].latestAt || createdAt > counts[id].latestAt) {
+        counts[id].latestAt = createdAt;
+        counts[id].latestBody = body;
+        counts[id].latestAuthor = author;
+      }
     }
-    counts[id].count += 1;
-    counts[id].timestamps.push(createdAt);
-    if (!counts[id].latestAt || createdAt > counts[id].latestAt) {
-      counts[id].latestAt = createdAt;
-      counts[id].latestBody = body;
-      counts[id].latestAuthor = author;
-    }
+    return counts;
+  } catch {
+    return {};
   }
-  return counts;
 }
 
 export async function appendComment(input: {
@@ -2368,9 +2384,10 @@ export async function appendComment(input: {
 
   const createdAt = new Date().toISOString();
   const commentKey = `${input.entityType}::${input.entityKey}::${input.authorEmail}::${createdAt}`;
-  const { siteId, listIds } = await ensureAtomicTargets(config);
+  const siteId = await resolveSiteId(config);
+  const listId = await ensureCommentListId(config, siteId);
 
-  await createItem(config, siteId, listIds.comments, {
+  await createItem(config, siteId, listId, {
     Title: input.body.slice(0, 255),
     CommentKey: commentKey,
     EntityType: input.entityType,
@@ -2396,11 +2413,12 @@ export async function removeComment(commentKey: string): Promise<boolean> {
   const config = getStorageConfig();
   if (!config.enabled) return false;
 
-  const { siteId, listIds } = await ensureAtomicTargets(config);
-  const items = await listItems(config, siteId, listIds.comments, ["CommentKey"]);
+  const siteId = await resolveSiteId(config);
+  const listId = await ensureCommentListId(config, siteId);
+  const items = await listItems(config, siteId, listId, ["CommentKey"]);
   const match = items.find((item) => asString(item.fields?.CommentKey).trim() === commentKey);
 
   if (!match) return false;
-  await deleteItem(config, siteId, listIds.comments, match.id);
+  await deleteItem(config, siteId, listId, match.id);
   return true;
 }
