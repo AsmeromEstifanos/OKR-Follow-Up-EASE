@@ -4,7 +4,7 @@ import LoaderImage from "@/app/loader-image";
 import { apiPath } from "@/lib/base-path";
 import { useMsal } from "@azure/msal-react";
 import { useState } from "react";
-import { ensureActiveAccount, initializeMsal, loginRequest, msalConfigError } from "@/lib/auth/msal-client";
+import { clearAllMsalCache, ensureActiveAccount, initializeMsal, loginRequest, msalConfigError } from "@/lib/auth/msal-client";
 
 type Props = {
   compact?: boolean;
@@ -84,6 +84,7 @@ export default function AuthButtons({ compact = false, onAuthChanged }: Props): 
 
     try {
       await initializeMsal();
+      clearAllMsalCache();
       await instance.logoutPopup();
       onAuthChanged?.();
     } catch (logoutError) {

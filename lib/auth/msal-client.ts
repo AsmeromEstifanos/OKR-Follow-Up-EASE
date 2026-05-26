@@ -106,6 +106,21 @@ export const loginRequest: PopupRequest = {
 
 export const sharePointProbeScopes = ["Sites.Read.All"];
 
+/**
+ * Purge all MSAL localStorage entries for every app on this origin.
+ * Both the SVH app (/okr) and Ventures app (/ease-okr) share the same
+ * localStorage, so clearing all msal.* keys signs out of both at once.
+ */
+export function clearAllMsalCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith("msal.") || k.startsWith("msal-"));
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // localStorage access denied (private browsing edge cases) — ignore.
+  }
+}
+
 let silentSsoAttempted = false;
 
 /**

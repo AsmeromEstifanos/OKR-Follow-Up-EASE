@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.4] — 2026-05-26
+
+### Fixed
+- Signing out of either app now clears the MSAL token cache for both apps (SVH and Ventures share the same origin, so both sessions are wiped together)
+
 ## [0.2.3] — 2026-05-26
 
 ### Fixed
