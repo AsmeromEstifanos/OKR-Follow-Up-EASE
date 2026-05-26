@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.6] — 2026-05-26
+
+### Fixed
+- Revert NEXT_PUBLIC_AZURE_CLIENT_ID back to server app and restore login scopes in workflow — the GitHub Secret was not updated so the client ID change caused a 400 token error in production
+
 ## [0.2.5] — 2026-05-26
 
 ### Changed
