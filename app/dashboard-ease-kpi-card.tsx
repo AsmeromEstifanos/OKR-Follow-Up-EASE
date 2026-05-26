@@ -341,97 +341,49 @@ export default function DashboardEaseKpiCard({
     router.refresh();
   };
 
+  const metaLine = [
+    `Weight: ${displayWeight}`,
+    kpi.targetValue !== 0 ? `Target: ${readMetricValue(kpi.targetValue)}` : null,
+    `Current: ${readMetricValue(kpi.currentValue)}`
+  ].filter(Boolean).join(" | ");
+
   return (
     <article className="ease-kpi-card">
-      <div className="ease-kr-layout">
-        {/* Left: all content */}
-        <div className="ease-kr-content">
-          {/* Clickable header: badge + title */}
-          <div
-            className={!isEditing ? "ease-card-head-clickable" : undefined}
-            onClick={!isEditing ? () => setIsBodyOpen((v) => !v) : undefined}
-            role={!isEditing ? "button" : undefined}
-            tabIndex={!isEditing ? 0 : undefined}
-            onKeyDown={!isEditing ? (e) => { if (e.key === "Enter" || e.key === " ") setIsBodyOpen((v) => !v); } : undefined}
-            aria-expanded={!isEditing ? showBody : undefined}
+      {/* Flat milestone-style row */}
+      <div className="ease-kpi-row">
+        {/* Left: title + meta */}
+        <div className="ease-kpi-row-left">
+          <button
+            type="button"
+            className="ease-kpi-title-btn"
+            onClick={openDetails}
           >
-            <div className="ease-code-badge">{codeValue}</div>
-            {isEditing ? (
-              <textarea
-                className="objective-row-input ease-title-textarea"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="KPI"
-                autoFocus
-                disabled={isSaving}
-              />
-            ) : (
-              <div className="ease-kr-title-row">
-                <button
-                  type="button"
-                  className="ease-title-btn"
-                  onClick={(e) => { e.stopPropagation(); openDetails(); }}
-                >
-                  <h5><HighlightText text={kpi.title} /></h5>
-                </button>
-                {hasDetails ? <span className="ease-has-details-dot" aria-hidden="true" /> : null}
-              </div>
-            )}
-          </div>
-
-          {showBody && (
-            <>
-              {!isEditing ? (
-                <div className="ease-kpi-meta">
-                  <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"}</span>
-                  <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
-                  <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
-                  <span className="ease-chip ease-chip-neutral">{getQuarterLabel(kpi.dueDate)}</span>
-                </div>
-              ) : null}
-              <div className="ease-progress-bar">
-                <span style={{ width: `${progressValue}%` }} />
-              </div>
-              {isEditing ? (
-                <div className="ease-edit-grid">
-                  <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
-                  <OwnerInput id={`ease-kpi-owner-${kpi.kpiKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
-                  <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
-                  <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                  <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
-                  <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                  <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                  <div className="field ease-edit-span"><label>Blockers</label><textarea value={blockers} onChange={(event) => setBlockers(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field ease-edit-span"><label>Comment</label><textarea value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field ease-edit-span"><label>Notes</label><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSaving} /></div>
-                </div>
-              ) : (
-                <div className="ease-footer-line">
-                  <span>Progress: {readMetricValue(kpi.currentValue)} / {readMetricValue(kpi.targetValue)}</span>
-                  <span>Weight: {readMetricValue(displayWeight)}</span>
-                  <span>Due Date: {formatDate(kpi.dueDate)}</span>
-                  <span>Last Updated: {formatDate(latestUpdatedAt ?? kpi.lastCheckinAt)}</span>
-                </div>
-              )}
-            </>
-          )}
+            <strong><HighlightText text={kpi.title} /></strong>
+          </button>
+          <div className="ease-kpi-row-meta">{metaLine}</div>
         </div>
 
-        {/* Right sidebar: status chip, progress ring, chevron */}
-        <div className="ease-kr-sidebar">
-          <span className={statusChipClass(isEditing ? status : kpi.status)}>
-            {formatStatus(isEditing ? status : kpi.status)}
-          </span>
-          <div className="ease-progress-ring ease-progress-ring-kpi" style={{ "--progress": `${progressValue}%` } as React.CSSProperties}>
-            <span>{Math.round(progressValue)}%</span>
+        {/* Right: progress bar + % + edit pencil */}
+        <div className="ease-kpi-row-right">
+          <div className="ease-kpi-bar-wrap">
+            <div className="ease-kpi-bar-track">
+              <div className="ease-kpi-bar-fill" style={{ width: `${progressValue}%` }} />
+            </div>
+            <span className="ease-kpi-bar-pct">{Math.round(progressValue)}%</span>
           </div>
-          <button type="button" className="card-chevron-btn" onClick={() => setIsBodyOpen((v) => !v)} aria-expanded={showBody} aria-label={showBody ? "Collapse" : "Expand"}>
-            <ChevronIcon open={showBody} />
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              className="ease-kpi-edit-btn"
+              onClick={openDetails}
+              aria-label="Edit KPI"
+              disabled={isSaving}
+            >
+              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10.5 1.5l3 3L4 14H1v-3L10.5 1.5z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

@@ -1767,19 +1767,113 @@ mark.search-highlight {
   margin-top: 1.1rem;
 }
 
-.ease-kr-card .ease-progress-bar,
-.ease-kpi-card .ease-progress-bar {
+.ease-kr-card .ease-progress-bar {
   margin-top: 0.95rem;
 }
 
-.ease-kr-card .ease-footer-line,
-.ease-kpi-card .ease-footer-line {
+.ease-kr-card .ease-footer-line {
   margin-top: 0.75rem;
 }
 
-.ease-kr-card .ease-card-actions,
-.ease-kpi-card .ease-card-actions {
+.ease-kr-card .ease-card-actions {
   margin-top: 1.15rem;
+}
+
+/* ── KPI card: flat milestone-style row ───────────────────────── */
+.ease-kpi-card {
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+}
+
+.ease-kpi-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ease-kpi-row-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ease-kpi-title-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.ease-kpi-title-btn:hover {
+  color: var(--accent);
+}
+
+.ease-kpi-row-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ease-kpi-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.ease-kpi-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ease-kpi-bar-track {
+  width: 120px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d6d8db;
+  overflow: hidden;
+}
+
+.ease-kpi-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent, #0f766e);
+  transition: width 0.3s ease;
+}
+
+.ease-kpi-bar-pct {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.ease-kpi-edit-btn {
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.ease-kpi-edit-btn:hover {
+  color: var(--accent);
+  background: #e6f4f2;
 }
 
 .ease-progress-bar {
@@ -2014,10 +2108,18 @@ mark.search-highlight {
 
 @media (max-width: 900px) {
   .ease-objective-card,
-  .ease-kr-card,
-  .ease-kpi-card {
+  .ease-kr-card {
     padding: 0.8rem 0.85rem;
     border-radius: 16px;
+  }
+
+  .ease-kpi-card {
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+  }
+
+  .ease-kpi-bar-track {
+    width: 80px;
   }
 
   .ease-objective-top,

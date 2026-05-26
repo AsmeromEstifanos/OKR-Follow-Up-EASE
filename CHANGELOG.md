@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1] — 2026-05-26
+
+### Changed
+- KPI cards redesigned to flat milestone-style rows: bold title, muted metadata line (Weight | Target | Current), thin horizontal progress bar with %, pencil edit icon — replacing the old expand/collapse layout with circular progress ring
+
+---
+
 ## [0.3.0] — 2026-05-26
 
 ### Added
