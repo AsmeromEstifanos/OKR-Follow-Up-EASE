@@ -107,11 +107,17 @@ function gatherRuleContent(
 
 function collectOwnerNames(allObjectives: Objective[], allKrs: KeyResult[]): Map<string, string> {
   const names = new Map<string, string>();
-  const remember = (emails: string[], name?: string | null): void => {
-    const n = (name ?? "").trim();
-    for (const e of emails) {
-      if (e && n && !names.get(e)) names.set(e, n);
-    }
+  const remember = (emails: string[], rawName?: string | null): void => {
+    // Split the display-name field the same way we split emails so each
+    // individual email gets its own name (not the whole "A; B" string).
+    const nameParts = (rawName ?? "").split(";").map((n) => n.trim()).filter(Boolean);
+    emails.forEach((e, i) => {
+      if (!e || names.has(e)) return;
+      // Use the positionally matched name part when counts align, otherwise
+      // fall back to the first part (single-owner record) or leave blank.
+      const n = nameParts.length === emails.length ? nameParts[i] : (nameParts.length === 1 ? nameParts[0] : "");
+      if (n) names.set(e, n);
+    });
   };
   for (const obj of allObjectives) remember(splitEmails(obj.ownerEmail), obj.owner);
   for (const kr of allKrs) remember(splitEmails(kr.ownerEmail), kr.owner);

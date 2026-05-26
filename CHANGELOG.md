@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9] — 2026-05-26
+
+### Fixed
+- Reminder recipient names: compound "A; B" display-name fields are now split positionally alongside emails so each individual gets their own name in the preview list (no more "Biruk Gossaye; Ep..." entries)
+
+---
+
 ## [0.3.8] — 2026-05-26
 
 ### Fixed
