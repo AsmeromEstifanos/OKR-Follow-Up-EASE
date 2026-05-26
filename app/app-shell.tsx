@@ -385,8 +385,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.2"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.2"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.3"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.3"}
             </div>
           ) : null}
         </div>

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.3] — 2026-05-26
+
+### Fixed
+- Activity log now records field-change diffs for objective, KR, and KPI updates (before/after values shown in the feed)
+- Added `buildActivityDiff` to EASE's `user-activity-log.ts` (was missing; SVH had it)
+- `logSuccessfulRequestActivity` now reads `x-activity-details` and `x-activity-label` response headers
+- Objective, KR, and KPI PATCH routes now attach diff JSON and entity label to their response headers
+
+---
+
 ## [0.3.2] — 2026-05-26
 
 ### Changed

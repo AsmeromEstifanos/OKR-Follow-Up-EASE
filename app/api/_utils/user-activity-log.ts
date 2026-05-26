@@ -67,6 +67,25 @@ function inferEntityKeyFromPath(pathname: string): string {
   return segments[2] ?? "";
 }
 
+export function buildActivityDiff(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>
+): string {
+  const changes: Array<{ field: string; from: unknown; to: unknown }> = [];
+
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  keys.forEach((key) => {
+    const from = before[key];
+    const to = after[key];
+    if (from === to) return;
+    if (from === undefined && to === undefined) return;
+    changes.push({ field: key, from: from ?? null, to: to ?? null });
+  });
+
+  if (changes.length === 0) return "";
+  return JSON.stringify({ changes });
+}
+
 export async function logSuccessfulRequestActivity(
   request: NextRequest,
   activityName: string,
@@ -85,12 +104,18 @@ export async function logSuccessfulRequestActivity(
   const entityType = inferEntityTypeFromPath(routePath);
   const entityKey = inferEntityKeyFromPath(routePath);
 
+  const detailsJson = result.headers.get("x-activity-details") ?? undefined;
+  const rawLabel = result.headers.get("x-activity-label") ?? undefined;
+  const entityLabel = rawLabel ? rawLabel.replace(/[^\x00-\x7F]/g, "") : undefined;
+
   return logUserActivity({
     userEmail,
     activityName,
     httpMethod: request.method,
     routePath,
     entityType,
-    entityKey
+    entityKey,
+    ...(entityLabel ? { entityLabel } : {}),
+    ...(detailsJson ? { detailsJson } : {})
   });
 }

@@ -1,4 +1,5 @@
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
+import { buildActivityDiff } from "@/app/api/_utils/user-activity-log";
 import { deleteKpi, getKpi, updateKpi } from "@/lib/store";
 import type { UpdateKpiInput } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
@@ -112,12 +113,19 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
     try {
       const body = await request.json();
       const patch = parseKpiPatch(body);
+      const before = await getKpi(context.params.kpiKey);
       const kpi = await updateKpi(context.params.kpiKey, patch);
       if (!kpi) {
         return NextResponse.json({ error: "KPI not found." }, { status: 404 });
       }
 
-      return NextResponse.json(kpi);
+      const detailsJson = before
+        ? buildActivityDiff(before as unknown as Record<string, unknown>, kpi as unknown as Record<string, unknown>)
+        : "";
+      const label = kpi.kpiCode ? `${kpi.kpiCode} ${kpi.title}` : kpi.title;
+      const headers: Record<string, string> = { "x-activity-label": label };
+      if (detailsJson) headers["x-activity-details"] = detailsJson;
+      return NextResponse.json(kpi, { headers });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update KPI.";
       return NextResponse.json({ error: message }, { status: 400 });
