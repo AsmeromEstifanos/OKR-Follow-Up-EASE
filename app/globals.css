@@ -385,7 +385,7 @@ a {
 
 .ln-main {
   min-height: 100vh;
-  padding: 0.8rem 0.6rem 1.2rem;
+  padding: 0 0.6rem 1.2rem;
   transition: margin-left 0.25s ease;
 }
 
@@ -399,7 +399,6 @@ a {
 
 .ln-main-mobile {
   margin-left: 0;
-  padding-top: 0.2rem;
 }
 
 .auth-gate {
@@ -760,6 +759,10 @@ a {
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
   animation: rise 0.35s ease-out;
+}
+
+html {
+  scroll-padding-top: 52px;
 }
 
 .layout:has(.dashboard-page) {
@@ -3491,6 +3494,7 @@ textarea {
   background: #ffffff;
   border-bottom: 1px solid #d8e0ea;
   box-shadow: 0 1px 4px #0000000d;
+  margin: 0 -0.6rem;
 }
 
 .app-tabs {

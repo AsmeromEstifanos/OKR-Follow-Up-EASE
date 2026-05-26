@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7] — 2026-05-26
+
+### Fixed
+- Topbar now stretches edge-to-edge in the main column (negative margin compensates for ln-main side padding)
+- Removed top padding from ln-main so topbar is flush at top; content padding preserved via layout div
+- Added scroll-padding-top so sticky topbar doesn't obscure jump targets
+
 ## [0.2.6] — 2026-05-26
 
 ### Fixed
