@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.5] — 2026-05-26
+
+### Added
+- Help page (`/help`): searchable user guide with category filters and sticky table of contents
+- 19 topics covering getting started, OKR board, KPIs, discussions, mentions, reminders, AI assistant, activity log, config, roles, ventures structure, and FAQ — tailored for Ventures
+- Help nav link (question-mark icon) visible to all signed-in users
+- All `help-*` CSS classes added to globals.css
+
+---
+
 ## [0.3.4] — 2026-05-26
 
 ### Fixed

@@ -87,6 +87,14 @@ function ActivityIcon(): JSX.Element {
   );
 }
 
+function HelpIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" fill="currentColor" />
+    </svg>
+  );
+}
+
 // URL of the companion app (the classic OKR / SVH app). Per-deployment env.
 const COMPANION_APP_URL = process.env.NEXT_PUBLIC_COMPANION_APP_URL ?? "";
 
@@ -175,6 +183,7 @@ export default function AppShell({ children }: Props): JSX.Element {
   const isDashboardRoute = normalizedPathname.startsWith("/dashboard");
   const isConfigRoute = normalizedPathname.startsWith("/config");
   const isActivityRoute = normalizedPathname.startsWith("/activity");
+  const isHelpRoute = normalizedPathname.startsWith("/help");
   const navQuery = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     const preserved = new URLSearchParams();
@@ -314,7 +323,7 @@ export default function AppShell({ children }: Props): JSX.Element {
           </Link>
           <Link
             href={boardHref}
-            className={`ln-nav-item ${!isDashboardRoute && !isConfigRoute && !isActivityRoute ? "ln-nav-item-active" : ""} ${
+            className={`ln-nav-item ${!isDashboardRoute && !isConfigRoute && !isActivityRoute && !isHelpRoute ? "ln-nav-item-active" : ""} ${
               isNavCollapsed ? "ln-nav-item-collapsed" : ""
             }`}
             onClick={() => {
@@ -364,6 +373,22 @@ export default function AppShell({ children }: Props): JSX.Element {
               <span className="ln-nav-label">{isNavCollapsed ? "" : "Config"}</span>
             </Link>
           ) : null}
+          <Link
+            href="/help"
+            className={`ln-nav-item ${isHelpRoute ? "ln-nav-item-active" : ""} ${
+              isNavCollapsed ? "ln-nav-item-collapsed" : ""
+            }`}
+            onClick={() => {
+              if (isMobile) {
+                setIsMobileMenuOpen(false);
+              }
+            }}
+          >
+            <span className="ln-nav-icon" aria-hidden="true">
+              <HelpIcon />
+            </span>
+            <span className="ln-nav-label">{isNavCollapsed ? "" : "Help"}</span>
+          </Link>
         </nav>
 
         <div className="ln-sidebar-footer">
@@ -385,8 +410,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.4"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.4"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.5"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.5"}
             </div>
           ) : null}
         </div>
