@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.3] — 2026-05-26
+
+### Fixed
+- Add gap between notification bell and "OKR Follow-Up" title in sidebar header
+
 ## [0.2.2] — 2026-05-26
 
 ### Fixed
