@@ -82,11 +82,9 @@ function ConfigIcon(): JSX.Element {
 // URL of the companion app (the classic OKR / SVH app). Per-deployment env.
 const COMPANION_APP_URL = process.env.NEXT_PUBLIC_COMPANION_APP_URL ?? "";
 
-// Top app-switch tabs. This is the EASE ("Ventures") app, so Ventures is active
-// and the "SVH" tab links to the companion (classic) app.
-function TopAppTabs(): JSX.Element {
+function AppTabsNav(): JSX.Element {
   return (
-    <nav className="app-tabs" aria-label="Application">
+    <>
       {COMPANION_APP_URL ? (
         <a className="app-tab" href={COMPANION_APP_URL}>
           SVH
@@ -99,7 +97,7 @@ function TopAppTabs(): JSX.Element {
       <span className="app-tab app-tab-active" aria-current="page">
         Ventures
       </span>
-    </nav>
+    </>
   );
 }
 
@@ -272,7 +270,6 @@ export default function AppShell({ children }: Props): JSX.Element {
       >
         <div className="ln-sidebar-header">
           <div className="ln-brand-wrap">
-            <NotificationBell userEmail={currentUserEmail ?? ""} />
             {!isNavCollapsed ? (
               <span className="ln-brand-title">OKR Follow-Up</span>
             ) : null}
@@ -361,8 +358,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.4"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.4"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.5"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.5"}
             </div>
           ) : null}
         </div>
@@ -383,7 +380,14 @@ export default function AppShell({ children }: Props): JSX.Element {
       ) : null}
 
       <main className={mainClassName}>
-        <TopAppTabs />
+        <div className="app-topbar">
+          <nav className="app-tabs" aria-label="Application">
+            <AppTabsNav />
+          </nav>
+          <div className="app-topbar-right">
+            <NotificationBell userEmail={currentUserEmail ?? ""} />
+          </div>
+        </div>
         <AuthGate>
           <div className="layout">{children}</div>
         </AuthGate>

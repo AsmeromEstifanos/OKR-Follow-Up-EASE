@@ -76,7 +76,7 @@ function formatRelativeTime(iso: string): string {
 export default function NotificationBell({ userEmail }: Props): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelContentRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
@@ -149,7 +149,7 @@ export default function NotificationBell({ userEmail }: Props): JSX.Element {
   function handleBellClick(): void {
     if (!isOpen && bellRef.current) {
       const rect = bellRef.current.getBoundingClientRect();
-      setPanelPos({ top: rect.bottom + 8, left: rect.left });
+      setPanelPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
       invalidateCommentCounts();
       void loadThreads();
     }
@@ -188,7 +188,7 @@ export default function NotificationBell({ userEmail }: Props): JSX.Element {
             className="notif-panel"
             role="dialog"
             aria-label="Chat notifications"
-            style={{ position: "fixed", top: panelPos.top, left: panelPos.left }}
+            style={{ position: "fixed", top: panelPos.top, right: panelPos.right }}
           >
             <div className="notif-panel-header">Chat notifications</div>
 

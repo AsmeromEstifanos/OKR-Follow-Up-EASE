@@ -3482,13 +3482,31 @@ textarea {
 }
 
 /* --- Top app-switch tabs (SVH / Ventures) --- */
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  background: #ffffff;
+  border-bottom: 1px solid #d8e0ea;
+  box-shadow: 0 1px 4px #0000000d;
+}
+
 .app-tabs {
   display: flex;
   align-items: stretch;
   gap: 4px;
   padding: 0 8px;
-  border-bottom: 1px solid #d8e0ea;
-  background: #ffffff;
+  flex: 1;
+  background: transparent;
+  border-bottom: none;
+}
+
+.app-topbar-right {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
 }
 .app-tab {
   display: inline-flex;
@@ -4612,9 +4630,9 @@ textarea {
 }
 
 .notif-bell-btn {
-  border: 1px solid #496788;
-  background: #f1f6ff0f;
-  color: #d6e3f4;
+  border: 1px solid #d0dce8;
+  background: transparent;
+  color: #5b6b7c;
   border-radius: 8px;
   width: 2rem;
   height: 2rem;
@@ -4628,9 +4646,9 @@ textarea {
 }
 
 .notif-bell-btn:hover {
-  background: #ffffff1a;
-  color: #fff;
-  border-color: #6a9cc4;
+  background: #f1f6ff80;
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .notif-badge {

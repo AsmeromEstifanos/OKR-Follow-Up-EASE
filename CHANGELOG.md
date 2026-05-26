@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5] — 2026-05-26
+
+### Changed
+- Move notification bell from sidebar to top-right of the sticky topbar (next to SVH/Ventures tabs)
+- Topbar now sticks to the top when scrolling
+- Bell popup opens to the left so it stays within the viewport
+
 ## [0.2.4] — 2026-05-26
 
 ### Fixed
