@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.9] — 2026-05-26
+
+### Fixed
+- Config > Field Options OptionEditor now uses compact `×` remove buttons (`config-option-row` / `config-remove-btn`) matching SVH style
+- Added `list-style: none` to `config-option-list` so options don't show browser bullet points
+- Added subtitle line to Config page header ("Manage roles, dropdown options, RAG ranges, ventures, departments, and notifications")
+
+---
+
 ## [0.2.8] — 2026-05-26
 
 ### Added

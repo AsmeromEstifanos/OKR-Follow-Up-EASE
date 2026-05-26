@@ -117,24 +117,37 @@ function OptionEditor({
         <input
           value={addValue}
           onChange={(event) => onAddValueChange(event.target.value)}
-          placeholder={`Add ${title} option`}
+          placeholder="New option"
           disabled={disabled}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onAdd();
+            }
+          }}
         />
         <button type="button" className="btn btn-add" onClick={onAdd} disabled={disabled}>
           Add
         </button>
       </div>
-      <div className="config-option-list">
+      <ul className="config-option-list">
         {options.map((value) => (
-          <div key={value} className="config-inline-row">
+          <li key={value} className="config-option-row">
             <span>{value}</span>
-            <button type="button" className="btn btn-danger" onClick={() => onRemove(value)} disabled={disabled}>
-              Remove
+            <button
+              type="button"
+              className="config-remove-btn"
+              onClick={() => onRemove(value)}
+              disabled={disabled}
+              aria-label={`Remove ${value}`}
+              title="Remove"
+            >
+              ×
             </button>
-          </div>
+          </li>
         ))}
-        {options.length === 0 ? <p className="meta">No options configured.</p> : null}
-      </div>
+        {options.length === 0 ? <li className="meta">No options configured.</li> : null}
+      </ul>
     </article>
   );
 }
@@ -569,6 +582,7 @@ export default function ConfigPage(): JSX.Element {
     <div className="config-page">
       <div className="config-page-header">
         <h1 className="page-title">Configuration</h1>
+        <p className="subtitle">Manage roles, dropdown options, RAG ranges, ventures, departments, and notifications.</p>
         {message ? <p className="message">{message}</p> : null}
         {error ? <p className="message danger">{error}</p> : null}
         {state === "loading" ? <p className="meta">Refreshing...</p> : null}
