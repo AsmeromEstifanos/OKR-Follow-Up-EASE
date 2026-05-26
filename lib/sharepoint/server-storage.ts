@@ -2472,3 +2472,73 @@ export async function removeComment(commentKey: string): Promise<boolean> {
   await deleteItem(config, siteId, listId, match.id);
   return true;
 }
+
+export type ActivityLogQuery = {
+  entityType?: string;
+  userEmail?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  cursor?: string;
+};
+
+export type ActivityLogPage = {
+  entries: ActivityLogEntry[];
+  nextCursor: string | null;
+};
+
+export async function queryActivityLog(query: ActivityLogQuery): Promise<ActivityLogPage> {
+  const config = getStorageConfig();
+  if (!config.enabled) {
+    return { entries: [], nextCursor: null };
+  }
+
+  const limit = Math.min(Math.max(1, query.limit ?? 50), 500);
+  const { siteId, listIds } = await ensureAtomicTargets(config);
+  const columns = [
+    "ActivityLogKey", "UserEmail", "ActivityName", "HttpMethod",
+    "RoutePath", "OccurredAt", "EntityType", "EntityKey", "EntityLabel", "DetailsJson"
+  ];
+
+  const items = await listItems(config, siteId, listIds.activityLogs, columns);
+
+  let entries = items.map((item) => ({
+    activityLogKey: asString(item.fields?.ActivityLogKey),
+    userEmail: asString(item.fields?.UserEmail),
+    activityName: asString(item.fields?.ActivityName),
+    httpMethod: asString(item.fields?.HttpMethod),
+    routePath: asString(item.fields?.RoutePath),
+    occurredAt: asString(item.fields?.OccurredAt),
+    entityType: asString(item.fields?.EntityType) || undefined,
+    entityKey: asString(item.fields?.EntityKey) || undefined,
+    entityLabel: asString(item.fields?.EntityLabel) || undefined,
+    detailsJson: asString(item.fields?.DetailsJson) || undefined
+  }));
+
+  if (query.entityType) {
+    const et = query.entityType.toLowerCase();
+    entries = entries.filter((e) => (e.entityType ?? "").toLowerCase() === et);
+  }
+  if (query.userEmail) {
+    const ue = query.userEmail.toLowerCase();
+    entries = entries.filter((e) => e.userEmail.toLowerCase() === ue);
+  }
+  if (query.from) {
+    entries = entries.filter((e) => e.occurredAt >= query.from!);
+  }
+  if (query.to) {
+    entries = entries.filter((e) => e.occurredAt <= query.to!);
+  }
+
+  entries.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+
+  if (query.cursor) {
+    const idx = entries.findIndex((e) => e.occurredAt < query.cursor!);
+    entries = idx >= 0 ? entries.slice(idx) : [];
+  }
+
+  const page = entries.slice(0, limit);
+  const nextCursor = entries.length > limit ? page[page.length - 1].occurredAt : null;
+
+  return { entries: page, nextCursor };
+}

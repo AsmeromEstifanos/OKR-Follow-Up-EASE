@@ -79,6 +79,14 @@ function ConfigIcon(): JSX.Element {
   );
 }
 
+function ActivityIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M3 3h2v18H3V3zm4 9h2v9H7v-9zm4-5h2v14h-2V7zm4 3h2v11h-2V10zm4-6h2v17h-2V4z" fill="currentColor" />
+    </svg>
+  );
+}
+
 // URL of the companion app (the classic OKR / SVH app). Per-deployment env.
 const COMPANION_APP_URL = process.env.NEXT_PUBLIC_COMPANION_APP_URL ?? "";
 
@@ -166,6 +174,7 @@ export default function AppShell({ children }: Props): JSX.Element {
   const normalizedPathname = useMemo(() => stripBasePath(pathname), [pathname]);
   const isDashboardRoute = normalizedPathname.startsWith("/dashboard");
   const isConfigRoute = normalizedPathname.startsWith("/config");
+  const isActivityRoute = normalizedPathname.startsWith("/activity");
   const navQuery = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     const preserved = new URLSearchParams();
@@ -305,7 +314,7 @@ export default function AppShell({ children }: Props): JSX.Element {
           </Link>
           <Link
             href={boardHref}
-            className={`ln-nav-item ${!isDashboardRoute && !isConfigRoute ? "ln-nav-item-active" : ""} ${
+            className={`ln-nav-item ${!isDashboardRoute && !isConfigRoute && !isActivityRoute ? "ln-nav-item-active" : ""} ${
               isNavCollapsed ? "ln-nav-item-collapsed" : ""
             }`}
             onClick={() => {
@@ -319,6 +328,24 @@ export default function AppShell({ children }: Props): JSX.Element {
             </span>
             <span className="ln-nav-label">{isNavCollapsed ? "" : "OKR Board"}</span>
           </Link>
+          {isAdminUser ? (
+            <Link
+              href="/activity"
+              className={`ln-nav-item ${isActivityRoute ? "ln-nav-item-active" : ""} ${
+                isNavCollapsed ? "ln-nav-item-collapsed" : ""
+              }`}
+              onClick={() => {
+                if (isMobile) {
+                  setIsMobileMenuOpen(false);
+                }
+              }}
+            >
+              <span className="ln-nav-icon" aria-hidden="true">
+                <ActivityIcon />
+              </span>
+              <span className="ln-nav-label">{isNavCollapsed ? "" : "Activity"}</span>
+            </Link>
+          ) : null}
           {isAdminUser ? (
             <Link
               href={configHref}
@@ -358,8 +385,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.9"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.9"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.0"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.0"}
             </div>
           ) : null}
         </div>

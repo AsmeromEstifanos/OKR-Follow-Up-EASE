@@ -56,6 +56,9 @@ import {
   setRoleAssignment,
   deleteRoleAssignment,
   listRoleAssignments,
+  queryActivityLog,
+  type ActivityLogQuery,
+  type ActivityLogPage,
   type RoleAssignment,
   loadSharePointSnapshot,
   saveSharePointSnapshot,
@@ -711,4 +714,33 @@ export async function getActivityLogEntries(
   }
 
   return listActivityLogEntries(entityType, limit);
+}
+
+export async function getUserRole(email: string): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return null;
+
+  const assignments = await listRoleAssignments();
+  const match = assignments.find((a) => a.userEmail === normalized);
+  if (match) {
+    const role = match.role.trim();
+    const valid = ["Admin", "Manager", "Editor", "Viewer"];
+    return valid.includes(role) ? role : null;
+  }
+
+  return null;
+}
+
+export type { ActivityLogQuery, ActivityLogPage };
+
+export async function getActivityLogPage(query: ActivityLogQuery): Promise<ActivityLogPage> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) {
+    return { entries: [], nextCursor: null };
+  }
+
+  return queryActivityLog(query);
 }

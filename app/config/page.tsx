@@ -835,11 +835,21 @@ export default function ConfigPage(): JSX.Element {
                 {config.ventures.map((venture) => (
                   <article className="venture-card" key={venture.ventureKey}>
                     <div className="row-between">
-                      <div><h3>{venture.name}</h3></div>
-                      <button className="btn btn-danger" type="button" onClick={() => void removeVenture(venture.ventureKey)} disabled={isBusy}>
-                        Delete
+                      <div>
+                        <h3>{venture.name}</h3>
+                      </div>
+                      <button
+                        className="config-remove-btn"
+                        type="button"
+                        onClick={() => void removeVenture(venture.ventureKey)}
+                        disabled={isBusy}
+                        aria-label={`Delete venture ${venture.name}`}
+                        title="Delete venture"
+                      >
+                        ×
                       </button>
                     </div>
+
                     <h4>Departments</h4>
                     {venture.departments.length === 0 ? (
                       <p className="meta">No departments yet.</p>
@@ -849,17 +859,20 @@ export default function ConfigPage(): JSX.Element {
                           <li key={department.departmentKey}>
                             <span>{department.name}</span>
                             <button
-                              className="btn btn-danger"
+                              className="config-remove-btn"
                               type="button"
                               onClick={() => void removeDepartment(venture.ventureKey, department.departmentKey)}
                               disabled={isBusy}
+                              aria-label={`Delete department ${department.name}`}
+                              title="Delete department"
                             >
-                              Delete
+                              ×
                             </button>
                           </li>
                         ))}
                       </ul>
                     )}
+
                     <div className="config-grid">
                       <div className="field">
                         <label htmlFor={`department-name-${venture.ventureKey}`}>Department Name</label>

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0] — 2026-05-26
+
+### Added
+- Activity Log page (`/activity`): timeline feed grouped by day with per-entry field-change diffs, insights panel (bar chart, top users, entity breakdown), detail popup with current item fields
+- `/api/activity` route with period shortcuts, entity type and user email filters, cursor-based pagination — restricted to Manager/Admin
+- `queryActivityLog` in server-storage; `getUserRole` and `getActivityLogPage` in store
+- Activity nav link in sidebar (visible to Admins)
+
+### Changed
+- Ventures tab: venture delete and department delete buttons now use compact × style (config-remove-btn) matching SVH
+
+### Fixed
+- Added full activity CSS to globals.css (`act-*` classes, `btn-primary`, `btn-secondary`)
+
+---
+
 ## [0.2.9] — 2026-05-26
 
 ### Fixed
