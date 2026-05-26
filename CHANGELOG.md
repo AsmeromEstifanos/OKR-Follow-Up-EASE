@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] — 2026-05-26
+
+### Fixed
+- Bell icon and "OKR Follow-Up" brand title now display side-by-side in the sidebar header
+- Replaced the spinner/logo shown to signed-out users with a proper "Sign In with Microsoft" button
+
 ## [0.2.1] — 2026-05-26
 
 ### Fixed

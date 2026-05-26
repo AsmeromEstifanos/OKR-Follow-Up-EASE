@@ -271,12 +271,12 @@ export default function AppShell({ children }: Props): JSX.Element {
         }}
       >
         <div className="ln-sidebar-header">
-          {currentUserEmail ? <NotificationBell userEmail={currentUserEmail} /> : null}
-          {!isNavCollapsed ? (
-            <div className="ln-brand-wrap">
+          <div className="ln-brand-wrap">
+            <NotificationBell userEmail={currentUserEmail ?? ""} />
+            {!isNavCollapsed ? (
               <span className="ln-brand-title">OKR Follow-Up</span>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           {isMobile ? (
             <button
               type="button"
@@ -361,8 +361,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.1"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.1"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.2"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.2"}
             </div>
           ) : null}
         </div>
