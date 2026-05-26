@@ -1,4 +1,5 @@
 import { createComment, getComments } from "@/lib/store";
+import { sendMentionNotifications } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const comment = await createComment(body);
+
+    const mentionedEmails: string[] = Array.isArray(body.mentionedEmails) ? body.mentionedEmails : [];
+    if (mentionedEmails.length > 0) {
+      try {
+        await sendMentionNotifications({
+          mentionedEmails,
+          authorEmail: body.authorEmail ?? "",
+          authorName: body.authorName ?? body.authorEmail ?? "",
+          messageBody: body.body ?? "",
+          entityType: body.entityType ?? "",
+          entityKey: body.entityKey ?? "",
+          entityTitle: body.entityTitle ?? ""
+        });
+      } catch (err: unknown) {
+        console.error("[mention-notify]", err instanceof Error ? err.message : err);
+      }
+    }
+
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create comment.";
