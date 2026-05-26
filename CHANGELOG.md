@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6] — 2026-05-26
+
+### Changed
+- Sidebar nav: Config and Activity swapped — Config now appears before Activity
+
+---
+
 ## [0.3.5] — 2026-05-26
 
 ### Added

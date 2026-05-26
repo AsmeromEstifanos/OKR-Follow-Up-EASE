@@ -339,24 +339,6 @@ export default function AppShell({ children }: Props): JSX.Element {
           </Link>
           {isAdminUser ? (
             <Link
-              href="/activity"
-              className={`ln-nav-item ${isActivityRoute ? "ln-nav-item-active" : ""} ${
-                isNavCollapsed ? "ln-nav-item-collapsed" : ""
-              }`}
-              onClick={() => {
-                if (isMobile) {
-                  setIsMobileMenuOpen(false);
-                }
-              }}
-            >
-              <span className="ln-nav-icon" aria-hidden="true">
-                <ActivityIcon />
-              </span>
-              <span className="ln-nav-label">{isNavCollapsed ? "" : "Activity"}</span>
-            </Link>
-          ) : null}
-          {isAdminUser ? (
-            <Link
               href={configHref}
               className={`ln-nav-item ${isConfigRoute ? "ln-nav-item-active" : ""} ${
                 isNavCollapsed ? "ln-nav-item-collapsed" : ""
@@ -371,6 +353,24 @@ export default function AppShell({ children }: Props): JSX.Element {
                 <ConfigIcon />
               </span>
               <span className="ln-nav-label">{isNavCollapsed ? "" : "Config"}</span>
+            </Link>
+          ) : null}
+          {isAdminUser ? (
+            <Link
+              href="/activity"
+              className={`ln-nav-item ${isActivityRoute ? "ln-nav-item-active" : ""} ${
+                isNavCollapsed ? "ln-nav-item-collapsed" : ""
+              }`}
+              onClick={() => {
+                if (isMobile) {
+                  setIsMobileMenuOpen(false);
+                }
+              }}
+            >
+              <span className="ln-nav-icon" aria-hidden="true">
+                <ActivityIcon />
+              </span>
+              <span className="ln-nav-label">{isNavCollapsed ? "" : "Activity"}</span>
             </Link>
           ) : null}
           <Link
@@ -410,8 +410,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.5"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.5"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.6"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.6"}
             </div>
           ) : null}
         </div>
