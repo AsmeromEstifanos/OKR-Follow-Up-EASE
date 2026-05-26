@@ -55,7 +55,7 @@ function renderBody(text: string, knownNames: Set<string>): JSX.Element {
       const name = part.slice(2, -1);
       nodes.push(
         <span key={i} className="chat-mention">
-          @{name}
+          {name}
         </span>
       );
       return;
