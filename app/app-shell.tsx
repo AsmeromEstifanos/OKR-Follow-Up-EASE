@@ -271,6 +271,7 @@ export default function AppShell({ children }: Props): JSX.Element {
         }}
       >
         <div className="ln-sidebar-header">
+          {currentUserEmail ? <NotificationBell userEmail={currentUserEmail} /> : null}
           {!isNavCollapsed ? (
             <div className="ln-brand-wrap">
               <span className="ln-brand-title">OKR Follow-Up</span>
@@ -382,10 +383,7 @@ export default function AppShell({ children }: Props): JSX.Element {
       ) : null}
 
       <main className={mainClassName}>
-        <div className="ln-topbar">
-          <TopAppTabs />
-          {currentUserEmail && <NotificationBell userEmail={currentUserEmail} />}
-        </div>
+        <TopAppTabs />
         <AuthGate>
           <div className="layout">{children}</div>
         </AuthGate>

@@ -4550,23 +4550,15 @@ textarea {
 }
 
 /* ── Notification Bell ── */
-.ln-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-right: 0.75rem;
-}
-
 .notif-bell-wrap {
   position: relative;
   display: inline-flex;
 }
 
 .notif-bell-btn {
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--muted);
+  border: 1px solid #496788;
+  background: #f1f6ff0f;
+  color: #d6e3f4;
   border-radius: 8px;
   width: 2rem;
   height: 2rem;
@@ -4580,9 +4572,9 @@ textarea {
 }
 
 .notif-bell-btn:hover {
-  background: #e8f6f0;
-  color: var(--accent);
-  border-color: var(--accent);
+  background: #ffffff1a;
+  color: #fff;
+  border-color: #6a9cc4;
 }
 
 .notif-badge {
