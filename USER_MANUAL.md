@@ -2,535 +2,292 @@
 
 ## 1. Overview
 
-OKR Follow-Up is used to manage ventures, positions, objectives, key results, and reporting in one place.
+OKR Follow-Up (Ventures) is used to manage ventures, departments, objectives, key results, KPIs, discussions, and reporting in one place.
 
-The application has three main areas:
+The main areas are:
 
-- `Dashboard`
-- `OKR Board`
-- `Config`
-
-`Config` is visible only to admins.
+- `OKR Board` — day-to-day venture OKR work
+- `Dashboard` — cross-venture reporting
+- `Config` — setup and administration (Manager/Admin)
+- `Activity` — audit log of changes (Manager/Admin)
+- `Help` — searchable user guide (all users)
 
 ## 2. Signing In
 
-To use the app:
-
 1. Open the OKR Follow-Up site.
-2. Click `Sign In`.
-3. Sign in with your Microsoft work account.
-4. Wait for the app to load your access.
+2. Click `Sign In with Microsoft`.
+3. Use your Microsoft work account.
+4. Wait for the app to load — it connects to SharePoint in the background.
 
-The left sidebar shows:
-
-- `Dashboard`
-- `OKR Board`
-- `Config` for admins
-
-The sidebar footer shows:
-
-- Your signed-in account
-- `Sign Out`
-- SharePoint connection status
+The sidebar shows your signed-in account and SharePoint connection status at the bottom.
 
 ## 3. Roles
 
-### 3.1 Signed-In Users
+The app uses four role levels. An admin assigns roles in `Config > Roles`.
 
-Signed-in users can:
+| Role | What they can do |
+|---|---|
+| **Admin** | Everything — including Config, Activity log, and role management |
+| **Manager** | Config, Activity log, creating/editing all OKR items |
+| **Editor** | Creating and editing OKR items they own |
+| **Viewer** | Read-only access to the board and dashboard |
 
-- Open `Dashboard`
-- Open `OKR Board`
-- View ventures, positions, objectives, and key results
-
-### 3.2 Admins
-
-Admins can:
-
-- Open `Config`
-- Add, rename, and delete ventures
-- Add, rename, and delete positions
-- Add and remove admin users
-- Update dropdown values
-- Update RAG thresholds
-- Create and edit objectives
-- Create and edit key results
-
-### 3.3 Position Owners
-
-Position owners can:
-
-- Create objectives in their position
-- Create key results under objectives in their position
-- Edit objectives in their position
-- Edit key results in their position
-
-### 3.4 Objective Owners
-
-Objective owners can edit the objectives assigned to them.
-
-### 3.5 KR Owners
-
-KR owners can edit the key results assigned to them.
-
-### 3.6 Ownership Notes
-
-- Position owners are optional.
-- Objective owners are optional.
-- KR owners are optional.
-- Empty owners are displayed as `-`.
-- The same position name can exist in different ventures.
+A default role can be set for users not explicitly listed. If no default is set, users who are not listed are treated as Viewers.
 
 ## 4. Navigation
 
-### 4.1 Dashboard
+The left sidebar links to:
 
-Use `Dashboard` for reporting and roll-up views.
+- **OKR Board** — the main board
+- **Dashboard** — reporting
+- **Config** — configuration (Manager/Admin only)
+- **Activity** — change log (Manager/Admin only)
+- **Help** — this guide (all users)
 
-### 4.2 OKR Board
-
-Use `OKR Board` for day-to-day work:
-
-- switch ventures
-- add or edit positions
-- add or edit objectives
-- add or edit key results
-
-### 4.3 Config
-
-Use `Config` for setup and administration.
+The top bar shows:
+- App switcher (Ventures / SVH)
+- Notification bell (unread discussion count)
 
 ## 5. OKR Board Layout
 
-The board is organized like this:
+The board is organized as:
 
 1. Venture tabs across the top
-2. Position sections inside the selected venture
+2. Position/department sections inside the selected venture
 3. Objectives inside each position
-4. Key results inside each objective
+4. Key results under each objective
+5. KPIs under each key result
 
 ## 6. Venture Tabs
 
-Each venture appears as a tab at the top of the board.
+Click a venture tab to switch the board to that venture.
 
-You can:
+Admins and Managers can:
+- Add a venture (`Add Venture` button)
+- Rename a venture (pen icon on the tab)
+- Delete a venture (from the edit form)
 
-- click a venture tab to switch the board to that venture
-- use `Add Venture` if you are an admin
-- use the pen icon on a venture tab to rename it if you are an admin
-- delete a venture from the venture edit form if you are an admin
-
-### 6.1 Adding a Venture
-
-1. Click `Add Venture`.
-2. Enter the venture name.
-3. Click `Add venture`.
-
-### 6.2 Editing a Venture
-
-1. Hover the venture tab.
-2. Click the pen icon.
-3. Update the venture name.
-4. Click `Save`.
-
-## 7. Positions
+## 7. Positions / Departments
 
 Each venture contains one or more positions.
 
-Examples:
-
-- `CEO`
-- `COO`
-- `Finance`
-- `Operations`
-
-Each position header shows:
-
-- position name
-- position owner, if available
-- objective count
-
-You can:
-
-- expand or collapse the position section
-- use `Add Position` if you are an admin
-- hover the position name to reveal the pen icon if you are an admin
+Each position header shows the position name, owner (if set), and objective count.
 
 ### 7.1 Adding a Position
 
 1. Open the correct venture tab.
 2. Click `Add Position`.
-3. Enter the position name.
-4. Optionally choose a position owner.
-5. Optionally confirm or enter the owner email.
-6. Click `Add`.
-
-Rules:
-
-- position name is required
-- position names must be unique inside the current venture
+3. Enter the position name and optional owner.
+4. Click `Add`.
 
 ### 7.2 Editing a Position
 
 1. Hover the position name.
 2. Click the pen icon.
-3. Update the position name, owner, or owner email.
-4. Click `Save`.
+3. Update fields and click `Save`.
 
-Admins can also delete the position from the same edit area.
+Admins can also delete the position from the edit area.
 
 ## 8. Objectives
 
-Inside each position, the board shows an objectives table.
-
-The table includes:
-
-- Objective
-- Owner
-- Objective Type
-- Health
-- RAG
-- Progress %
-- OKR Cycle
-- Blockers
-- Key Risks/Dependancy
-- Notes
-- Last updated
+Each position shows an objectives table with columns for title, owner, type, health, RAG, progress, cycle, blockers, risks, notes, and last updated.
 
 ### 8.1 Adding Objectives
 
-Admins and position owners can add objectives.
-
-1. Open the correct venture.
-2. Expand the correct position.
-3. Click `Add Objective`.
-4. Review the generated objective code.
-5. Optionally choose an owner.
-6. Review the owner email if a person was selected.
-7. Enter the objective text.
-8. Choose `Objective Type`.
-9. Choose `Health`.
-10. Enter `Progress` or `Progress %`.
-11. Choose `OKR Cycle`.
-12. Fill `Blockers`, `Key Risks/Dependancy`, and `Notes` if needed.
-13. Click `Save All`.
-
-You can queue multiple objectives before saving:
-
-1. Fill the first objective.
-2. Click `Add More`.
-3. Repeat for additional rows.
+1. Expand the correct position.
+2. Click `Add Objective`.
+3. Fill in the fields (code is auto-generated).
 4. Click `Save All`.
 
-### 8.2 Editing Objectives Inline
+Use `Add More` to queue multiple objectives before saving.
 
-Admins, position owners, and objective owners can edit objectives inline on the board.
+### 8.2 Editing Objectives
 
 1. Hover the objective row.
-2. Click the pen icon next to the objective title.
-3. Update the fields you need.
-4. Click `Save`.
+2. Click the pen icon.
+3. Update the fields and click `Save`.
 
-Editable objective fields include:
-
-- objective code
-- title
-- owner
-- objective type
-- health
-- progress %
-- OKR cycle
-- blockers
-- key risks or dependency
-- notes
-
-The `RAG` value is displayed in the table and follows the configured thresholds.
+Editable fields: code, title, owner, type, health, progress %, cycle, blockers, risks, notes.
 
 ## 9. Key Results
 
-Each objective has a collapsible `Key Results (n)` section underneath it.
+Each objective has a collapsible `Key Results` section.
 
-When you expand it, you see:
-
-- an add form for new key results if you have permission
-- a key result table for that objective
-
-The key result table includes:
-
-- Key Result
-- Owner
-- KR Metric Type
-- Baseline Value
-- Target Value
-- Current Value
-- KR Progress %
-- KR Status
-- Due Date
-- Check-in Frequency
-- Blockers
-- Key Risks/Dependancy
-- Notes
-- Last updated
+The key result table includes: title, owner, metric type, baseline, target, current, progress %, status, due date, check-in frequency, blockers, notes, last updated.
 
 ### 9.1 Adding Key Results
 
-Admins and position owners can add key results.
-
-1. Expand the correct objective.
+1. Expand the objective.
 2. Open the `Key Results` section.
 3. Click `Add Key Result`.
-4. Review the generated KR code.
-5. Enter the key result text.
-6. Optionally choose an owner.
-7. Review the owner email if a person was selected.
-8. Choose `KR Metric Type`.
-9. Enter `Baseline Value`.
-10. Enter `Target Value`.
-11. Enter `Current Value`.
-12. Choose `KR Status`.
-13. Choose `Due Date`.
-14. Choose `Check-in Frequency`.
-15. Fill `Blockers` and `Notes` if needed.
-16. Click `Save All`.
+4. Fill in the fields and click `Save All`.
 
-You can queue multiple key results before saving:
-
-1. Fill the first key result.
-2. Click `Add More`.
-3. Repeat for additional rows.
-4. Click `Save All`.
-
-### 9.2 Editing Key Results Inline
-
-Admins, position owners, and KR owners can edit key results inline on the board.
+### 9.2 Editing Key Results
 
 1. Hover the key result row.
-2. Click the pen icon next to the key result title.
-3. Update the fields you need.
-4. Click `Save`.
+2. Click the pen icon.
+3. Update the fields and click `Save`.
 
-Editable key result fields include:
+## 10. KPIs
 
-- KR code
-- title
-- owner
-- KR Metric Type
-- baseline value
-- target value
-- current value
-- KR Progress %
-- KR Status
-- due date
-- check-in frequency
-- blockers
-- notes
+Each key result can have KPIs attached to it, shown as milestone-style rows below the KR.
 
-## 10. Dashboard
+Each KPI row shows: title, weight, target, current value, and a progress bar.
+
+Click the pencil icon on a KPI row to edit it.
+
+## 11. Discussions
+
+Every objective and key result has a discussion thread. Click the chat icon on a row to open it.
+
+- Type a message and press `Send`.
+- Use `@email` to mention a user — they will receive an email notification.
+- Messages are stored in SharePoint and visible to all users with board access.
+
+The notification bell in the top bar shows unread discussion counts. Click it to see which items have new messages.
+
+## 12. Dashboard
 
 Open `Dashboard` from the sidebar.
 
-The dashboard is the reporting view of the system.
+### 12.1 Filters
 
-### 10.1 Filters
+Filter by venture or department. Click `Clear` to reset.
 
-You can filter the dashboard by:
+### 12.2 Summary
 
-- Venture
-- Department
+At the top: average progress card, objective progress breakdown, key result progress breakdown.
 
-Use `Clear` to reset the filters.
+### 12.3 Venture Performance
 
-### 10.2 Summary Area
+A table per venture with:
+- Objectives row: Count, On Track, At Risk, Off Track, Avg Progress
+- Key Results row: same columns
 
-At the top of the dashboard, you see:
+### 12.4 Department Performance
 
-- one `Avg Progress` card for the current scope
-- an `Objective Progress` section
-- a `Key Result Progress` section
+Same structure, broken down by department.
 
-The objective and key result sections use the configured dropdown values.
+## 13. Config
 
-### 10.3 Venture Performance
+Visible to Managers and Admins. Contains tabs:
 
-The `Venture Performance` table shows ventures in two rows each:
+- `Roles` — manage user roles and default role
+- `Field Options` — manage dropdown values
+- `RAG Definition` — set progress thresholds
+- `Ventures` — manage ventures and departments
+- `Notifications` — configure reminders and send them manually
 
-- `Objectives`
-- `Key Results`
+### 13.1 Roles Tab
 
-Each row shows:
+**Assign a role:**
+1. Enter the user's email (and optionally display name).
+2. Choose a role (Admin / Manager / Editor / Viewer).
+3. Click `Assign Role`.
 
-- Count
-- On Track
-- At Risk
-- Off Track
-- Avg Progress
+**Remove a role:**
+Click the × button next to the user in the list.
 
-### 10.4 Department Performance
+**Default role:**
+Use the `Default role for unlisted users` dropdown to set a fallback role for anyone not explicitly listed. Choose `(none)` to treat unlisted users as Viewers.
 
-The `Department Performance` table works the same way.
+### 13.2 Field Options Tab
 
-Each department is split into:
+Manage the dropdown values used in forms:
 
-- `Objectives`
-- `Key Results`
+- Objective Type, Objective Health, OKR Cycle
+- KR Metric Type, KR Status, Check-in Frequency
 
-Each row shows:
+Add or remove values, then click `Save Dropdown Config`.
 
-- Count
-- On Track
-- At Risk
-- Off Track
-- Avg Progress
+### 13.3 RAG Definition Tab
 
-## 11. Config
+Set the thresholds for the RAG indicator:
 
-`Config` is visible only to admins.
+- `Green Min (%)` — progress at or above this is Green
+- `Amber Min (%)` — progress at or above this (but below Green) is Amber
+- Below Amber Min is Red
 
-The page contains four sections:
+Click `Save RAG`.
 
-- `Admin Users`
-- `Dropdown Field Options`
-- `RAG Definition`
-- `Ventures`
+### 13.4 Ventures Tab
 
-## 12. Admin Users
+Add or delete ventures and their departments from this tab.
 
-The `Admin Users` section is used to grant and remove admin access.
+### 13.5 Notifications Tab
 
-### 12.1 Adding an Admin
+**Configure reminder rules:**
+Each rule has a schedule (e.g., Weekly on Monday), a message template, and an enable/disable toggle. Click `Save Settings` after editing.
 
-1. Open `Config`.
-2. In `Admin Users`, type a name or email.
-3. Select the person when the suggestion appears.
-4. Click `Add Admin`.
+**Send reminders manually:**
+1. Click `Send Reminders`.
+2. Select the rules to apply.
+3. Review or adjust recipients.
+4. Preview the email content.
+5. Click `Send`.
 
-The admin list shows the person's name when available, with the email beside it.
+## 14. Activity Log
 
-### 12.2 Removing an Admin
+Visible to Managers and Admins. Shows a timeline of all changes made in the app.
 
-1. Open `Config`.
-2. Find the admin in the list.
-3. Click `Remove`.
+Each entry shows: who made the change, what entity was affected, and when.
 
-## 13. Dropdown Field Options
+Click an entry to open a detail popup showing the current state of that item (title, status, progress, targets, etc.).
 
-Admins can manage the option lists used across forms and the dashboard.
+**Filters:**
+- Period shortcuts: Today, 7 days, 30 days, or custom date range
+- Entity type: objectives, key results, KPIs, etc.
+- User email
 
-The editable groups are:
+**Insights panel:** shows a bar chart of activity by day, top active users, and entity type breakdown.
 
-- `Objective Type`
-- `Objective Health`
-- `OKR Cycle`
-- `KR Metric Type`
-- `KR Status`
-- `Check-in Frequency`
+## 15. Help
 
-To update any option group:
+Click the `?` icon in the sidebar to open the Help page.
 
-1. Open `Config`.
-2. Find the correct option card.
-3. Add a value or remove a value.
-4. Click `Save Dropdown Config`.
-
-## 14. RAG Definition
-
-Admins can define the thresholds used for RAG.
-
-The page includes:
-
-- `Green Min (%)`
-- `Amber Min (%)`
-- a live preview line
-
-To update RAG:
-
-1. Open `Config`.
-2. Enter the new threshold values.
-3. Review the preview.
-4. Click `Save RAG`.
-
-## 15. Ventures and Departments in Config
-
-The `Ventures` section in `Config` is used for structure setup.
-
-### 15.1 Adding a Venture
-
-1. Open `Config`.
-2. Enter the venture name.
-3. Click `Add Venture`.
-
-### 15.2 Deleting a Venture
-
-1. Open `Config`.
-2. Find the venture card.
-3. Click `Delete`.
-
-### 15.3 Adding a Department
-
-1. Open `Config`.
-2. Find the correct venture card.
-3. Enter the department name.
-4. Click `Add Department`.
-
-### 15.4 Deleting a Department
-
-1. Open `Config`.
-2. Find the department under the venture card.
-3. Click `Delete`.
+Use the search box or category chips to find topics. Click a topic in the table of contents to jump to it.
 
 ## 16. Tips
 
 - Use the board for daily work and inline updates.
-- Use the dashboard for reporting and filters.
-- Keep position names consistent within each venture.
-- Use owners where accountability is needed, but remember they are optional.
-- Review dropdown values in `Config` before changing reporting expectations.
+- Use the dashboard for cross-venture reporting.
+- Use discussions for context — @mention colleagues to notify them.
+- Check the notification bell regularly for new discussion replies.
+- Admins should assign roles via Config > Roles rather than sharing credentials.
+- Review dropdown values in Config > Field Options before changing reporting expectations.
 
 ## 17. Troubleshooting
 
-### 17.1 I cannot see `Config`
+### 17.1 I cannot see Config or Activity
 
-Possible reasons:
-
-- you are not signed in
-- your account is not an admin
-
-What to do:
-
-1. Sign out and sign back in.
-2. Confirm the correct work account is being used.
-3. Ask an existing admin to add you.
+- You may not have Manager or Admin role.
+- Ask an Admin to assign you a role in Config > Roles.
 
 ### 17.2 I cannot save changes
 
-Check:
-
-- the SharePoint status in the sidebar
-- your permission level
-- that required fields are filled in
+- Check the SharePoint status in the sidebar footer.
+- Confirm you have the correct role for the action.
+- Check that all required fields are filled.
 
 ### 17.3 A screen looks stale
 
-Try:
-
 1. Refresh the browser tab.
-2. Re-open the correct venture.
-3. Re-expand the position or key result section you were using.
+2. Re-open the venture tab.
+3. Re-expand the section you were using.
 
-### 17.4 Two ventures have the same position name
+### 17.4 I am not receiving mention notifications
 
-This is supported.
-
-The app keeps positions separate by venture, so a `CEO` in one venture is different from a `CEO` in another venture.
+- Confirm the @mention used your exact work email address.
+- Check your junk/spam folder.
+- Ask an Admin to verify the notification settings in Config > Notifications.
 
 ## 18. Quick Start
-
-If you want the shortest path:
 
 1. Sign in with Microsoft.
 2. Open `OKR Board`.
 3. Choose the correct venture tab.
-4. Expand the correct position.
+4. Expand a position.
 5. Add or edit objectives and key results if your role allows it.
-6. Open `Dashboard` when you want reporting.
-7. Open `Config` only if you are an admin.
+6. Open `Dashboard` for reporting.
+7. Open `Config` if you are a Manager or Admin.
+8. Open `Help` at any time for guidance.

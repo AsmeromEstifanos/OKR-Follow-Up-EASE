@@ -268,11 +268,24 @@ const KR_FIELD_ORDER = [
   "dueDate", "checkInFrequency", "blockers", "supportNeeded", "notes", "lastCheckinAt"
 ];
 
-const HIDDEN_DETAIL_FIELDS = new Set(["objectiveKey", "krKey", "periodKey"]);
+const KPI_FIELD_ORDER = [
+  "kpiCode", "title", "status", "progressPct", "metricType",
+  "baselineValue", "targetValue", "currentValue", "weight",
+  "owner", "ownerEmail", "dueDate", "checkInFrequency", "blockers", "notes", "lastCheckinAt"
+];
 
-const ENTITY_FETCH_CONFIG: Record<string, { path: string; keyField: string; codeField?: string }> = {
-  objectives: { path: "/api/objectives", keyField: "objectiveKey", codeField: "objectiveCode" },
-  krs: { path: "/api/krs", keyField: "krKey", codeField: "krCode" }
+const HIDDEN_DETAIL_FIELDS = new Set(["objectiveKey", "krKey", "kpiKey", "periodKey"]);
+
+const ENTITY_ITEM_PATH: Record<string, string> = {
+  objectives: "/api/objectives",
+  krs: "/api/krs",
+  kpis: "/api/kpis"
+};
+
+const ENTITY_DETAIL_HEADING: Record<string, string> = {
+  objectives: "OBJECTIVE DETAILS",
+  krs: "KEY RESULT DETAILS",
+  kpis: "KPI DETAILS"
 };
 
 function orderedEntries(item: Record<string, unknown>, order: string[]): Array<[string, unknown]> {
@@ -298,41 +311,43 @@ function codeFromLabel(label: string | undefined): string | null {
 }
 
 function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; userEmail: string; onClose: () => void }): JSX.Element {
-  const changes = parseChanges(entry.detailsJson);
-  const config = entry.entityType ? ENTITY_FETCH_CONFIG[entry.entityType] : undefined;
+  const basePath = entry.entityType ? ENTITY_ITEM_PATH[entry.entityType] : undefined;
+  const canFetch = Boolean(basePath && entry.entityKey);
 
   const [item, setItem] = useState<Record<string, unknown> | null>(null);
   const [loadState, setLoadState] = useState<"idle" | "loading" | "loaded" | "notfound" | "error">(
-    config ? "loading" : "idle"
+    canFetch ? "loading" : "idle"
   );
 
   useEffect(() => {
-    if (!config || !userEmail) return;
+    if (!canFetch || !basePath || !entry.entityKey || !userEmail) return;
     let mounted = true;
     setLoadState("loading");
-    fetch(apiPath(config.path), { headers: { "x-user-email": userEmail } })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("fetch failed"))))
-      .then((list: Record<string, unknown>[]) => {
+    fetch(apiPath(`${basePath}/${encodeURIComponent(entry.entityKey)}`), {
+      headers: { "x-user-email": userEmail }
+    })
+      .then((r) => {
         if (!mounted) return;
-        const code = codeFromLabel(entry.entityLabel);
-        const found =
-          list.find((row) => entry.entityKey && String(row[config.keyField]) === entry.entityKey) ??
-          (config.codeField && code
-            ? list.find((row) => String(row[config.codeField as string]) === code)
-            : undefined);
-        if (found) {
-          setItem(found);
-          setLoadState("loaded");
-        } else {
-          setLoadState("notfound");
-        }
+        if (r.status === 404) { setLoadState("notfound"); return; }
+        if (!r.ok) throw new Error("fetch failed");
+        return r.json();
+      })
+      .then((data: Record<string, unknown> | undefined) => {
+        if (!mounted || !data) return;
+        const obj = data.objective ?? data;
+        setItem(obj as Record<string, unknown>);
+        setLoadState("loaded");
       })
       .catch(() => { if (mounted) setLoadState("error"); });
     return () => { mounted = false; };
-  }, [config, userEmail, entry.entityKey, entry.entityLabel]);
+  }, [canFetch, basePath, entry.entityKey, userEmail]);
 
-  const order = entry.entityType === "objectives" ? OBJECTIVE_FIELD_ORDER : KR_FIELD_ORDER;
+  const order =
+    entry.entityType === "objectives" ? OBJECTIVE_FIELD_ORDER :
+    entry.entityType === "kpis" ? KPI_FIELD_ORDER :
+    KR_FIELD_ORDER;
   const fields = item ? orderedEntries(item, order) : [];
+  const detailHeading = entry.entityType ? (ENTITY_DETAIL_HEADING[entry.entityType] ?? "DETAILS") : "DETAILS";
 
   return (
     <div className="act-popup-backdrop" onClick={onClose} role="dialog" aria-modal="true">
@@ -340,7 +355,7 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
         <div className="act-popup-header">
           <div>
             <span className={actionClass(entry.httpMethod)}>{composeActionSentence(entry)}</span>
-            {entry.entityLabel && <span className="act-popup-entity">{entry.entityLabel}</span>}
+            {entry.entityLabel && <strong className="act-popup-entity">{entry.entityLabel}</strong>}
           </div>
           <button type="button" className="act-popup-close" onClick={onClose} aria-label="Close">×</button>
         </div>
@@ -349,11 +364,9 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
           <span>{new Date(entry.occurredAt).toLocaleString()}</span>
         </div>
 
-        {config ? (
+        {canFetch ? (
           <div className="act-popup-details">
-            <div className="act-popup-changes-heading">
-              {entry.entityType === "objectives" ? "Objective details" : "Key result details"}
-            </div>
+            <div className="act-popup-changes-heading">{detailHeading}</div>
             {loadState === "loading" && <div className="act-popup-no-changes">Loading details…</div>}
             {loadState === "error" && <div className="act-popup-no-changes">Couldn&rsquo;t load the current details.</div>}
             {loadState === "notfound" && (
@@ -372,22 +385,8 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
               </dl>
             )}
           </div>
-        ) : changes.length > 0 ? (
-          <div className="act-popup-changes">
-            <div className="act-popup-changes-heading">Changes</div>
-            {changes.map((c) => (
-              <div key={c.field} className="act-popup-change-row">
-                <div className="act-popup-change-field">{friendlyFieldName(c.field)}</div>
-                <div className="act-popup-change-values">
-                  <span className="act-change-from">{formatValue(c.from, c.field)}</span>
-                  <span className="act-change-arrow">→</span>
-                  <span className="act-change-to">{formatValue(c.to, c.field)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="act-popup-no-changes">No field-level changes recorded for this event.</div>
+          <div className="act-popup-no-changes">No additional details recorded for this event.</div>
         )}
       </div>
     </div>

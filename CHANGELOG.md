@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7] — 2026-05-26
+
+### Changed
+- Activity log detail popup now fetches and displays current item fields (title, status, progress, targets, etc.) instead of re-listing the change description — matching SVH popup behaviour
+
+---
+
 ## [0.3.6] — 2026-05-26
 
 ### Changed
