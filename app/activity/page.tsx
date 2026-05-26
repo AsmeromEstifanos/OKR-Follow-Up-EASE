@@ -68,14 +68,19 @@ const FIELD_LABELS: Record<string, string> = {
   measurementRule: "Measurement rule",
   checkInFrequency: "Check-in frequency",
   krCode: "KR code",
+  kpiCode: "KPI code",
   objectiveCode: "Objective code",
   objectiveKey: "Objective",
+  krKey: "Key result",
+  kpiKey: "KPI",
+  lastCheckinAt: "Last Checkin At",
+  weight: "Weight",
   rag: "RAG status"
 };
 
 const SKIP_FIELDS = new Set([
   "updatedAt", "createdAt", "activityLogKey", "authLogKey",
-  "krKey", "objectiveKey_internal", "milestoneKey", "checkInKey"
+  "krKey", "kpiKey", "objectiveKey_internal", "milestoneKey", "checkInKey"
 ]);
 
 function parseChanges(detailsJson: string | undefined): FieldChange[] {
@@ -118,6 +123,7 @@ function formatValue(value: unknown, field?: string): string {
 const ENTITY_TYPE_WORDS: Record<string, string> = {
   objectives: "objective",
   krs: "key result",
+  kpis: "KPI",
   milestones: "milestone",
   "check-ins": "check-in",
   periods: "period",
@@ -125,6 +131,7 @@ const ENTITY_TYPE_WORDS: Record<string, string> = {
   position: "position",
   venture: "venture",
   admin: "admin",
+  roles: "role",
   "dropdown-config": "dropdown config",
   "rag-config": "RAG config",
   notification: "notification"

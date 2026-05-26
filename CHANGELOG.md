@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.4] — 2026-05-26
+
+### Fixed
+- Activity feed: added `kpis` → "KPI" and `roles` → "role" to entity type word map
+- Added `kpiCode`, `kpiKey`, `krKey`, `lastCheckinAt`, `weight` to field label / skip sets so KPI changes display correctly
+- `kpiKey` added to SKIP_FIELDS (internal identifier, not a meaningful diff value)
+
+---
+
 ## [0.3.3] — 2026-05-26
 
 ### Fixed
