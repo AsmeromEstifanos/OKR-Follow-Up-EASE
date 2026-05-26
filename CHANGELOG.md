@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.8] — 2026-05-26
+
+### Added
+- Notifications tab in Config page: 5 configurable reminder rules (schedule, message, enable/disable) + manual Send Reminders wizard with rule selection, recipient picker, email preview, and send log
+- API routes: `/api/notifications/settings` (GET/PATCH), `/api/notifications/remind` (GET preview/POST send), `/api/notifications/scheduled` (POST scheduler hook), `/api/notifications/log` (GET)
+- `lib/notification-settings.ts` and `lib/run-reminders.ts` ported from SVH
+- `listActivityLogEntries` added to server-storage for notification log API
+
+### Fixed
+- Config page converted from accordion layout to tab layout matching SVH
+- Sidebar z-index raised to 50 so it renders on top of the sticky topbar when expanded
+- Venture-tabs sticky `top` updated to `calc(48px + 0.65rem)` to account for topbar height — tabs no longer scroll under the topbar
+
 ## [0.2.7] — 2026-05-26
 
 ### Fixed

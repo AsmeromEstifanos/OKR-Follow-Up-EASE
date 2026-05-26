@@ -49,6 +49,7 @@ import {
   appendComment,
   ensureSharePointStore,
   getSharePointStorageStatus,
+  listActivityLogEntries,
   listCommentCounts,
   listComments,
   removeComment,
@@ -698,4 +699,16 @@ export async function deleteComment(commentKey: string): Promise<boolean> {
   const status = getSharePointStorageStatus();
   if (!status.enabled) return false;
   return removeComment(commentKey);
+}
+
+export async function getActivityLogEntries(
+  entityType: string,
+  limit = 20
+): Promise<ActivityLogEntry[]> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) {
+    return [];
+  }
+
+  return listActivityLogEntries(entityType, limit);
 }
