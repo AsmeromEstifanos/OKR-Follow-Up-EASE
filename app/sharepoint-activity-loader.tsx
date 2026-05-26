@@ -5,6 +5,7 @@ import {
   OKR_OPERATION_BATCH_EVENT,
   type OperationBatchSnapshot
 } from "@/lib/client-operation-batch";
+import LoaderImage from "@/app/loader-image";
 import { stripBasePath, withBasePath } from "@/lib/base-path";
 import { useEffect, useState } from "react";
 
@@ -375,14 +376,7 @@ export default function SharePointActivityLoader(): JSX.Element | null {
   return (
     <div className="sp-loader-overlay" aria-live="polite" aria-busy="true">
       <div className="sp-loader-card">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={withBasePath("/loader-ring.svg")}
-          alt="Loading SharePoint data"
-          width={72}
-          height={72}
-          className="sp-loader-image"
-        />
+        <LoaderImage size={48} className="sp-loader-image" />
         {displayStage ? <p className="sp-loader-stage">{displayStage}</p> : null}
         {displayCount ? (
           <p className="sp-loader-count">

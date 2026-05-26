@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0] — 2026-05-26
+
+### Changed
+- Replaced `loader-ring.svg` with a clean CSS thin-arc spinner (`loader-spinner`) — no image file, scales to any size, works on any background
+
+---
+
 ## [0.3.9] — 2026-05-26
 
 ### Fixed

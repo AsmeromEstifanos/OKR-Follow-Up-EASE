@@ -498,6 +498,7 @@ a {
 
 .sp-loader-image {
   display: block;
+  flex-shrink: 0;
 }
 
 .sp-loader-text {
@@ -532,9 +533,16 @@ a {
 
 .loader-image {
   display: block;
-  border-radius: 8px;
-  max-width: min(70vw, 420px);
-  height: auto;
+}
+
+.loader-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: #e2e8f0;
+  border-top-color: #2563eb;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 
 .auth-gate h1 {
