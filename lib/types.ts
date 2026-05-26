@@ -8,6 +8,21 @@ export type Confidence = "High" | "Medium" | "Low";
 export type Rag = "Green" | "Amber" | "Red";
 export type MetricType = string;
 
+export type AppRole = "Admin" | "Manager" | "Editor" | "Viewer";
+
+export const ROLE_HIERARCHY: Record<AppRole, number> = {
+  Admin: 40,
+  Manager: 30,
+  Editor: 20,
+  Viewer: 10
+};
+
+export interface RoleUser {
+  email: string;
+  role: AppRole;
+  displayName?: string;
+}
+
 export interface RagThresholds {
   greenMin: number;
   amberMin: number;

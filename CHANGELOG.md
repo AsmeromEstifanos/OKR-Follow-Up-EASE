@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2] — 2026-05-26
+
+### Changed
+- Config page "Admin Users" tab replaced with full "Roles" tab: Admin/Manager/Editor/Viewer assignments, default-role-for-unlisted-users selector, assign role form (email + role dropdown), user list with compact × remove buttons
+- `authz/me` endpoint now returns `isAdmin: true` for Manager role as well (so Managers see the Activity nav link)
+- Added `AppRole`, `RoleUser` types and `ROLE_HIERARCHY` to `lib/types.ts`
+- Added `getDefaultRoleAssignment`, `setDefaultRoleAssignment`, `deleteDefaultRoleAssignment` to server-storage; added `listRoleUsers`, `setUserRole`, `removeUserRole`, `getDefaultRole`, `setDefaultRole` to store
+- New API routes: `/api/roles` (GET/POST), `/api/roles/[email]` (DELETE), `/api/roles/default` (GET/PUT)
+- Added `config-subsection` / `config-subsection-heading` CSS to globals.css
+
+---
+
 ## [0.3.1] — 2026-05-26
 
 ### Changed

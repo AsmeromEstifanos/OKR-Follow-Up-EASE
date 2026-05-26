@@ -56,6 +56,9 @@ import {
   setRoleAssignment,
   deleteRoleAssignment,
   listRoleAssignments,
+  getDefaultRoleAssignment,
+  setDefaultRoleAssignment,
+  deleteDefaultRoleAssignment,
   queryActivityLog,
   type ActivityLogQuery,
   type ActivityLogPage,
@@ -93,7 +96,9 @@ import type {
   UpdateKpiInput,
   UpdateObjectiveInput,
   UpdateVentureInput,
-  Venture
+  Venture,
+  AppRole,
+  RoleUser
 } from "@/lib/types";
 
 export { DEMO_OWNER };
@@ -716,7 +721,9 @@ export async function getActivityLogEntries(
   return listActivityLogEntries(entityType, limit);
 }
 
-export async function getUserRole(email: string): Promise<string | null> {
+const VALID_ROLES: AppRole[] = ["Admin", "Manager", "Editor", "Viewer"];
+
+export async function getUserRole(email: string): Promise<AppRole | null> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
 
@@ -726,12 +733,81 @@ export async function getUserRole(email: string): Promise<string | null> {
   const assignments = await listRoleAssignments();
   const match = assignments.find((a) => a.userEmail === normalized);
   if (match) {
-    const role = match.role.trim();
-    const valid = ["Admin", "Manager", "Editor", "Viewer"];
-    return valid.includes(role) ? role : null;
+    const role = match.role.trim() as AppRole;
+    return VALID_ROLES.includes(role) ? role : null;
   }
 
-  return null;
+  return getDefaultRole();
+}
+
+export async function listRoleUsers(): Promise<RoleUser[]> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return [];
+
+  const assignments = await listRoleAssignments();
+  const deduped = new Map<string, RoleUser>();
+
+  assignments.forEach((entry) => {
+    const email = entry.userEmail.toLowerCase();
+    if (!email || email === "__default__") return;
+    const role = entry.role.trim() as AppRole;
+    if (!VALID_ROLES.includes(role)) return;
+    deduped.set(email, {
+      email,
+      role,
+      ...(entry.displayName ? { displayName: entry.displayName } : {})
+    });
+  });
+
+  const order: Record<AppRole, number> = { Admin: 40, Manager: 30, Editor: 20, Viewer: 10 };
+  return Array.from(deduped.values()).sort((a, b) => (order[b.role] ?? 0) - (order[a.role] ?? 0));
+}
+
+export async function setUserRole(email: string, role: AppRole, displayName?: string): Promise<void> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) throw new Error("SharePoint storage is not enabled.");
+
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) throw new Error("Email is required.");
+
+  updateOperationProgress(18, "Updating role assignment");
+  await setRoleAssignment(normalized, role, displayName);
+  updateOperationProgress(88, "Role assignment saved");
+}
+
+export async function removeUserRole(email: string): Promise<void> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) throw new Error("SharePoint storage is not enabled.");
+
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) throw new Error("Email is required.");
+
+  updateOperationProgress(18, "Removing role assignment");
+  await deleteRoleAssignment(normalized);
+  updateOperationProgress(88, "Role assignment removed");
+}
+
+export async function getDefaultRole(): Promise<AppRole | null> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) return null;
+
+  const role = await getDefaultRoleAssignment();
+  if (!role) return null;
+  const cast = role.trim() as AppRole;
+  return VALID_ROLES.includes(cast) ? cast : null;
+}
+
+export async function setDefaultRole(role: AppRole | null): Promise<void> {
+  const status = getSharePointStorageStatus();
+  if (!status.enabled) throw new Error("SharePoint storage is not enabled.");
+
+  if (!role) {
+    await deleteDefaultRoleAssignment();
+    return;
+  }
+
+  if (!VALID_ROLES.includes(role)) throw new Error("Invalid role.");
+  await setDefaultRoleAssignment(role);
 }
 
 export type { ActivityLogQuery, ActivityLogPage };

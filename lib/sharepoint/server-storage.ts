@@ -2195,6 +2195,28 @@ export async function deleteRoleAssignment(userEmail: string): Promise<void> {
   await deleteItem(config, siteId, listIds.roles, existing.id);
 }
 
+const DEFAULT_ROLE_KEY = "__default__";
+
+export async function getDefaultRoleAssignment(): Promise<string | null> {
+  const config = getStorageConfig();
+  if (!config.enabled) return null;
+
+  const { siteId, listIds } = await ensureAtomicTargets(config);
+  const items = await listItems(config, siteId, listIds.roles, []);
+  const item = items.find((i) => getRoleAssignmentEmail(i.fields) === DEFAULT_ROLE_KEY);
+  if (!item) return null;
+  const role = asString(item.fields?.Role).trim();
+  return role || null;
+}
+
+export async function setDefaultRoleAssignment(role: string): Promise<void> {
+  await setRoleAssignment(DEFAULT_ROLE_KEY, role, DEFAULT_ROLE_KEY);
+}
+
+export async function deleteDefaultRoleAssignment(): Promise<void> {
+  await deleteRoleAssignment(DEFAULT_ROLE_KEY);
+}
+
 export async function appendAuthLogEntry(userEmail: string, displayName?: string): Promise<AuthLogEntry | null> {
   const config = getStorageConfig();
   if (!config.enabled) {
