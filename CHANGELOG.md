@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8] — 2026-05-26
+
+### Fixed
+- Reminder emails: objectives/KRs with multiple owners (semicolon-separated) now send to each owner individually — previously the full "A; B" string was treated as one recipient
+
+---
+
 ## [0.3.7] — 2026-05-26
 
 ### Changed

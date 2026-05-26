@@ -39,6 +39,14 @@ function lowerEmail(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
+// Split a potentially semicolon-delimited owner email field into individual emails.
+function splitEmails(value: string | null | undefined): string[] {
+  return (value ?? "")
+    .split(";")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 // Returns the subset of enabled rules whose (admin-customised) schedule
 // matches `now`.
 export async function rulesFiringAt(now: Date, windowMinutes = 15): Promise<RuleId[]> {
@@ -65,10 +73,10 @@ function gatherRuleContent(
   activePeriodKeys: Set<string>
 ): RuleContent {
   const ownerObjectives = allObjectives.filter(
-    (obj) => activePeriodKeys.has(obj.periodKey) && lowerEmail(obj.ownerEmail) === ownerEmail
+    (obj) => activePeriodKeys.has(obj.periodKey) && splitEmails(obj.ownerEmail).includes(ownerEmail)
   );
   const ownerKrs = allKrs.filter(
-    (kr) => activePeriodKeys.has(kr.periodKey) && lowerEmail(kr.ownerEmail) === ownerEmail
+    (kr) => activePeriodKeys.has(kr.periodKey) && splitEmails(kr.ownerEmail).includes(ownerEmail)
   );
 
   switch (ruleId) {
@@ -99,14 +107,14 @@ function gatherRuleContent(
 
 function collectOwnerNames(allObjectives: Objective[], allKrs: KeyResult[]): Map<string, string> {
   const names = new Map<string, string>();
-  const remember = (email: string, name?: string | null): void => {
-    const e = lowerEmail(email);
-    if (!e) return;
+  const remember = (emails: string[], name?: string | null): void => {
     const n = (name ?? "").trim();
-    if (n && !names.get(e)) names.set(e, n);
+    for (const e of emails) {
+      if (e && n && !names.get(e)) names.set(e, n);
+    }
   };
-  for (const obj of allObjectives) remember(obj.ownerEmail ?? "", obj.owner);
-  for (const kr of allKrs) remember(kr.ownerEmail ?? "", kr.owner);
+  for (const obj of allObjectives) remember(splitEmails(obj.ownerEmail), obj.owner);
+  for (const kr of allKrs) remember(splitEmails(kr.ownerEmail), kr.owner);
   return names;
 }
 
@@ -137,13 +145,11 @@ async function buildAggregated(rulesToRun: RuleId[]): Promise<AggregatedBuild> {
     const owners = new Set<string>();
     for (const obj of allObjectives) {
       if (!activePeriodKeys.has(obj.periodKey)) continue;
-      const email = lowerEmail(obj.ownerEmail);
-      if (email) owners.add(email);
+      for (const email of splitEmails(obj.ownerEmail)) owners.add(email);
     }
     for (const kr of allKrs) {
       if (!activePeriodKeys.has(kr.periodKey)) continue;
-      const email = lowerEmail(kr.ownerEmail);
-      if (email) owners.add(email);
+      for (const email of splitEmails(kr.ownerEmail)) owners.add(email);
     }
 
     for (const email of owners) {
