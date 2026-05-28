@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2] — 2026-05-26
+
+### Fixed
+- Remove `Sites.Read.All` from `DEFAULT_SCOPES` fallback in `msal-client.ts` — this was the remaining source of admin-consent prompts when the env var wasn't baked in correctly
+
+---
+
 ## [0.4.1] — 2026-05-26
 
 ### Fixed
