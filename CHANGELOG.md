@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1] — 2026-05-26
+
+### Fixed
+- Deploy workflow: switch `NEXT_PUBLIC_AZURE_CLIENT_ID` back to the client-side app registration (`99756659`) and remove `Sites.Read.All` / `Sites.ReadWrite.All` from login scopes — these caused "Need admin approval" for non-admin users (same fix as v0.2.1, re-broken when the workflow was updated)
+
+---
+
 ## [0.4.0] — 2026-05-26
 
 ### Changed
