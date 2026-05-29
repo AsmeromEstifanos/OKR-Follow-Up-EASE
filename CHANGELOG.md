@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.14] — 2026-05-29
+
+### Fixed
+- Change Alerts settings not loading on page open: GET to /api/notifications/settings was missing x-user-email header, causing a 401 that silently returned empty data — recipients and enabled state now load correctly on every visit
+
+---
+
 ## [0.4.13] — 2026-05-29
 
 ### Changed

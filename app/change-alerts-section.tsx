@@ -33,9 +33,13 @@ export default function ChangeAlertsSection(): JSX.Element {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!signedInEmail) return;
     void (async () => {
       try {
-        const res = await fetch(apiPath("/api/notifications/settings"), { cache: "no-store" });
+        const res = await fetch(apiPath("/api/notifications/settings"), {
+          headers: { "x-user-email": signedInEmail },
+          cache: "no-store"
+        });
         if (!res.ok) return;
         const data = await readJson<{ changeAlerts?: ChangeAlertSettings }>(res);
         if (data?.changeAlerts) {
@@ -47,7 +51,7 @@ export default function ChangeAlertsSection(): JSX.Element {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [signedInEmail]);
 
   const save = async (): Promise<void> => {
     if (isSaving) return;
