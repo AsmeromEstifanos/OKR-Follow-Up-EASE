@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.13] — 2026-05-29
+
+### Changed
+- Notifications page: compact list layout — all 5 rules visible at once as rows with toggle + name + schedule; click ▼ to expand a rule for schedule/message editing
+- Toggle on/off auto-saves immediately (no need to click Save for enable/disable changes)
+
+---
+
 ## [0.4.12] — 2026-05-29
 
 ### Fixed

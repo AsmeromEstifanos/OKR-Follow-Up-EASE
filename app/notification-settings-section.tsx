@@ -58,6 +58,7 @@ export default function NotificationSettingsSection(): JSX.Element {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [expandedId, setExpandedId] = useState<RuleId | null>(null);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -82,9 +83,7 @@ export default function NotificationSettingsSection(): JSX.Element {
         if (!cancelled) setIsLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [userEmail]);
 
   async function saveSettings(): Promise<void> {
@@ -113,16 +112,31 @@ export default function NotificationSettingsSection(): JSX.Element {
   }
 
   function updateRule(id: RuleId, patch: Partial<RuleSettings>): void {
-    setSettings((prev) => ({
-      ...prev,
-      rules: { ...prev.rules, [id]: { ...prev.rules[id], ...patch } }
-    }));
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        rules: { ...prev.rules, [id]: { ...prev.rules[id], ...patch } }
+      };
+      // Auto-save immediately when toggling enabled so the user doesn't need to
+      // remember to click Save for simple on/off changes.
+      if ("enabled" in patch) {
+        void (async () => {
+          if (!userEmail) return;
+          await fetch(apiPath("/api/notifications/settings"), {
+            method: "PATCH",
+            headers: { "content-type": "application/json", "x-user-email": userEmail },
+            body: JSON.stringify(next)
+          });
+        })();
+      }
+      return next;
+    });
   }
 
   function resetRule(id: RuleId): void {
     setSettings((prev) => ({
       ...prev,
-      rules: { ...prev.rules, [id]: { ...defaultSettingsFor(id), enabled: prev.rules[id]?.enabled ?? false } }
+      rules: { ...prev.rules, [id]: { ...defaultSettingsFor(id), enabled: prev.rules[id]?.enabled ?? true } }
     }));
   }
 
@@ -132,104 +146,114 @@ export default function NotificationSettingsSection(): JSX.Element {
 
   return (
     <>
-      <p className="meta">
-        Enable, schedule, and word the automated reminder emails the OKR system sends. The scheduler runs
-        every 15 minutes and dispatches each enabled rule once on its configured day at the configured time.
-      </p>
-
       {error ? <p className="message danger">{error}</p> : null}
       {message ? <p className="message success">{message}</p> : null}
 
-      <div className="notif-rules-grid">
+      <div className="notif-compact-list">
         {RULE_IDS.map((id) => {
           const def = RULE_DEFINITIONS[id];
           const cfg = settings.rules[id] ?? defaultSettingsFor(id);
           const eff = effectiveRule(id, cfg);
           const kind = def.schedule.kind;
           const timeValue = `${pad2(cfg.hour)}:${pad2(cfg.minute)}`;
+          const isExpanded = expandedId === id;
+
           return (
-            <section key={id} className="config-option-card">
-              <header className="notif-rule-head">
-                <div>
-                  <h3 className="config-option-title">{def.label}</h3>
-                  <div className="notif-rule-schedule">{formatScheduleLabel(eff.schedule)}</div>
-                </div>
-                <label className="notif-settings-toggle">
+            <div key={id} className={`notif-compact-row${isExpanded ? " notif-compact-row-open" : ""}`}>
+              {/* Summary line */}
+              <div className="notif-compact-head">
+                <label className="notif-compact-toggle">
                   <input
                     type="checkbox"
                     checked={cfg.enabled}
                     onChange={(e) => updateRule(id, { enabled: e.target.checked })}
                     disabled={isSaving}
                   />
-                  <span>{cfg.enabled ? "On" : "Off"}</span>
                 </label>
-              </header>
-
-              <div className="notif-rule-fields">
-                {kind === "weekly" && (
-                  <label className="notif-rule-field">
-                    Day
-                    <select
-                      value={cfg.dayOfWeek}
-                      onChange={(e) => updateRule(id, { dayOfWeek: Number(e.target.value) })}
-                      disabled={isSaving || !cfg.enabled}
-                    >
-                      {DAY_NAMES.map((label, idx) => (
-                        <option key={idx} value={idx}>{label}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {kind === "monthly" && (
-                  <label className="notif-rule-field">
-                    Day of month
-                    <input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={cfg.dayOfMonth}
-                      onChange={(e) => updateRule(id, { dayOfMonth: Number(e.target.value) || 1 })}
-                      disabled={isSaving || !cfg.enabled}
-                    />
-                  </label>
-                )}
-                <label className="notif-rule-field">
-                  Time
-                  <input
-                    type="time"
-                    value={timeValue}
-                    onChange={(e) => {
-                      const parsed = parseTimeInput(e.target.value);
-                      if (parsed) updateRule(id, { hour: parsed.hour, minute: parsed.minute });
-                    }}
-                    disabled={isSaving || !cfg.enabled}
-                  />
-                </label>
+                <div className="notif-compact-info">
+                  <span className="notif-compact-name">{def.label}</span>
+                  <span className="notif-compact-schedule">{formatScheduleLabel(eff.schedule)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="notif-compact-edit-btn"
+                  onClick={() => setExpandedId(isExpanded ? null : id)}
+                  aria-expanded={isExpanded}
+                  aria-label={isExpanded ? "Collapse" : "Edit schedule and message"}
+                >
+                  {isExpanded ? "▲" : "▼"}
+                </button>
               </div>
 
-              <label className="notif-rule-field notif-rule-field-message">
-                Message
-                <textarea
-                  value={cfg.message}
-                  onChange={(e) => updateRule(id, { message: e.target.value })}
-                  disabled={isSaving || !cfg.enabled}
-                  rows={2}
-                />
-              </label>
-
-              <p className="notif-rule-shows">
-                <span className="notif-rule-shows-label">What it shows:</span> {def.contentLabel}
-              </p>
-
-              <button
-                type="button"
-                className="notif-rule-reset"
-                onClick={() => resetRule(id)}
-                disabled={isSaving}
-              >
-                Reset to defaults
-              </button>
-            </section>
+              {/* Expanded edit panel */}
+              {isExpanded && (
+                <div className="notif-compact-body">
+                  <div className="notif-rule-fields">
+                    {kind === "weekly" && (
+                      <label className="notif-rule-field">
+                        Day
+                        <select
+                          value={cfg.dayOfWeek}
+                          onChange={(e) => updateRule(id, { dayOfWeek: Number(e.target.value) })}
+                          disabled={isSaving || !cfg.enabled}
+                        >
+                          {DAY_NAMES.map((dayLabel, idx) => (
+                            <option key={idx} value={idx}>{dayLabel}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {kind === "monthly" && (
+                      <label className="notif-rule-field">
+                        Day of month
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={cfg.dayOfMonth}
+                          onChange={(e) => updateRule(id, { dayOfMonth: Number(e.target.value) || 1 })}
+                          disabled={isSaving || !cfg.enabled}
+                        />
+                      </label>
+                    )}
+                    <label className="notif-rule-field">
+                      Time
+                      <input
+                        type="time"
+                        value={timeValue}
+                        onChange={(e) => {
+                          const parsed = parseTimeInput(e.target.value);
+                          if (parsed) updateRule(id, { hour: parsed.hour, minute: parsed.minute });
+                        }}
+                        disabled={isSaving || !cfg.enabled}
+                      />
+                    </label>
+                  </div>
+                  <label className="notif-rule-field notif-rule-field-message">
+                    Message
+                    <textarea
+                      value={cfg.message}
+                      onChange={(e) => updateRule(id, { message: e.target.value })}
+                      disabled={isSaving || !cfg.enabled}
+                      rows={2}
+                    />
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.4rem" }}>
+                    <p className="notif-rule-shows" style={{ margin: 0 }}>
+                      <span className="notif-rule-shows-label">Shows: </span>{def.contentLabel}
+                    </p>
+                    <button
+                      type="button"
+                      className="notif-rule-reset"
+                      onClick={() => resetRule(id)}
+                      disabled={isSaving}
+                    >
+                      Reset to defaults
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
