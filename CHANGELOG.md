@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.11] — 2026-05-29
+
+### Fixed
+- Change Alerts: fixed "Missing signed-in user email" error — PATCH was missing x-user-email header; restored OwnerInput (people search) for recipient field
+
+---
+
 ## [0.4.10] — 2026-05-29
 
 ### Fixed

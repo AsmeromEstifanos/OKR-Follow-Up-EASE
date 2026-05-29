@@ -1,5 +1,7 @@
 "use client";
 
+import OwnerInput from "@/app/owner-input";
+import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import type { ChangeAlertSettings, ChangeAlertTrigger } from "@/lib/notification-settings";
 import { useEffect, useState } from "react";
@@ -19,10 +21,12 @@ async function readJson<T>(response: Response): Promise<T | null> {
 }
 
 export default function ChangeAlertsSection(): JSX.Element {
+  const signedInEmail = useCurrentUserEmail();
   const [enabled, setEnabled] = useState(false);
   const [trigger, setTrigger] = useState<ChangeAlertTrigger>("all");
   const [recipients, setRecipients] = useState<string[]>([]);
-  const [emailDraft, setEmailDraft] = useState("");
+  const [ownerDraft, setOwnerDraft] = useState("");
+  const [ownerEmailDraft, setOwnerEmailDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -52,7 +56,7 @@ export default function ChangeAlertsSection(): JSX.Element {
     setError("");
     const res = await fetch(apiPath("/api/notifications/settings"), {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-user-email": signedInEmail },
       body: JSON.stringify({ changeAlerts: { enabled, trigger, recipients } })
     });
     setIsSaving(false);
@@ -66,11 +70,12 @@ export default function ChangeAlertsSection(): JSX.Element {
   };
 
   const addRecipient = (): void => {
-    const email = emailDraft.trim().toLowerCase();
-    if (!email || !email.includes("@")) { setError("Enter a valid email address."); return; }
+    const email = (ownerEmailDraft.trim() || ownerDraft.trim()).toLowerCase();
+    if (!email || !email.includes("@")) { setError("Select a person or enter a valid email address."); return; }
     if (recipients.includes(email)) { setError("Already in the list."); return; }
     setRecipients((prev) => [...prev, email]);
-    setEmailDraft("");
+    setOwnerDraft("");
+    setOwnerEmailDraft("");
     setError("");
   };
 
@@ -119,18 +124,24 @@ export default function ChangeAlertsSection(): JSX.Element {
 
       <div className="field" style={{ marginBottom: "1rem" }}>
         <label>Recipients</label>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-          <input
-            className="objective-row-input"
-            type="email"
-            placeholder="email@example.com"
-            value={emailDraft}
-            onChange={(e) => setEmailDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRecipient(); } }}
-            disabled={!enabled}
-            style={{ maxWidth: "320px" }}
-          />
-          <button type="button" className="btn" onClick={addRecipient} disabled={!enabled}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+          <div style={{ flex: "1 1 260px", minWidth: "200px" }}>
+            <OwnerInput
+              id="change-alert-recipient"
+              label=""
+              value={ownerDraft}
+              onChange={setOwnerDraft}
+              onSelectUser={(user) => {
+                if (user) {
+                  setOwnerDraft(user.displayName);
+                  setOwnerEmailDraft(user.mail || user.principalName);
+                }
+              }}
+              disabled={!enabled}
+              placeholder="Search or enter email"
+            />
+          </div>
+          <button type="button" className="btn" onClick={addRecipient} disabled={!enabled} style={{ flexShrink: 0 }}>
             Add
           </button>
         </div>
