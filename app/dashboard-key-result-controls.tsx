@@ -312,7 +312,7 @@ export default function DashboardKeyResultControls({
         <form className="kr-form" onSubmit={(event) => {
           event.preventDefault();
           void saveAll();
-        }}>
+        }} onClick={(e) => e.stopPropagation()}>
           <div className="kr-form-grid">
             <div className="field">
               <label>{itemLabel} Code</label>
@@ -347,7 +347,7 @@ export default function DashboardKeyResultControls({
               <label>Type</label>
               <select value={mode} onChange={(event) => setMode(event.target.value as KpiMode)} disabled={isSaving}>
                 <option value="measurable">Measurable</option>
-                <option value="binary">Non-measurable (Done/Not Done)</option>
+                <option value="binary">Non-measurable</option>
               </select>
             </div>
             <div className="field">

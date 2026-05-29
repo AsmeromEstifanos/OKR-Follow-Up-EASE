@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.5] — 2026-05-29
+
+### Fixed
+- KR/KPI add forms: `stopPropagation` on form click so parent section toggle doesn't intercept select interactions and prevent mode from changing
+- Removed "(Done/Not Done)" suffix from Non-measurable option label in all forms
+
+---
+
 ## [0.4.4] — 2026-05-29
 
 ### Fixed
