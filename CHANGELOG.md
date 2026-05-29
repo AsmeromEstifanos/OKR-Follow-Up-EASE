@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.9] — 2026-05-29
+
+### Fixed
+- Change Alerts section: fixed checkbox+label alignment, replaced trigger dropdown with radio buttons, replaced plain email input with OwnerInput (people search with suggestions)
+
+---
+
 ## [0.4.8] — 2026-05-29
 
 ### Added
