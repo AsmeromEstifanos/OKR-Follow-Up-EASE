@@ -27,7 +27,7 @@ export type NotificationSettings = {
 function defaultRuleSettings(id: RuleId): RuleSettings {
   const def = RULE_DEFINITIONS[id];
   return {
-    enabled: false,
+    enabled: true,
     hour: "hour" in def.schedule ? def.schedule.hour : 9,
     minute: "minute" in def.schedule ? def.schedule.minute : 0,
     dayOfWeek: def.schedule.kind === "weekly" ? def.schedule.dayOfWeek : 1,

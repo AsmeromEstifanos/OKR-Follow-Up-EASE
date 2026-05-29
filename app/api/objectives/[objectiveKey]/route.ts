@@ -1,7 +1,7 @@
 import { deleteObjective, getObjectiveWithContext, updateObjective } from "@/lib/store";
 import type { Confidence, UpdateObjectiveInput } from "@/lib/types";
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
-import { buildActivityDiff } from "@/app/api/_utils/user-activity-log";
+import { buildActivityDiff, toAsciiHeader } from "@/app/api/_utils/user-activity-log";
 import { sendChangeAlert } from "@/lib/change-alerts";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -215,7 +215,7 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
       const detailsJson = before
         ? buildActivityDiff(before as unknown as Record<string, unknown>, objective as unknown as Record<string, unknown>)
         : "";
-      const label = objective.objectiveCode ? `${objective.objectiveCode} ${objective.title}` : objective.title;
+      const label = toAsciiHeader(objective.objectiveCode ? `${objective.objectiveCode} ${objective.title}` : objective.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
       void sendChangeAlert({ entityType: "objective", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
       const headers: Record<string, string> = { "x-activity-label": label };

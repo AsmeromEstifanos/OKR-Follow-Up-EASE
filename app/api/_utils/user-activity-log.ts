@@ -67,6 +67,11 @@ function inferEntityKeyFromPath(pathname: string): string {
   return segments[2] ?? "";
 }
 
+// Strip non-ASCII characters so the string is safe to use as an HTTP header value.
+export function toAsciiHeader(value: string): string {
+  return value.replace(/[^\x00-\x7F]/g, "");
+}
+
 export function buildActivityDiff(
   before: Record<string, unknown>,
   after: Record<string, unknown>

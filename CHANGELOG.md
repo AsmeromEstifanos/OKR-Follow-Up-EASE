@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.12] — 2026-05-29
+
+### Fixed
+- "Cannot convert argument to a ByteString" error: entity titles with em-dashes or other non-ASCII characters are now stripped before being set as HTTP response headers (`x-activity-label`) via new `toAsciiHeader()` helper
+- Notification reminder rules now default to enabled (were defaulting to Off)
+
+---
+
 ## [0.4.11] — 2026-05-29
 
 ### Fixed

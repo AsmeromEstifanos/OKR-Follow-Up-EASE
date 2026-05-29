@@ -1,5 +1,5 @@
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
-import { buildActivityDiff } from "@/app/api/_utils/user-activity-log";
+import { buildActivityDiff, toAsciiHeader } from "@/app/api/_utils/user-activity-log";
 import { sendChangeAlert } from "@/lib/change-alerts";
 import { deleteKpi, getKpi, updateKpi } from "@/lib/store";
 import type { UpdateKpiInput } from "@/lib/types";
@@ -133,7 +133,7 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
       const detailsJson = before
         ? buildActivityDiff(before as unknown as Record<string, unknown>, kpi as unknown as Record<string, unknown>)
         : "";
-      const label = kpi.kpiCode ? `${kpi.kpiCode} ${kpi.title}` : kpi.title;
+      const label = toAsciiHeader(kpi.kpiCode ? `${kpi.kpiCode} ${kpi.title}` : kpi.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
       void sendChangeAlert({ entityType: "kpi", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
       const headers: Record<string, string> = { "x-activity-label": label };
