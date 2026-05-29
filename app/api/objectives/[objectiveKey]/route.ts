@@ -2,6 +2,7 @@ import { deleteObjective, getObjectiveWithContext, updateObjective } from "@/lib
 import type { Confidence, UpdateObjectiveInput } from "@/lib/types";
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
 import { buildActivityDiff } from "@/app/api/_utils/user-activity-log";
+import { sendChangeAlert } from "@/lib/change-alerts";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -215,6 +216,8 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
         ? buildActivityDiff(before as unknown as Record<string, unknown>, objective as unknown as Record<string, unknown>)
         : "";
       const label = objective.objectiveCode ? `${objective.objectiveCode} ${objective.title}` : objective.title;
+      const changedBy = (request.headers.get("x-user-email") ?? "").trim();
+      void sendChangeAlert({ entityType: "objective", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
       const headers: Record<string, string> = { "x-activity-label": label };
       if (detailsJson) headers["x-activity-details"] = detailsJson;
       return NextResponse.json(objective, { headers });

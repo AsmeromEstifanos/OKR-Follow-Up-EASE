@@ -1,0 +1,160 @@
+"use client";
+
+import { apiPath } from "@/lib/base-path";
+import type { ChangeAlertSettings, ChangeAlertTrigger } from "@/lib/notification-settings";
+import { useEffect, useState } from "react";
+
+const TRIGGER_OPTIONS: { value: ChangeAlertTrigger; label: string; description: string }[] = [
+  { value: "all", label: "All updates", description: "Every field change on any objective, KR, or KPI" },
+  { value: "status_progress", label: "Status & progress only", description: "Only when status, progress %, RAG, or current value changes" },
+  { value: "new_only", label: "New items only", description: "Only when a new objective, KR, or KPI is created" }
+];
+
+type ApiError = { error?: string };
+
+async function readJson<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+  try { return JSON.parse(text) as T; } catch { return null; }
+}
+
+export default function ChangeAlertsSection(): JSX.Element {
+  const [enabled, setEnabled] = useState(false);
+  const [trigger, setTrigger] = useState<ChangeAlertTrigger>("all");
+  const [recipients, setRecipients] = useState<string[]>([]);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(apiPath("/api/notifications/settings"), { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await readJson<{ changeAlerts?: ChangeAlertSettings }>(res);
+        if (data?.changeAlerts) {
+          setEnabled(data.changeAlerts.enabled);
+          setTrigger(data.changeAlerts.trigger ?? "all");
+          setRecipients(data.changeAlerts.recipients ?? []);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
+
+  const save = async (): Promise<void> => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setMessage("");
+    setError("");
+    const res = await fetch(apiPath("/api/notifications/settings"), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ changeAlerts: { enabled, trigger, recipients } })
+    });
+    setIsSaving(false);
+    if (!res.ok) {
+      const p = await readJson<ApiError>(res);
+      setError(p?.error ?? "Failed to save.");
+      return;
+    }
+    setMessage("Saved.");
+    setTimeout(() => setMessage(""), 3000);
+  };
+
+  const addRecipient = (): void => {
+    const email = emailDraft.trim().toLowerCase();
+    if (!email || !email.includes("@")) { setError("Enter a valid email address."); return; }
+    if (recipients.includes(email)) { setError("Already in the list."); return; }
+    setRecipients((prev) => [...prev, email]);
+    setEmailDraft("");
+    setError("");
+  };
+
+  const removeRecipient = (email: string): void => {
+    setRecipients((prev) => prev.filter((r) => r !== email));
+  };
+
+  if (isLoading) return <p className="meta">Loading…</p>;
+
+  return (
+    <div className="config-subsection">
+      <h3 className="config-subsection-heading">Change Alert Emails</h3>
+      <p className="meta" style={{ marginBottom: "1rem" }}>
+        Send an email to the recipients below whenever an objective, KR, or KPI is changed.
+        Requires <code>NOTIFICATION_FROM_EMAIL</code> to be configured.
+      </p>
+
+      <div className="field" style={{ marginBottom: "1rem" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+          Enable change alert emails
+        </label>
+      </div>
+
+      <div className="field" style={{ marginBottom: "1rem" }}>
+        <label>Trigger</label>
+        <select
+          className="objective-row-select"
+          value={trigger}
+          onChange={(e) => setTrigger(e.target.value as ChangeAlertTrigger)}
+          disabled={!enabled}
+          style={{ maxWidth: "400px" }}
+        >
+          {TRIGGER_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label} — {opt.description}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="field" style={{ marginBottom: "0.5rem" }}>
+        <label>Recipients</label>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <input
+            className="objective-row-input"
+            type="email"
+            placeholder="email@example.com"
+            value={emailDraft}
+            onChange={(e) => setEmailDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRecipient(); } }}
+            disabled={!enabled}
+            style={{ maxWidth: "320px" }}
+          />
+          <button type="button" className="btn" onClick={addRecipient} disabled={!enabled}>
+            Add
+          </button>
+        </div>
+        {recipients.length === 0 ? (
+          <p className="meta">No recipients configured.</p>
+        ) : (
+          <ul className="config-option-list">
+            {recipients.map((email) => (
+              <li key={email} className="config-option-row">
+                <span>{email}</span>
+                <button
+                  type="button"
+                  className="config-remove-btn"
+                  onClick={() => removeRecipient(email)}
+                  aria-label={`Remove ${email}`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginTop: "1rem" }}>
+        <button type="button" className="btn" onClick={() => void save()} disabled={isSaving}>
+          {isSaving ? "Saving…" : "Save Change Alerts"}
+        </button>
+        {message && <span style={{ color: "#22c55e", fontSize: "0.875rem" }}>{message}</span>}
+        {error && <span style={{ color: "#ef4444", fontSize: "0.875rem" }}>{error}</span>}
+      </div>
+    </div>
+  );
+}

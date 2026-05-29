@@ -1,5 +1,6 @@
 "use client";
 
+import ChangeAlertsSection from "@/app/change-alerts-section";
 import NotificationActionsSection from "@/app/notification-actions-section";
 import NotificationSettingsSection from "@/app/notification-settings-section";
 import useCurrentUserEmail from "@/app/use-current-user-email";
@@ -951,6 +952,9 @@ export default function ConfigPage(): JSX.Element {
             <NotificationSettingsSection />
             <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid #e2e8f0" }}>
               <NotificationActionsSection />
+            </div>
+            <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid #e2e8f0" }}>
+              <ChangeAlertsSection />
             </div>
           </div>
         )}

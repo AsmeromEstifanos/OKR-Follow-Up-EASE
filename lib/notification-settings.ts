@@ -11,8 +11,17 @@ export type RuleSettings = {
   message: string;
 };
 
+export type ChangeAlertTrigger = "all" | "status_progress" | "new_only";
+
+export type ChangeAlertSettings = {
+  enabled: boolean;
+  recipients: string[];
+  trigger: ChangeAlertTrigger;
+};
+
 export type NotificationSettings = {
   rules: Record<RuleId, RuleSettings>;
+  changeAlerts: ChangeAlertSettings;
 };
 
 function defaultRuleSettings(id: RuleId): RuleSettings {
@@ -37,8 +46,15 @@ function defaultRules(): Record<RuleId, RuleSettings> {
   );
 }
 
+const DEFAULT_CHANGE_ALERTS: ChangeAlertSettings = {
+  enabled: false,
+  recipients: [],
+  trigger: "all"
+};
+
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  rules: defaultRules()
+  rules: defaultRules(),
+  changeAlerts: DEFAULT_CHANGE_ALERTS
 };
 
 function getSettingsFilePath(): string {
@@ -73,7 +89,18 @@ function normalize(input: unknown): NotificationSettings {
     };
   }
 
-  return { rules };
+  const rawAlerts = (raw.changeAlerts ?? {}) as Partial<ChangeAlertSettings>;
+  const changeAlerts: ChangeAlertSettings = {
+    enabled: typeof rawAlerts.enabled === "boolean" ? rawAlerts.enabled : false,
+    recipients: Array.isArray(rawAlerts.recipients)
+      ? rawAlerts.recipients.filter((r): r is string => typeof r === "string" && r.trim().length > 0)
+      : [],
+    trigger: rawAlerts.trigger === "status_progress" || rawAlerts.trigger === "new_only"
+      ? rawAlerts.trigger
+      : "all"
+  };
+
+  return { rules, changeAlerts };
 }
 
 export async function readNotificationSettings(): Promise<NotificationSettings> {

@@ -34,7 +34,7 @@ function buildFallbackSettings(): NotificationSettings {
     },
     {} as Record<RuleId, RuleSettings>
   );
-  return { rules };
+  return { rules, changeAlerts: { enabled: false, recipients: [], trigger: "all" as const } };
 }
 
 function pad2(n: number): string {

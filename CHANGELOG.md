@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.8] — 2026-05-29
+
+### Added
+- Change alert emails: when an objective, KR, or KPI is updated, an email is sent to a configurable recipient list showing what changed (before/after diff), who made the change, and when
+- Config > Notifications > "Change Alert Emails" section: enable toggle, trigger selector (All updates / Status & progress only / New items only), recipient list with add/remove
+- `lib/change-alerts.ts`: `sendChangeAlert()` helper (best-effort, never throws) wired into objective, KR, and KPI PATCH routes
+
+---
+
 ## [0.4.7] — 2026-05-29
 
 ### Changed
