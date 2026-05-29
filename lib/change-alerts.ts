@@ -25,12 +25,22 @@ const FIELD_LABELS: Record<string, string> = {
   strategicTheme: "Strategic Theme"
 };
 
+export type CascadeContext = {
+  krLabel: string;
+  krProgressBefore: number;
+  krProgressAfter: number;
+  objectiveLabel: string;
+  objectiveProgressBefore: number;
+  objectiveProgressAfter: number;
+};
+
 export type ChangeAlertPayload = {
   entityType: "objective" | "kr" | "kpi";
   entityLabel: string;
   changedBy: string;
   diffJson: string;
   isNew: boolean;
+  cascade?: CascadeContext;
 };
 
 function getGraphAppConfig(): GraphAppConfig | null {
@@ -78,8 +88,49 @@ function buildDiffRows(diffJson: string): Array<{ field: string; from: string; t
   }
 }
 
+function progressBar(pct: number): string {
+  const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+  const color = clamped >= 70 ? "#22c55e" : clamped >= 40 ? "#f59e0b" : "#ef4444";
+  return `<span style="display:inline-block;width:80px;height:8px;background:#e5e7eb;border-radius:4px;vertical-align:middle;margin-right:6px"><span style="display:block;width:${clamped}%;height:100%;background:${color};border-radius:4px"></span></span>${clamped}%`;
+}
+
+function buildCascadeHtml(cascade: CascadeContext): string {
+  const krChanged = Math.round(cascade.krProgressBefore) !== Math.round(cascade.krProgressAfter);
+  const objChanged = Math.round(cascade.objectiveProgressBefore) !== Math.round(cascade.objectiveProgressAfter);
+  if (!krChanged && !objChanged) return "";
+
+  const rows = [
+    krChanged ? `
+      <tr>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:600">Key Result</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb;color:#6b7280;font-size:0.85rem">${cascade.krLabel}</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb">${progressBar(cascade.krProgressBefore)}</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb">${progressBar(cascade.krProgressAfter)}</td>
+      </tr>` : "",
+    objChanged ? `
+      <tr>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:600">Objective</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb;color:#6b7280;font-size:0.85rem">${cascade.objectiveLabel}</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb">${progressBar(cascade.objectiveProgressBefore)}</td>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb">${progressBar(cascade.objectiveProgressAfter)}</td>
+      </tr>` : ""
+  ].filter(Boolean).join("");
+
+  return `
+    <h3 style="color:#374151;font-size:0.9rem;margin:20px 0 8px;text-transform:uppercase;letter-spacing:0.05em">Cascade Impact</h3>
+    <table style="border-collapse:collapse;width:100%;font-size:0.9rem">
+      <thead><tr style="background:#f3f4f6">
+        <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb"></th>
+        <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb"></th>
+        <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb">Before</th>
+        <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb">After</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function buildHtml(payload: ChangeAlertPayload): string {
-  const { entityType, entityLabel, changedBy, diffJson, isNew } = payload;
+  const { entityType, entityLabel, changedBy, diffJson, isNew, cascade } = payload;
   const typeLabel = entityTypeLabel(entityType);
   const rows = isNew ? [] : buildDiffRows(diffJson);
   const now = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
@@ -103,11 +154,14 @@ function buildHtml(payload: ChangeAlertPayload): string {
           </tbody>
         </table>`;
 
+  const cascadeHtml = cascade ? buildCascadeHtml(cascade) : "";
+
   return `<div style="font-family:sans-serif;max-width:640px;margin:0 auto;padding:24px">
     <h2 style="color:#111827;margin:0 0 4px">${isNew ? `New ${typeLabel} created` : `${typeLabel} updated`}</h2>
     <p style="color:#6b7280;margin:0 0 20px;font-size:0.9rem">${now} &mdash; by ${changedBy || "unknown"}</p>
     <p style="font-weight:600;margin:0 0 16px;color:#1d3d52">${entityLabel}</p>
     ${changesHtml}
+    ${cascadeHtml}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
     <p style="color:#9ca3af;font-size:0.8rem">OKR Follow-Up &mdash; automated change alert</p>
   </div>`;

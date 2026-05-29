@@ -1,8 +1,8 @@
-import { deleteKeyResult, getKeyResult, updateKeyResult } from "@/lib/store";
+import { deleteKeyResult, getKeyResult, getObjective, updateKeyResult } from "@/lib/store";
 import type { UpdateKeyResultInput } from "@/lib/types";
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
 import { buildActivityDiff, toAsciiHeader } from "@/app/api/_utils/user-activity-log";
-import { sendChangeAlert } from "@/lib/change-alerts";
+import { sendChangeAlert, type CascadeContext } from "@/lib/change-alerts";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -183,7 +183,28 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
         : "";
       const label = toAsciiHeader(keyResult.krCode ? `${keyResult.krCode} ${keyResult.title}` : keyResult.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
-      void sendChangeAlert({ entityType: "kr", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
+
+      let cascade: CascadeContext | undefined;
+      try {
+        const [objBefore, objAfter] = await Promise.all([
+          before?.objectiveKey ? getObjective(before.objectiveKey) : null,
+          keyResult.objectiveKey ? getObjective(keyResult.objectiveKey) : null
+        ]);
+        if (objBefore && objAfter) {
+          cascade = {
+            krLabel: label,
+            krProgressBefore: before?.progressPct ?? 0,
+            krProgressAfter: keyResult.progressPct,
+            objectiveLabel: toAsciiHeader(objAfter.objectiveCode ? `${objAfter.objectiveCode} ${objAfter.title}` : objAfter.title),
+            objectiveProgressBefore: objBefore.progressPct,
+            objectiveProgressAfter: objAfter.progressPct
+          };
+        }
+      } catch {
+        // cascade context is best-effort
+      }
+
+      void sendChangeAlert({ entityType: "kr", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false, cascade });
       const headers: Record<string, string> = { "x-activity-label": label };
       if (detailsJson) headers["x-activity-details"] = detailsJson;
       return NextResponse.json(keyResult, { headers });

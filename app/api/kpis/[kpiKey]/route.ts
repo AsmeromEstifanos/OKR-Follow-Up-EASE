@@ -1,7 +1,7 @@
 import { withOperationProgress } from "@/app/api/_utils/with-operation-progress";
 import { buildActivityDiff, toAsciiHeader } from "@/app/api/_utils/user-activity-log";
-import { sendChangeAlert } from "@/lib/change-alerts";
-import { deleteKpi, getKpi, updateKpi } from "@/lib/store";
+import { sendChangeAlert, type CascadeContext } from "@/lib/change-alerts";
+import { deleteKpi, getKpi, getKeyResult, getObjective, updateKpi } from "@/lib/store";
 import type { UpdateKpiInput } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -135,7 +135,33 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
         : "";
       const label = toAsciiHeader(kpi.kpiCode ? `${kpi.kpiCode} ${kpi.title}` : kpi.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
-      void sendChangeAlert({ entityType: "kpi", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
+
+      // Build cascade context: KR and Objective progress before/after
+      let cascade: CascadeContext | undefined;
+      try {
+        const [krBefore, krAfter] = await Promise.all([
+          before?.krKey ? getKeyResult(before.krKey) : null,
+          getKeyResult(kpi.krKey)
+        ]);
+        const [objBefore, objAfter] = await Promise.all([
+          krBefore?.objectiveKey ? getObjective(krBefore.objectiveKey) : null,
+          krAfter?.objectiveKey ? getObjective(krAfter.objectiveKey) : null
+        ]);
+        if (krBefore && krAfter && objBefore && objAfter) {
+          cascade = {
+            krLabel: toAsciiHeader(krAfter.krCode ? `${krAfter.krCode} ${krAfter.title}` : krAfter.title),
+            krProgressBefore: krBefore.progressPct,
+            krProgressAfter: krAfter.progressPct,
+            objectiveLabel: toAsciiHeader(objAfter.objectiveCode ? `${objAfter.objectiveCode} ${objAfter.title}` : objAfter.title),
+            objectiveProgressBefore: objBefore.progressPct,
+            objectiveProgressAfter: objAfter.progressPct
+          };
+        }
+      } catch {
+        // cascade context is best-effort
+      }
+
+      void sendChangeAlert({ entityType: "kpi", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false, cascade });
       const headers: Record<string, string> = { "x-activity-label": label };
       if (detailsJson) headers["x-activity-details"] = detailsJson;
       return NextResponse.json(kpi, { headers });

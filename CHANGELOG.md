@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.15] — 2026-05-29
+
+### Added
+- Change alert emails now include a "Cascade Impact" section when a KPI or KR is updated: shows the parent KR progress (before → after) and parent Objective progress (before → after) with colour-coded progress bars — only shown when those values actually changed
+
+---
+
 ## [0.4.14] — 2026-05-29
 
 ### Fixed
