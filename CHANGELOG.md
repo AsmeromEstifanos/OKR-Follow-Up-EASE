@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.4] — 2026-05-29
+
+### Fixed
+- KPI rows: removed pencil edit button (click title to open details instead)
+- KPI create: non-measurable mode now saves correctly — `createKpi` in dummy-store now preserves null target/current instead of defaulting to 100/0
+- KR create: added measurable/non-measurable Type selector and target/current fields to the Add Key Result form (was only in edit)
+- KR create: `createKeyResult` now uses target/current from input (with null support) instead of always defaulting to 100/0
+
+---
+
 ## [0.4.3] — 2026-05-26
 
 ### Added

@@ -2616,6 +2616,13 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
   const blockers = normalizeName(input.blockers ?? "");
   const comment = normalizeName(input.comment ?? "");
   const notes = normalizeName(input.notes ?? "");
+  const targetValue = input.targetValue === null
+    ? null
+    : Number.isFinite(input.targetValue) ? input.targetValue : 100;
+  const currentValue = input.currentValue === null
+    ? null
+    : Number.isFinite(input.currentValue) ? input.currentValue : 0;
+  const progressPct = computeKrProgress(weightValue, targetValue, currentValue);
 
   const keyResult: KeyResult = {
     krKey,
@@ -2631,9 +2638,9 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
       undefined,
     metricType: normalizeMetricType(input.metricType),
     baselineValue: weightValue,
-    targetValue: 100,
-    currentValue: 0,
-    progressPct: 0,
+    targetValue,
+    currentValue,
+    progressPct,
     status: input.status,
     dueDate: input.dueDate,
     checkInFrequency,
@@ -2715,12 +2722,12 @@ export function createKpi(input: CreateKpiInput): Kpi {
     keyResult.periodKey || objective.periodKey,
   );
   const baselineValue = normalizeWeightInput(input.baselineValue, "KPI");
-  const targetValue = Number.isFinite(input.targetValue)
-    ? input.targetValue
-    : 100;
-  const currentValue = Number.isFinite(input.currentValue)
-    ? input.currentValue
-    : 0;
+  const targetValue = input.targetValue === null
+    ? null
+    : Number.isFinite(input.targetValue) ? input.targetValue : 100;
+  const currentValue = input.currentValue === null
+    ? null
+    : Number.isFinite(input.currentValue) ? input.currentValue : 0;
   const progressPct = computeKrProgress(
     baselineValue,
     targetValue,

@@ -400,19 +400,6 @@ export default function DashboardEaseKpiCard({
             </div>
             <span className="ease-kpi-bar-pct">{Math.round(progressValue)}%</span>
           </div>
-          {canEdit && (
-            <button
-              type="button"
-              className="ease-kpi-edit-btn"
-              onClick={openDetails}
-              aria-label="Edit KPI"
-              disabled={isSaving}
-            >
-              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M10.5 1.5l3 3L4 14H1v-3L10.5 1.5z" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 

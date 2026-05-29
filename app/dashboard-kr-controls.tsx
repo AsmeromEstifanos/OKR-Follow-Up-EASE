@@ -22,12 +22,15 @@ type Props = {
 };
 
 type ApiError = { error?: string };
+type KrMode = "measurable" | "binary";
 type PendingKr = {
   title: string;
   owner: string;
   ownerEmail: string;
   metricType: MetricType;
   baselineValue: number;
+  targetValue: number | null;
+  currentValue: number | null;
   status: KrStatus;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
@@ -89,6 +92,10 @@ export default function DashboardKrControls({
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [codePreview, setCodePreview] = useState("");
+  const [mode, setMode] = useState<KrMode>("measurable");
+  const [isDone, setIsDone] = useState(false);
+  const [targetValue, setTargetValue] = useState("100");
+  const [currentValue, setCurrentValue] = useState("0");
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
@@ -130,6 +137,10 @@ export default function DashboardKrControls({
   }, [defaultOwner, defaultOwnerEmail, isAdding, sanitizedDefaultOwner]);
 
   const resetDraft = (): void => {
+    setMode("measurable");
+    setIsDone(false);
+    setTargetValue("100");
+    setCurrentValue("0");
     setTitle("");
     setOwner("");
     setOwnerEmail("");
@@ -161,17 +172,33 @@ export default function DashboardKrControls({
       return null;
     }
     const baseline = Number(baselineValue);
-    if (!Number.isFinite(baseline)) {
-      setError("Weight must be a valid number.");
-      return null;
-    }
-    if (baseline < 0 || baseline > 1) {
-      setError("Weight must be between 0 and 1.");
+    if (!Number.isFinite(baseline) || baseline < 0 || baseline > 1) {
+      setError("Weight must be a number between 0 and 1.");
       return null;
     }
     if (!dueDate) {
       setError("Due date is required.");
       return null;
+    }
+
+    let resolvedTarget: number | null;
+    let resolvedCurrent: number | null;
+    if (mode === "binary") {
+      resolvedTarget = null;
+      resolvedCurrent = isDone ? 100 : 0;
+    } else {
+      const target = Number(targetValue);
+      const current = Number(currentValue);
+      if (!Number.isFinite(target) || !Number.isFinite(current)) {
+        setError("Target and current values must be numbers.");
+        return null;
+      }
+      if (target <= 0) {
+        setError("Target value must be greater than 0.");
+        return null;
+      }
+      resolvedTarget = target;
+      resolvedCurrent = current;
     }
 
     return {
@@ -180,6 +207,8 @@ export default function DashboardKrControls({
       ownerEmail: ownerEmail.trim(),
       metricType,
       baselineValue: baseline,
+      targetValue: resolvedTarget,
+      currentValue: resolvedCurrent,
       status,
       dueDate,
       checkInFrequency,
@@ -290,8 +319,29 @@ export default function DashboardKrControls({
                 {metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
+            <div className="field">
+              <label>Type</label>
+              <select value={mode} onChange={(event) => setMode(event.target.value as KrMode)} disabled={isSaving}>
+                <option value="measurable">Measurable</option>
+                <option value="binary">Non-measurable (Done/Not Done)</option>
+              </select>
+            </div>
             <div className="field"><label>Weight</label><input type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-            <div className="field"><label>Progress %</label><input value="0" readOnly disabled /></div>
+            {mode === "measurable" ? (
+              <>
+                <div className="field"><label>Target Value</label><input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Current Value</label><input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
+              </>
+            ) : (
+              <div className="field">
+                <label>Status</label>
+                <div className="objective-row-actions">
+                  <button type="button" className={isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(true)} disabled={isSaving}>Done</button>
+                  <button type="button" className={!isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(false)} disabled={isSaving}>Not Done</button>
+                </div>
+              </div>
+            )}
+            <div className="field"><label>Progress %</label><input value={mode === "binary" ? (isDone ? "100" : "0") : String(Math.round(Math.max(0, Math.min(100, (Number(currentValue) / (Number(targetValue) || 1)) * 100)) * 100) / 100)} readOnly disabled /></div>
             <div className="field">
               <label>{itemLabel} Status</label>
               <select value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>
