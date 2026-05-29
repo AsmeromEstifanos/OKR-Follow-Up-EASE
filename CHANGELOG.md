@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.10] — 2026-05-29
+
+### Fixed
+- Change Alerts: reverted trigger back to dropdown (radio layout was broken), replaced OwnerInput with plain email input (OwnerInput requires signed-in user context and was throwing "Missing signed-in user email" error)
+
+---
+
 ## [0.4.9] — 2026-05-29
 
 ### Fixed

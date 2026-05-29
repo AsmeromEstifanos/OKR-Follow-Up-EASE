@@ -1,14 +1,13 @@
 "use client";
 
-import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
 import type { ChangeAlertSettings, ChangeAlertTrigger } from "@/lib/notification-settings";
 import { useEffect, useState } from "react";
 
-const TRIGGER_OPTIONS: { value: ChangeAlertTrigger; label: string; description: string }[] = [
-  { value: "all", label: "All updates", description: "Every field change on any objective, KR, or KPI" },
-  { value: "status_progress", label: "Status & progress only", description: "Only when status, progress %, RAG, or current value changes" },
-  { value: "new_only", label: "New items only", description: "Only when a new objective, KR, or KPI is created" }
+const TRIGGER_OPTIONS: { value: ChangeAlertTrigger; label: string }[] = [
+  { value: "all", label: "All updates — every field change on any objective, KR, or KPI" },
+  { value: "status_progress", label: "Status & progress only — status, progress %, RAG, current value" },
+  { value: "new_only", label: "New items only — when a new objective, KR, or KPI is created" }
 ];
 
 type ApiError = { error?: string };
@@ -23,8 +22,7 @@ export default function ChangeAlertsSection(): JSX.Element {
   const [enabled, setEnabled] = useState(false);
   const [trigger, setTrigger] = useState<ChangeAlertTrigger>("all");
   const [recipients, setRecipients] = useState<string[]>([]);
-  const [ownerDraft, setOwnerDraft] = useState("");
-  const [ownerEmailDraft, setOwnerEmailDraft] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -68,12 +66,11 @@ export default function ChangeAlertsSection(): JSX.Element {
   };
 
   const addRecipient = (): void => {
-    const email = ownerEmailDraft.trim().toLowerCase() || ownerDraft.trim().toLowerCase();
-    if (!email || !email.includes("@")) { setError("Select or enter a valid email address."); return; }
+    const email = emailDraft.trim().toLowerCase();
+    if (!email || !email.includes("@")) { setError("Enter a valid email address."); return; }
     if (recipients.includes(email)) { setError("Already in the list."); return; }
     setRecipients((prev) => [...prev, email]);
-    setOwnerDraft("");
-    setOwnerEmailDraft("");
+    setEmailDraft("");
     setError("");
   };
 
@@ -91,7 +88,6 @@ export default function ChangeAlertsSection(): JSX.Element {
         Requires <code>NOTIFICATION_FROM_EMAIL</code> to be configured.
       </p>
 
-      {/* Enable toggle */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
         <input
           id="change-alert-enabled"
@@ -100,70 +96,48 @@ export default function ChangeAlertsSection(): JSX.Element {
           onChange={(e) => setEnabled(e.target.checked)}
           style={{ width: "16px", height: "16px", cursor: "pointer", flexShrink: 0 }}
         />
-        <label htmlFor="change-alert-enabled" style={{ cursor: "pointer", margin: 0 }}>
+        <label htmlFor="change-alert-enabled" style={{ cursor: "pointer", margin: 0, userSelect: "none" }}>
           Enable change alert emails
         </label>
       </div>
 
-      {/* Trigger checkboxes */}
       <div className="field" style={{ marginBottom: "1.25rem" }}>
-        <label style={{ marginBottom: "0.4rem", display: "block" }}>Trigger</label>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <label htmlFor="change-alert-trigger">Trigger</label>
+        <select
+          id="change-alert-trigger"
+          className="objective-row-select"
+          value={trigger}
+          onChange={(e) => setTrigger(e.target.value as ChangeAlertTrigger)}
+          disabled={!enabled}
+          style={{ maxWidth: "480px" }}
+        >
           {TRIGGER_OPTIONS.map((opt) => (
-            <label key={opt.value} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="change-alert-trigger"
-                value={opt.value}
-                checked={trigger === opt.value}
-                onChange={() => setTrigger(opt.value)}
-                disabled={!enabled}
-                style={{ marginTop: "3px", flexShrink: 0 }}
-              />
-              <span>
-                <strong>{opt.label}</strong>
-                <span style={{ color: "#6b7280", marginLeft: "0.4rem", fontSize: "0.85rem" }}>{opt.description}</span>
-              </span>
-            </label>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </div>
+        </select>
       </div>
 
-      {/* Recipients */}
       <div className="field" style={{ marginBottom: "1rem" }}>
-        <label style={{ marginBottom: "0.4rem", display: "block" }}>Recipients</label>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 260px", minWidth: "200px" }}>
-            <OwnerInput
-              id="change-alert-recipient"
-              label=""
-              value={ownerDraft}
-              onChange={setOwnerDraft}
-              onSelectUser={(user) => {
-                if (user) {
-                  setOwnerDraft(user.displayName);
-                  setOwnerEmailDraft(user.mail || user.principalName);
-                }
-              }}
-              disabled={!enabled}
-              placeholder="Search or enter email"
-            />
-          </div>
-          <button
-            type="button"
-            className="btn"
-            onClick={addRecipient}
+        <label>Recipients</label>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <input
+            className="objective-row-input"
+            type="email"
+            placeholder="email@example.com"
+            value={emailDraft}
+            onChange={(e) => setEmailDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRecipient(); } }}
             disabled={!enabled}
-            style={{ flexShrink: 0 }}
-          >
+            style={{ maxWidth: "320px" }}
+          />
+          <button type="button" className="btn" onClick={addRecipient} disabled={!enabled}>
             Add
           </button>
         </div>
-
         {recipients.length === 0 ? (
-          <p className="meta" style={{ marginTop: "0.5rem" }}>No recipients configured.</p>
+          <p className="meta">No recipients configured.</p>
         ) : (
-          <ul className="config-option-list" style={{ marginTop: "0.5rem" }}>
+          <ul className="config-option-list">
             {recipients.map((email) => (
               <li key={email} className="config-option-row">
                 <span>{email}</span>
@@ -181,7 +155,7 @@ export default function ChangeAlertsSection(): JSX.Element {
         )}
       </div>
 
-      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginTop: "1rem" }}>
         <button type="button" className="btn" onClick={() => void save()} disabled={isSaving}>
           {isSaving ? "Saving…" : "Save Change Alerts"}
         </button>
