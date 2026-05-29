@@ -124,7 +124,12 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
     try {
       const body = await request.json();
       const patch = parseKpiPatch(body);
+
+      // Snapshot before state (KPI + parent KR + parent Objective) BEFORE the update
       const before = await getKpi(context.params.kpiKey);
+      const krSnapshotBefore = before?.krKey ? await getKeyResult(before.krKey) : null;
+      const objSnapshotBefore = krSnapshotBefore?.objectiveKey ? await getObjective(krSnapshotBefore.objectiveKey) : null;
+
       const kpi = await updateKpi(context.params.kpiKey, patch);
       if (!kpi) {
         return NextResponse.json({ error: "KPI not found." }, { status: 404 });
@@ -136,24 +141,18 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
       const label = toAsciiHeader(kpi.kpiCode ? `${kpi.kpiCode} ${kpi.title}` : kpi.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
 
-      // Build cascade context: KR and Objective progress before/after
+      // Build cascade context using pre-update snapshots vs post-update values
       let cascade: CascadeContext | undefined;
       try {
-        const [krBefore, krAfter] = await Promise.all([
-          before?.krKey ? getKeyResult(before.krKey) : null,
-          getKeyResult(kpi.krKey)
-        ]);
-        const [objBefore, objAfter] = await Promise.all([
-          krBefore?.objectiveKey ? getObjective(krBefore.objectiveKey) : null,
-          krAfter?.objectiveKey ? getObjective(krAfter.objectiveKey) : null
-        ]);
-        if (krBefore && krAfter && objBefore && objAfter) {
+        const krAfter = await getKeyResult(kpi.krKey);
+        const objAfter = krAfter?.objectiveKey ? await getObjective(krAfter.objectiveKey) : null;
+        if (krSnapshotBefore && krAfter && objSnapshotBefore && objAfter) {
           cascade = {
             krLabel: toAsciiHeader(krAfter.krCode ? `${krAfter.krCode} ${krAfter.title}` : krAfter.title),
-            krProgressBefore: krBefore.progressPct,
+            krProgressBefore: krSnapshotBefore.progressPct,
             krProgressAfter: krAfter.progressPct,
             objectiveLabel: toAsciiHeader(objAfter.objectiveCode ? `${objAfter.objectiveCode} ${objAfter.title}` : objAfter.title),
-            objectiveProgressBefore: objBefore.progressPct,
+            objectiveProgressBefore: objSnapshotBefore.progressPct,
             objectiveProgressAfter: objAfter.progressPct
           };
         }

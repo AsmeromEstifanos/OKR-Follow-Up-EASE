@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.16] — 2026-05-29
+
+### Fixed
+- Cascade impact not showing in change alert emails: parent KR and Objective progress were both read after the update (when the store had already recalculated them), so before === after. Now snapshots are taken before calling updateKpi/updateKeyResult.
+
+---
+
 ## [0.4.15] — 2026-05-29
 
 ### Added

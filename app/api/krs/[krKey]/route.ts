@@ -171,7 +171,11 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
     try {
       const body = await request.json();
       const patch = parseKrPatch(body);
+
+      // Snapshot before state BEFORE the update so cascade comparison is accurate
       const before = await getKeyResult(context.params.krKey);
+      const objSnapshotBefore = before?.objectiveKey ? await getObjective(before.objectiveKey) : null;
+
       const keyResult = await updateKeyResult(context.params.krKey, patch);
 
       if (!keyResult) {
@@ -186,17 +190,14 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
 
       let cascade: CascadeContext | undefined;
       try {
-        const [objBefore, objAfter] = await Promise.all([
-          before?.objectiveKey ? getObjective(before.objectiveKey) : null,
-          keyResult.objectiveKey ? getObjective(keyResult.objectiveKey) : null
-        ]);
-        if (objBefore && objAfter) {
+        const objAfter = keyResult.objectiveKey ? await getObjective(keyResult.objectiveKey) : null;
+        if (objSnapshotBefore && objAfter) {
           cascade = {
             krLabel: label,
             krProgressBefore: before?.progressPct ?? 0,
             krProgressAfter: keyResult.progressPct,
             objectiveLabel: toAsciiHeader(objAfter.objectiveCode ? `${objAfter.objectiveCode} ${objAfter.title}` : objAfter.title),
-            objectiveProgressBefore: objBefore.progressPct,
+            objectiveProgressBefore: objSnapshotBefore.progressPct,
             objectiveProgressAfter: objAfter.progressPct
           };
         }
