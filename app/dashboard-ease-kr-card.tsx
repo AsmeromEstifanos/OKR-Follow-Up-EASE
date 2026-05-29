@@ -99,8 +99,6 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-type KrMode = "measurable" | "binary";
-
 function normalizeWeightValue(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
@@ -109,9 +107,6 @@ function normalizeWeightValue(value: number): number {
   return value;
 }
 
-function inferKrMode(targetValue: number | null): KrMode {
-  return targetValue === null ? "binary" : "measurable";
-}
 
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
@@ -181,10 +176,8 @@ export default function DashboardEaseKrCard({
   const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<KrMode>(inferKrMode(keyResult.targetValue));
-  const [isDone, setIsDone] = useState((keyResult.currentValue ?? 0) >= 100);
-  const [targetValue, setTargetValue] = useState(keyResult.targetValue === null ? "" : String(keyResult.targetValue));
-  const [currentValue, setCurrentValue] = useState(keyResult.currentValue === null ? "" : String(keyResult.currentValue));
+  const [targetValue, setTargetValue] = useState(String(keyResult.targetValue ?? 100));
+  const [currentValue, setCurrentValue] = useState(String(keyResult.currentValue ?? 0));
   const [code, setCode] = useState(codeValue);
   const [title, setTitle] = useState(keyResult.title);
   const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
@@ -206,10 +199,8 @@ export default function DashboardEaseKrCard({
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
-    setMode(inferKrMode(keyResult.targetValue));
-    setIsDone((keyResult.currentValue ?? 0) >= 100);
-    setTargetValue(keyResult.targetValue === null ? "" : String(keyResult.targetValue));
-    setCurrentValue(keyResult.currentValue === null ? "" : String(keyResult.currentValue));
+    setTargetValue(String(keyResult.targetValue ?? 100));
+    setCurrentValue(String(keyResult.currentValue ?? 0));
     setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
     setStatus(keyResult.status);
     setDueDate(toDateInput(keyResult.dueDate));
@@ -244,10 +235,8 @@ export default function DashboardEaseKrCard({
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
     setMetricType(keyResult.metricType);
-    setMode(inferKrMode(keyResult.targetValue));
-    setIsDone((keyResult.currentValue ?? 0) >= 100);
-    setTargetValue(keyResult.targetValue === null ? "" : String(keyResult.targetValue));
-    setCurrentValue(keyResult.currentValue === null ? "" : String(keyResult.currentValue));
+    setTargetValue(String(keyResult.targetValue ?? 100));
+    setCurrentValue(String(keyResult.currentValue ?? 0));
     setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
     setStatus(keyResult.status);
     setDueDate(toDateInput(keyResult.dueDate));
@@ -280,30 +269,20 @@ export default function DashboardEaseKrCard({
       return;
     }
 
-    if (!dueDate) {
-      setError("Due date is required.");
+    const target = Number(targetValue);
+    const current = Number(currentValue);
+    if (!Number.isFinite(target) || !Number.isFinite(current)) {
+      setError("Target and current values must be numeric.");
+      return;
+    }
+    if (target <= 0) {
+      setError("Target value must be greater than 0.");
       return;
     }
 
-    let resolvedTarget: number | null;
-    let resolvedCurrent: number | null;
-
-    if (mode === "binary") {
-      resolvedTarget = null;
-      resolvedCurrent = isDone ? 100 : 0;
-    } else {
-      const target = Number(targetValue);
-      const current = Number(currentValue);
-      if (!Number.isFinite(target) || !Number.isFinite(current)) {
-        setError("Target and current values must be numeric.");
-        return;
-      }
-      if (target <= 0) {
-        setError("Target value must be greater than 0.");
-        return;
-      }
-      resolvedTarget = target;
-      resolvedCurrent = current;
+    if (!dueDate) {
+      setError("Due date is required.");
+      return;
     }
 
     setIsSaving(true);
@@ -322,8 +301,8 @@ export default function DashboardEaseKrCard({
         ownerEmail: ownerEmail.trim(),
         metricType,
         baselineValue: baseline,
-        targetValue: resolvedTarget,
-        currentValue: resolvedCurrent,
+        targetValue: target,
+        currentValue: current,
         status,
         dueDate,
         checkInFrequency,
@@ -437,16 +416,9 @@ export default function DashboardEaseKrCard({
                   <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                   <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
                   <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
-                  <div className="field"><label>Type</label><select className="objective-row-select" value={mode} onChange={(event) => setMode(event.target.value as KrMode)} disabled={isSaving}><option value="measurable">Measurable</option><option value="binary">Non-measurable</option></select></div>
                   <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
-                  {mode === "measurable" ? (
-                    <>
-                      <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-                      <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
-                    </>
-                  ) : (
-                    <div className="field"><label>Done?</label><div className="objective-row-actions"><button type="button" className={isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(true)} disabled={isSaving}>Done</button><button type="button" className={!isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(false)} disabled={isSaving}>Not Done</button></div></div>
-                  )}
+                  <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
+                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
                   <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                   <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                   <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
@@ -556,16 +528,9 @@ export default function DashboardEaseKrCard({
                 <OwnerInput id={`dialog-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
                 <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-                <div className="field"><label>Type</label><select className="objective-row-select" value={mode} onChange={(e) => setMode(e.target.value as KrMode)} disabled={isSaving}><option value="measurable">Measurable</option><option value="binary">Non-measurable</option></select></div>
                 <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
-                {mode === "measurable" ? (
-                  <>
-                    <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
-                    <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} disabled={isSaving} /></div>
-                  </>
-                ) : (
-                  <div className="field"><label>Done?</label><div className="objective-row-actions"><button type="button" className={isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(true)} disabled={isSaving}>Done</button><button type="button" className={!isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(false)} disabled={isSaving}>Not Done</button></div></div>
-                )}
+                <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
@@ -588,7 +553,6 @@ export default function DashboardEaseKrCard({
                 <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">Due: {formatDate(keyResult.dueDate)}</span>
                 <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
-                <span className="ease-chip ease-chip-neutral">{keyResult.targetValue === null ? "Non-measurable" : `Target: ${keyResult.targetValue} | Current: ${keyResult.currentValue ?? "-"}`}</span>
                 <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
                 <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
                 <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.7] — 2026-05-29
+
+### Changed
+- KRs reverted to always-measurable — removed the Type toggle, binary mode, and Done/Not Done from KR create and edit forms. KRs always require numeric target and current values. Non-measurable (binary) mode remains on KPIs only.
+
+---
+
+## [0.4.6] — 2026-05-29
+
+### Fixed
+- KR/KPI type toggle: replaced `<select>` with Measurable/Non-measurable button pair (same Done/Not Done pattern) — `<select>` onChange was being swallowed by parent event handlers in the card layout
+
+---
+
 ## [0.4.5] — 2026-05-29
 
 ### Fixed
