@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.3] — 2026-05-26
+
+### Added
+- KRs and KPIs now support **measurable vs non-measurable** mode
+  - Measurable: target + current numeric fields with calculated progress %
+  - Non-measurable (binary): Done / Not Done toggle; progress is 0% or 100%
+  - Mode is inferred from whether `targetValue` is null (stored in SharePoint, no schema change)
+  - Available in the KPI add form, KR/KPI inline edit, and KR/KPI detail dialog
+
+---
+
 ## [0.4.2] — 2026-05-26
 
 ### Fixed

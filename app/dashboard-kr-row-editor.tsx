@@ -53,7 +53,8 @@ function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleDateString() : "-";
 }
 
-function formatMetricValue(value: number): string {
+function formatMetricValue(value: number | null): string {
+  if (value === null) return "-";
   return value.toLocaleString();
 }
 

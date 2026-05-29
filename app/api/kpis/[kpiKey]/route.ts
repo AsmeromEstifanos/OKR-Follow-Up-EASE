@@ -56,6 +56,16 @@ function expectNumber(raw: Record<string, unknown>, field: string): number {
   return value;
 }
 
+function expectNullableNumber(raw: Record<string, unknown>, field: string): number | null {
+  const value = raw[field];
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${field} must be a valid number or null.`);
+  }
+
+  return value;
+}
+
 function parseKpiPatch(body: unknown): UpdateKpiInput {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid KPI update payload.");
@@ -87,8 +97,8 @@ function parseKpiPatch(body: unknown): UpdateKpiInput {
   if (raw.ownerEmail !== undefined) patch.ownerEmail = expectString(raw, "ownerEmail", true);
   if (raw.metricType !== undefined) patch.metricType = expectString(raw, "metricType");
   if (raw.baselineValue !== undefined) patch.baselineValue = expectNumber(raw, "baselineValue");
-  if (raw.targetValue !== undefined) patch.targetValue = expectNumber(raw, "targetValue");
-  if (raw.currentValue !== undefined) patch.currentValue = expectNumber(raw, "currentValue");
+  if (raw.targetValue !== undefined) patch.targetValue = expectNullableNumber(raw, "targetValue");
+  if (raw.currentValue !== undefined) patch.currentValue = expectNullableNumber(raw, "currentValue");
   if (raw.status !== undefined) patch.status = expectString(raw, "status");
   if (raw.dueDate !== undefined) patch.dueDate = expectString(raw, "dueDate");
   if (raw.checkInFrequency !== undefined) patch.checkInFrequency = expectString(raw, "checkInFrequency");

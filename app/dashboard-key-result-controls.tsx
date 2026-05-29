@@ -23,14 +23,15 @@ type Props = {
 };
 
 type ApiError = { error?: string };
+type KpiMode = "measurable" | "binary";
 type PendingKpi = {
   title: string;
   owner: string;
   ownerEmail: string;
   metricType: MetricType;
   baselineValue: number;
-  targetValue: number;
-  currentValue: number;
+  targetValue: number | null;
+  currentValue: number | null;
   status: KrStatus;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
@@ -94,6 +95,8 @@ export default function DashboardKeyResultControls({
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [codePreview, setCodePreview] = useState("");
+  const [mode, setMode] = useState<KpiMode>("measurable");
+  const [isDone, setIsDone] = useState(false);
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
@@ -110,6 +113,7 @@ export default function DashboardKeyResultControls({
   const [pendingItems, setPendingItems] = useState<PendingKpi[]>([]);
   const [error, setError] = useState("");
   const progressPreview = (() => {
+    if (mode === "binary") return isDone ? 100 : 0;
     const target = Number(targetValue);
     const current = Number(currentValue);
     if (!Number.isFinite(target) || target <= 0 || !Number.isFinite(current)) {
@@ -131,6 +135,8 @@ export default function DashboardKeyResultControls({
   };
 
   const resetDraft = (): void => {
+    setMode("measurable");
+    setIsDone(false);
     setTitle("");
     setOwner("");
     setOwnerEmail("");
@@ -177,20 +183,8 @@ export default function DashboardKeyResultControls({
     }
 
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
-    const current = Number(currentValue);
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Weight, target, and current values must be numbers.");
-      return null;
-    }
-
-    if (baseline < 0 || baseline > 1) {
-      setError("Weight must be between 0 and 1.");
-      return null;
-    }
-
-    if (target <= 0) {
-      setError("Target value must be greater than 0.");
+    if (!Number.isFinite(baseline) || baseline < 0 || baseline > 1) {
+      setError("Weight must be a number between 0 and 1.");
       return null;
     }
 
@@ -199,14 +193,35 @@ export default function DashboardKeyResultControls({
       return null;
     }
 
+    let resolvedTarget: number | null;
+    let resolvedCurrent: number | null;
+
+    if (mode === "binary") {
+      resolvedTarget = null;
+      resolvedCurrent = isDone ? 100 : 0;
+    } else {
+      const target = Number(targetValue);
+      const current = Number(currentValue);
+      if (!Number.isFinite(target) || !Number.isFinite(current)) {
+        setError("Target and current values must be numbers.");
+        return null;
+      }
+      if (target <= 0) {
+        setError("Target value must be greater than 0.");
+        return null;
+      }
+      resolvedTarget = target;
+      resolvedCurrent = current;
+    }
+
     return {
       title: trimmedTitle,
       owner: owner.trim(),
       ownerEmail: ownerEmail.trim(),
       metricType,
       baselineValue: baseline,
-      targetValue: target,
-      currentValue: current,
+      targetValue: resolvedTarget,
+      currentValue: resolvedCurrent,
       status,
       dueDate,
       checkInFrequency,
@@ -329,17 +344,36 @@ export default function DashboardKeyResultControls({
               </select>
             </div>
             <div className="field">
+              <label>Type</label>
+              <select value={mode} onChange={(event) => setMode(event.target.value as KpiMode)} disabled={isSaving}>
+                <option value="measurable">Measurable</option>
+                <option value="binary">Non-measurable (Done/Not Done)</option>
+              </select>
+            </div>
+            <div className="field">
               <label>Weight</label>
               <input type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} />
             </div>
-            <div className="field">
-              <label>Target Value</label>
-              <input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} />
-            </div>
-            <div className="field">
-              <label>Current Value</label>
-              <input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
-            </div>
+            {mode === "measurable" ? (
+              <>
+                <div className="field">
+                  <label>Target Value</label>
+                  <input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} />
+                </div>
+                <div className="field">
+                  <label>Current Value</label>
+                  <input type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} />
+                </div>
+              </>
+            ) : (
+              <div className="field">
+                <label>Status</label>
+                <div className="objective-row-actions">
+                  <button type="button" className={isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(true)} disabled={isSaving}>Done</button>
+                  <button type="button" className={!isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(false)} disabled={isSaving}>Not Done</button>
+                </div>
+              </div>
+            )}
             <div className="field">
               <label>Progress %</label>
               <input value={String(Math.round(progressPreview * 100) / 100)} readOnly disabled />

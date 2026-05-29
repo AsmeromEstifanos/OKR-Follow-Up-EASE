@@ -116,8 +116,8 @@ export interface KeyResult {
   ownerEmail?: string;
   metricType: MetricType;
   baselineValue: number;
-  targetValue: number;
-  currentValue: number;
+  targetValue: number | null;
+  currentValue: number | null;
   progressPct: number;
   status: KrStatus;
   dueDate: string;
@@ -139,8 +139,8 @@ export interface Kpi {
   ownerEmail?: string;
   metricType: MetricType;
   baselineValue: number;
-  targetValue: number;
-  currentValue: number;
+  targetValue: number | null;
+  currentValue: number | null;
   progressPct: number;
   status: KrStatus;
   dueDate: string;

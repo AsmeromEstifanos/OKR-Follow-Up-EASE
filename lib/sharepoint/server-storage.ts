@@ -722,6 +722,14 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+// Returns null when the SharePoint field is null/undefined/empty (non-measurable sentinel).
+function asNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = Number(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function parseConfigJson(value: unknown): unknown {
   const raw = asString(value).trim();
   if (!raw) {
@@ -1687,8 +1695,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
           ownerEmail: asOwnerEmail(item.fields?.OwnerEmail, item.fields?.Owner) || undefined,
           metricType: asString(item.fields?.MetricType) as KeyResult["metricType"],
         baselineValue: asNumber(item.fields?.BaselineValue, 0),
-        targetValue: asNumber(item.fields?.TargetValue, 0),
-        currentValue: asNumber(item.fields?.CurrentValue, 0),
+        targetValue: asNullableNumber(item.fields?.TargetValue),
+        currentValue: asNullableNumber(item.fields?.CurrentValue),
         progressPct: asNumber(item.fields?.ProgressPct, 0),
         status: asString(item.fields?.Status) as KeyResult["status"],
         dueDate: asString(item.fields?.DueDate),
@@ -1719,8 +1727,8 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         ownerEmail: asOwnerEmail(item.fields?.OwnerEmail, item.fields?.Owner) || undefined,
         metricType: asString(item.fields?.MetricType) as Kpi["metricType"],
         baselineValue: asNumber(item.fields?.BaselineValue, 0),
-        targetValue: asNumber(item.fields?.TargetValue, 0),
-        currentValue: asNumber(item.fields?.CurrentValue, 0),
+        targetValue: asNullableNumber(item.fields?.TargetValue),
+        currentValue: asNullableNumber(item.fields?.CurrentValue),
         progressPct: asNumber(item.fields?.ProgressPct, 0),
         status: asString(item.fields?.Status) as Kpi["status"],
         dueDate: asString(item.fields?.DueDate),

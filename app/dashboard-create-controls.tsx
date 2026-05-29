@@ -99,8 +99,9 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
-function formatMetricValue(value: number, metricType: MetricType): string {
+function formatMetricValue(value: number | null, metricType: MetricType): string {
   void metricType;
+  if (value === null) return "-";
   return value.toLocaleString();
 }
 

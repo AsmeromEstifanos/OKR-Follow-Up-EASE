@@ -76,8 +76,15 @@ function toDateInput(value: string | null): string {
   return value ? value.slice(0, 10) : "";
 }
 
-function readMetricValue(value: number): string {
+type KpiMode = "measurable" | "binary";
+
+function readMetricValue(value: number | null): string {
+  if (value === null) return "-";
   return value.toLocaleString();
+}
+
+function inferMode(targetValue: number | null): KpiMode {
+  return targetValue === null ? "binary" : "measurable";
 }
 
 function statusChipClass(status: KrStatus): string {
@@ -92,12 +99,16 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-function deriveProgressPct(target: number, current: number, fallback: number): number {
+function deriveProgressPct(target: number | null, current: number | null, fallback: number): number {
+  if (target === null) {
+    // Binary: currentValue holds 0 or 100
+    return current === null ? clampPercent(fallback) : clampPercent(current);
+  }
   if (!Number.isFinite(target) || Math.abs(target) < 0.000001) {
     return clampPercent(fallback);
   }
 
-  return clampPercent((current / target) * 100);
+  return clampPercent(((current ?? 0) / target) * 100);
 }
 
 function normalizeWeightValue(value: number): number {
@@ -175,14 +186,16 @@ export default function DashboardEaseKpiCard({
   const [isDialogEditing, setIsDialogEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<KpiMode>(inferMode(kpi.targetValue));
+  const [isDone, setIsDone] = useState((kpi.currentValue ?? 0) >= 100);
   const [code, setCode] = useState(codeValue);
   const [title, setTitle] = useState(kpi.title);
   const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
   const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
   const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(kpi.baselineValue)));
-  const [targetValue, setTargetValue] = useState(String(kpi.targetValue));
-  const [currentValue, setCurrentValue] = useState(String(kpi.currentValue));
+  const [targetValue, setTargetValue] = useState(kpi.targetValue === null ? "" : String(kpi.targetValue));
+  const [currentValue, setCurrentValue] = useState(kpi.currentValue === null ? "" : String(kpi.currentValue));
   const [status, setStatus] = useState<KrStatus>(kpi.status);
   const [dueDate, setDueDate] = useState(toDateInput(kpi.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(kpi.checkInFrequency);
@@ -203,9 +216,11 @@ export default function DashboardEaseKpiCard({
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
+    setMode(inferMode(kpi.targetValue));
+    setIsDone((kpi.currentValue ?? 0) >= 100);
     setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
-    setTargetValue(String(kpi.targetValue));
-    setCurrentValue(String(kpi.currentValue));
+    setTargetValue(kpi.targetValue === null ? "" : String(kpi.targetValue));
+    setCurrentValue(kpi.currentValue === null ? "" : String(kpi.currentValue));
     setStatus(kpi.status);
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
@@ -215,7 +230,9 @@ export default function DashboardEaseKpiCard({
   }, [kpi, codeValue, effectiveNotes]);
 
   const showBody = isBodyOpen || isEditing;
-  const progressValue = deriveProgressPct(Number(targetValue), Number(currentValue), kpi.progressPct);
+  const progressValue = mode === "binary"
+    ? (isDone ? 100 : 0)
+    : deriveProgressPct(targetValue === "" ? null : Number(targetValue), currentValue === "" ? null : Number(currentValue), kpi.progressPct);
   const displayWeight = normalizeWeightValue(kpi.baselineValue);
 
   const cancelEdit = (): void => {
@@ -227,9 +244,11 @@ export default function DashboardEaseKpiCard({
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
     setMetricType(kpi.metricType);
+    setMode(inferMode(kpi.targetValue));
+    setIsDone((kpi.currentValue ?? 0) >= 100);
     setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
-    setTargetValue(String(kpi.targetValue));
-    setCurrentValue(String(kpi.currentValue));
+    setTargetValue(kpi.targetValue === null ? "" : String(kpi.targetValue));
+    setCurrentValue(kpi.currentValue === null ? "" : String(kpi.currentValue));
     setStatus(kpi.status);
     setDueDate(toDateInput(kpi.dueDate));
     setCheckInFrequency(kpi.checkInFrequency);
@@ -249,27 +268,35 @@ export default function DashboardEaseKpiCard({
     }
 
     const baseline = Number(baselineValue);
-    const target = Number(targetValue);
-    const current = Number(currentValue);
-
-    if (!Number.isFinite(baseline) || !Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Weight, target, and current must be numeric.");
-      return;
-    }
-
-    if (baseline < 0 || baseline > 1) {
-      setError("Weight must be between 0 and 1.");
-      return;
-    }
-
-    if (target <= 0) {
-      setError("Target value must be greater than 0.");
+    if (!Number.isFinite(baseline) || baseline < 0 || baseline > 1) {
+      setError("Weight must be a number between 0 and 1.");
       return;
     }
 
     if (!dueDate) {
       setError("Due date is required.");
       return;
+    }
+
+    let resolvedTarget: number | null;
+    let resolvedCurrent: number | null;
+
+    if (mode === "binary") {
+      resolvedTarget = null;
+      resolvedCurrent = isDone ? 100 : 0;
+    } else {
+      const target = Number(targetValue);
+      const current = Number(currentValue);
+      if (!Number.isFinite(target) || !Number.isFinite(current)) {
+        setError("Target and current values must be numeric.");
+        return;
+      }
+      if (target <= 0) {
+        setError("Target value must be greater than 0.");
+        return;
+      }
+      resolvedTarget = target;
+      resolvedCurrent = current;
     }
 
     setIsSaving(true);
@@ -288,8 +315,8 @@ export default function DashboardEaseKpiCard({
         ownerEmail: ownerEmail.trim(),
         metricType,
         baselineValue: baseline,
-        targetValue: target,
-        currentValue: current,
+        targetValue: resolvedTarget,
+        currentValue: resolvedCurrent,
         status,
         dueDate,
         checkInFrequency,
@@ -341,11 +368,13 @@ export default function DashboardEaseKpiCard({
     router.refresh();
   };
 
-  const metaLine = [
-    `Weight: ${displayWeight}`,
-    kpi.targetValue !== 0 ? `Target: ${readMetricValue(kpi.targetValue)}` : null,
-    `Current: ${readMetricValue(kpi.currentValue)}`
-  ].filter(Boolean).join(" | ");
+  const metaLine = kpi.targetValue === null
+    ? `Weight: ${displayWeight} | ${(kpi.currentValue ?? 0) >= 100 ? "Done" : "Not Done"}`
+    : [
+        `Weight: ${displayWeight}`,
+        `Target: ${readMetricValue(kpi.targetValue)}`,
+        `Current: ${readMetricValue(kpi.currentValue)}`
+      ].join(" | ");
 
   return (
     <article className="ease-kpi-card">
@@ -426,10 +455,17 @@ export default function DashboardEaseKpiCard({
                 <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} placeholder="KPI Code" />
                 <OwnerInput id={`dialog-kpi-owner-${kpi.kpiKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
+                <div className="field"><label>Type</label><select className="objective-row-select" value={mode} onChange={(e) => setMode(e.target.value as KpiMode)} disabled={isSaving}><option value="measurable">Measurable</option><option value="binary">Non-measurable (Done/Not Done)</option></select></div>
                 <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} disabled={isSaving} /></div>
+                {mode === "measurable" ? (
+                  <>
+                    <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
+                    <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} disabled={isSaving} /></div>
+                  </>
+                ) : (
+                  <div className="field"><label>Status</label><div className="objective-row-actions"><button type="button" className={isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(true)} disabled={isSaving}>Done</button><button type="button" className={!isDone ? "btn" : "tab-btn"} onClick={() => setIsDone(false)} disabled={isSaving}>Not Done</button></div></div>
+                )}
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
@@ -454,8 +490,14 @@ export default function DashboardEaseKpiCard({
                 <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
                 <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
                 <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
-                <span className="ease-chip ease-chip-neutral">Target: {readMetricValue(kpi.targetValue)}</span>
-                <span className="ease-chip ease-chip-neutral">Current: {readMetricValue(kpi.currentValue)}</span>
+                {kpi.targetValue === null ? (
+                  <span className="ease-chip ease-chip-neutral">{(kpi.currentValue ?? 0) >= 100 ? "Done" : "Not Done"}</span>
+                ) : (
+                  <>
+                    <span className="ease-chip ease-chip-neutral">Target: {readMetricValue(kpi.targetValue)}</span>
+                    <span className="ease-chip ease-chip-neutral">Current: {readMetricValue(kpi.currentValue)}</span>
+                  </>
+                )}
                 <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>
               </div>
               <EaseCardDetailBlocks note={effectiveNotes} blockers={kpi.blockers} comment={kpi.comment} />

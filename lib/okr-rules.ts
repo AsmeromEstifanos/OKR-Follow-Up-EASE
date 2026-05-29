@@ -18,12 +18,17 @@ export function clampPercent(value: number): number {
   return Number(value.toFixed(2));
 }
 
-export function computeKrProgress(_baselineValue: number, targetValue: number, currentValue: number): number {
+export function computeKrProgress(_baselineValue: number, targetValue: number | null, currentValue: number | null): number {
+  // Non-measurable (binary): targetValue is null, currentValue holds 0 or 100
+  if (targetValue === null) {
+    return currentValue === null ? 0 : clampPercent(currentValue);
+  }
+
   if (!Number.isFinite(targetValue) || targetValue <= 0) {
     return 0;
   }
 
-  return clampPercent((currentValue / targetValue) * 100);
+  return clampPercent(((currentValue ?? 0) / targetValue) * 100);
 }
 
 function resolveWeight(value: number): number {
