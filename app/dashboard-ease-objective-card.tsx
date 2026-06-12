@@ -1,6 +1,7 @@
 "use client";
 
 import ChatIconButton from "@/app/chat-icon-button";
+import ModalPortal from "@/app/modal-portal";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKrCard from "@/app/dashboard-ease-kr-card";
 import DashboardKrControls from "@/app/dashboard-kr-controls";
@@ -345,7 +346,8 @@ export default function DashboardEaseObjectiveCard({
         </div>
       </div>
 
-      {/* Details popup */}
+      {/* Details popup — portaled to body so showModal's backdrop covers the full viewport */}
+      <ModalPortal lockScroll={false}>
       <dialog ref={dialogRef} className="okr-details-dialog" onClose={() => setIsDialogOpen(false)}>
         <div className="okr-details-inner">
           <div className="okr-details-header">
@@ -419,6 +421,7 @@ export default function DashboardEaseObjectiveCard({
           )}
         </div>
       </dialog>
+      </ModalPortal>
     </article>
   );
 }

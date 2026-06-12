@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1] — 2026-06-12
+
+### Fixed
+- Modal forms now fully block background interaction. Detail dialogs (Objective/KR/KPI) and the chat, AI-summary, and activity-detail modals are portaled to `document.body` so their backdrop reliably covers the viewport, and the new shared `ModalPortal` stops event propagation at the portal boundary — fixing a case where clicking inside a modal toggled controls (e.g. the KPI section) behind it. Background scroll is locked while any modal is open.
+
+---
+
 ## [0.5.0] — 2026-06-12
 
 ### Added

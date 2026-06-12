@@ -1,5 +1,6 @@
 "use client";
 
+import ModalPortal from "@/app/modal-portal";
 import { apiPath } from "@/lib/base-path";
 import { useEffect, useState } from "react";
 
@@ -59,7 +60,7 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
   }
 
   return (
-    <>
+    <ModalPortal>
       <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
 
       <div className="chat-modal ai-modal" role="dialog" aria-modal="true" aria-label={`AI Summary: ${objectiveTitle}`}>
@@ -121,6 +122,6 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
           </button>
         </div>
       </div>
-    </>
+    </ModalPortal>
   );
 }

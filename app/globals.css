@@ -3716,14 +3716,14 @@ textarea {
 .chat-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1200;
   background: #0b172750;
   backdrop-filter: blur(2px);
 }
 
 .chat-modal {
   position: fixed;
-  z-index: 201;
+  z-index: 1201;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);

@@ -1,6 +1,7 @@
 "use client";
 
 import ChatIconButton from "@/app/chat-icon-button";
+import ModalPortal from "@/app/modal-portal";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
@@ -415,7 +416,8 @@ export default function DashboardEaseKpiCard({
         </div>
       </div>
 
-      {/* Details popup — always in DOM */}
+      {/* Details popup — always in DOM, portaled to body so showModal's backdrop covers the full viewport */}
+      <ModalPortal lockScroll={false}>
       <dialog
         ref={dialogRef}
         className="okr-details-dialog"
@@ -506,6 +508,7 @@ export default function DashboardEaseKpiCard({
           )}
         </div>
       </dialog>
+      </ModalPortal>
     </article>
   );
 }

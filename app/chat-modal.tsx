@@ -1,6 +1,7 @@
 "use client";
 
 import type { Comment } from "@/lib/types";
+import ModalPortal from "@/app/modal-portal";
 import { apiPath } from "@/lib/base-path";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
@@ -325,7 +326,7 @@ export default function ChatModal({
   const showMentionDropdown = mentionQuery !== null && mentionSuggestions.length > 0;
 
   return (
-    <>
+    <ModalPortal>
       <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
 
       <div className="chat-modal" role="dialog" aria-modal="true" aria-label={`Discussion: ${title}`}>
@@ -454,6 +455,6 @@ export default function ChatModal({
           </button>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

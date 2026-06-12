@@ -1,5 +1,6 @@
 "use client";
 
+import ModalPortal from "@/app/modal-portal";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
@@ -349,6 +350,7 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
   const detailHeading = entry.entityType ? (ENTITY_DETAIL_HEADING[entry.entityType] ?? "DETAILS") : "DETAILS";
 
   return (
+    <ModalPortal>
     <div className="act-popup-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="act-popup" onClick={(e) => e.stopPropagation()}>
         <div className="act-popup-header">
@@ -389,6 +391,7 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
