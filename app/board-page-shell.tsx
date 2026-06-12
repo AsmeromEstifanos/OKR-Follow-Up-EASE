@@ -10,7 +10,6 @@ import type {
   Kpi,
   KeyResult,
   KrStatus,
-  MetricType,
   Objective,
   ObjectiveStatus,
   ObjectiveType,

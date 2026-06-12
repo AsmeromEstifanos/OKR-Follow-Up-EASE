@@ -14,7 +14,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KeyResult, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 
@@ -29,7 +29,6 @@ type Props = {
   kpis: KpiRowData[];
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -81,7 +80,6 @@ export default function DashboardKrRowEditor({
   kpis,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -96,7 +94,6 @@ export default function DashboardKrRowEditor({
   const [title, setTitle] = useState(keyResult.title);
   const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(keyResult.metricType);
   const [baselineValue, setBaselineValue] = useState(String(keyResult.baselineValue));
   const [targetValue, setTargetValue] = useState(String(keyResult.targetValue));
   const [currentValue, setCurrentValue] = useState(String(keyResult.currentValue));
@@ -122,7 +119,6 @@ export default function DashboardKrRowEditor({
     setTitle(keyResult.title);
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-    setMetricType(keyResult.metricType);
     setBaselineValue(String(keyResult.baselineValue));
     setTargetValue(String(keyResult.targetValue));
     setCurrentValue(String(keyResult.currentValue));
@@ -173,7 +169,6 @@ export default function DashboardKrRowEditor({
         krCode: code.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        metricType,
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
@@ -265,7 +260,6 @@ export default function DashboardKrRowEditor({
             <input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
           </>
         ) : (formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-")}</td>
-        <td>{isEditing ? <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select> : keyResult.metricType}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.baselineValue)}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.targetValue)}</td>
         <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(keyResult.currentValue)}</td>
@@ -291,7 +285,6 @@ export default function DashboardKrRowEditor({
                   defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)}
                   positionOwnerEmail={positionOwnerEmail}
                   adminEmails={adminEmails}
-                  metricTypeOptions={metricTypeOptions}
                   keyResultStatusOptions={keyResultStatusOptions}
                   checkInFrequencyOptions={checkInFrequencyOptions}
                 />
@@ -300,7 +293,6 @@ export default function DashboardKrRowEditor({
                     <tr className="board-subheader-row">
                       <th>KPI</th>
                       <th>Owner</th>
-                      <th>KPI Metric Type</th>
                       <th>Weight</th>
                       <th>Target Value</th>
                       <th>Current Value</th>
@@ -328,8 +320,7 @@ export default function DashboardKrRowEditor({
                           latestUpdatedAt={item.latestUpdatedAt}
                           positionOwnerEmail={positionOwnerEmail}
                           adminEmails={adminEmails}
-                          metricTypeOptions={metricTypeOptions}
-                          keyResultStatusOptions={keyResultStatusOptions}
+                                  keyResultStatusOptions={keyResultStatusOptions}
                           checkInFrequencyOptions={checkInFrequencyOptions}
                         />
                       ))

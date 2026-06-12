@@ -6,6 +6,7 @@ import DashboardEaseKpiCard from "@/app/dashboard-ease-kpi-card";
 import DashboardKeyResultControls from "@/app/dashboard-key-result-controls";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
+import useBodyScrollLock from "@/app/use-body-scroll-lock";
 import WeightGroupControls from "@/app/weight-group-controls";
 import { useSearchQuery } from "@/app/search-context";
 import { apiPath } from "@/lib/base-path";
@@ -17,7 +18,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KeyResult, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -45,7 +46,6 @@ type Props = {
   forcedBodyOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -152,7 +152,6 @@ export default function DashboardEaseKrCard({
   forcedBodyOpen,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -173,6 +172,7 @@ export default function DashboardEaseKrCard({
   const [isBodyOpen, setIsBodyOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogEditing, setIsDialogEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKpiSectionOpen, setIsKpiSectionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -182,7 +182,6 @@ export default function DashboardEaseKrCard({
   const [title, setTitle] = useState(keyResult.title);
   const [owner, setOwner] = useState(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(keyResult.metricType);
   const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(keyResult.baselineValue)));
   const [status, setStatus] = useState<KrStatus>(keyResult.status);
   const [dueDate, setDueDate] = useState(toDateInput(keyResult.dueDate));
@@ -198,7 +197,6 @@ export default function DashboardEaseKrCard({
     setTitle(keyResult.title);
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-    setMetricType(keyResult.metricType);
     setTargetValue(String(keyResult.targetValue ?? 100));
     setCurrentValue(String(keyResult.currentValue ?? 0));
     setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
@@ -226,6 +224,8 @@ export default function DashboardEaseKrCard({
 
   const hasDetails = !!(keyResult.notes?.trim() || keyResult.blockers?.trim() || keyResult.comment?.trim());
 
+  useBodyScrollLock(isDialogOpen);
+
   const cancelEdit = (): void => {
     setIsEditing(false);
     setIsDialogEditing(false);
@@ -234,7 +234,6 @@ export default function DashboardEaseKrCard({
     setTitle(keyResult.title);
     setOwner(resolveOwnerName(keyResult.owner, keyResult.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail));
-    setMetricType(keyResult.metricType);
     setTargetValue(String(keyResult.targetValue ?? 100));
     setCurrentValue(String(keyResult.currentValue ?? 0));
     setBaselineValue(String(normalizeWeightValue(keyResult.baselineValue)));
@@ -249,11 +248,13 @@ export default function DashboardEaseKrCard({
   const openDetails = (): void => {
     cancelEdit();
     dialogRef.current?.showModal();
+    setIsDialogOpen(true);
   };
 
   const closeDetails = (): void => {
     cancelEdit();
     dialogRef.current?.close();
+    setIsDialogOpen(false);
   };
 
   const saveEdit = async (): Promise<void> => {
@@ -270,9 +271,8 @@ export default function DashboardEaseKrCard({
     }
 
     const target = Number(targetValue);
-    const current = Number(currentValue);
-    if (!Number.isFinite(target) || !Number.isFinite(current)) {
-      setError("Target and current values must be numeric.");
+    if (!Number.isFinite(target)) {
+      setError("Target value must be numeric.");
       return;
     }
     if (target <= 0) {
@@ -299,10 +299,8 @@ export default function DashboardEaseKrCard({
         krCode: code.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        metricType,
         baselineValue: baseline,
         targetValue: target,
-        currentValue: current,
         status,
         dueDate,
         checkInFrequency,
@@ -323,6 +321,7 @@ export default function DashboardEaseKrCard({
     setIsEditing(false);
     setIsDialogEditing(false);
     dialogRef.current?.close();
+    setIsDialogOpen(false);
     router.refresh();
   };
 
@@ -355,6 +354,7 @@ export default function DashboardEaseKrCard({
     setIsEditing(false);
     setIsDialogEditing(false);
     dialogRef.current?.close();
+    setIsDialogOpen(false);
     router.refresh();
   };
 
@@ -400,8 +400,7 @@ export default function DashboardEaseKrCard({
                 <>
                   <div className="ease-kr-meta">
                     <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
-                    <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
-                    <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
+                        <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
                     <span className="ease-chip ease-chip-neutral">{getQuarterLabel(keyResult.dueDate)}</span>
                   </div>
                   <div className="ease-footer-line">
@@ -415,10 +414,9 @@ export default function DashboardEaseKrCard({
                   <input className="objective-row-input" value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving} />
                   <OwnerInput id={`ease-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                   <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
-                  <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                   <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
                   <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /></div>
+                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} readOnly disabled title="Auto-computed from KPIs" /></div>
                   <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                   <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                   <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
@@ -443,7 +441,7 @@ export default function DashboardEaseKrCard({
                 <span className="ease-section-toggle-indicator" aria-hidden="true">{isKpiSectionOpen ? "v" : ">"}</span>
                 <span className="ease-section-toggle-label">KPIs ({kpis.length})</span>
               </button>
-              <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+              <DashboardKeyResultControls objectiveKey={keyResult.objectiveKey} krKey={keyResult.krKey} defaultDueDate={keyResult.dueDate} defaultOwner={resolveOwnerName(keyResult.owner, keyResult.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
             </div>
             {isKpiSectionOpen ? (
               <div className="ease-kpi-list">
@@ -465,7 +463,7 @@ export default function DashboardEaseKrCard({
                   <p className="meta">No KPIs for this key result yet.</p>
                 ) : (
                   kpis.map((item) => (
-                    <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} forcedBodyOpen={forcedKpiSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                    <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} forcedBodyOpen={forcedKpiSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
                   ))
                 )}
               </div>
@@ -492,6 +490,7 @@ export default function DashboardEaseKrCard({
       <dialog
         ref={dialogRef}
         className="okr-details-dialog"
+        onClose={() => setIsDialogOpen(false)}
       >
         <div className="okr-details-inner">
           <div className="okr-details-header">
@@ -527,10 +526,9 @@ export default function DashboardEaseKrCard({
                 <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} placeholder="KR Code" />
                 <OwnerInput id={`dialog-kr-owner-${keyResult.krKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
-                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} disabled={isSaving} /></div>
+                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} readOnly disabled title="Auto-computed from KPIs" /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
@@ -553,7 +551,6 @@ export default function DashboardEaseKrCard({
                 <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(keyResult.owner, keyResult.ownerEmail) || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">Due: {formatDate(keyResult.dueDate)}</span>
                 <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
-                <span className="ease-chip ease-chip-neutral">{keyResult.metricType}</span>
                 <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(keyResult.checkInFrequency)}</span>
                 <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>
               </div>

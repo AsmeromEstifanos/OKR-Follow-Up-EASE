@@ -5,7 +5,6 @@ import type {
   AppConfig,
   CheckInFrequency,
   KeyResult,
-  MetricType,
   Objective,
   ObjectiveStatus,
   ObjectiveType,
@@ -99,8 +98,7 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
-function formatMetricValue(value: number | null, metricType: MetricType): string {
-  void metricType;
+function formatMetricValue(value: number | null): string {
   if (value === null) return "-";
   return value.toLocaleString();
 }
@@ -133,7 +131,6 @@ export default function DashboardCreateControls(): JSX.Element {
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>("Committed");
   const [objectiveStatus, setObjectiveStatus] = useState<ObjectiveStatus>("OnTrack");
   const [objectiveCycle, setObjectiveCycle] = useState<OkrCycle>(getCurrentCycle());
-  const [objectiveMetricType, setObjectiveMetricType] = useState<MetricType>("Operational");
   const [objectiveBaselineValue, setObjectiveBaselineValue] = useState<string>("1");
   const [objectiveDueDate, setObjectiveDueDate] = useState<string>(getCycleDateRange(getCurrentCycle()).endDate);
   const [objectiveCheckInFrequency, setObjectiveCheckInFrequency] = useState<CheckInFrequency>("Weekly");
@@ -415,7 +412,6 @@ export default function DashboardCreateControls(): JSX.Element {
           strategicTheme: objectiveStrategicTheme.trim(),
           objectiveType,
           okrCycle: objectiveCycle,
-          metricType: objectiveMetricType,
           baselineValue,
           blockers: objectiveBlockers.trim(),
           keyRisksDependency: objectiveKeyRisksDependency.trim(),
@@ -441,7 +437,6 @@ export default function DashboardCreateControls(): JSX.Element {
     setObjectiveCodePreview("");
     setObjectiveTitle("");
     setObjectiveStrategicTheme("");
-    setObjectiveMetricType("Operational");
     setObjectiveBaselineValue("1");
     setObjectiveDueDate(getCycleDateRange(objectiveCycle).endDate);
     setObjectiveCheckInFrequency("Weekly");
@@ -498,7 +493,6 @@ export default function DashboardCreateControls(): JSX.Element {
           title: krTitles[index],
           owner: krOwner.trim(),
           ownerEmail: krOwnerEmail.trim(),
-          metricType: "Operational" as MetricType,
           baselineValue,
           status: krStatus,
           dueDate: selectedObjective.endDate,
@@ -672,20 +666,6 @@ export default function DashboardCreateControls(): JSX.Element {
                 onChange={(event) => setObjectiveCycle(event.target.value as OkrCycle)}
               >
                 {OKR_CYCLE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="quick-objective-metric-type">Metric Type</label>
-              <select
-                id="quick-objective-metric-type"
-                value={objectiveMetricType}
-                onChange={(event) => setObjectiveMetricType(event.target.value as MetricType)}
-              >
-                {(config?.fieldOptions.keyResultMetricTypes ?? ["Operational"]).map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
@@ -936,7 +916,7 @@ export default function DashboardCreateControls(): JSX.Element {
                         <td>{parentObjective ? `${parentObjective.progressPct}%` : "-"}</td>
                         <td>{formatStatusLabel(kr.status)}</td>
                         <td>
-                          {formatMetricValue(kr.currentValue, kr.metricType)} / {formatMetricValue(kr.targetValue, kr.metricType)}
+                          {formatMetricValue(kr.currentValue)} / {formatMetricValue(kr.targetValue)}
                         </td>
                         <td>{kr.progressPct}%</td>
                         <td>{parentObjective?.okrCycle || "-"}</td>

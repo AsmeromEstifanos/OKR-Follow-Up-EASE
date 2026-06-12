@@ -5,7 +5,7 @@ import { apiPath } from "@/lib/base-path";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
-  entityType: "objective" | "kr";
+  entityType: "objective" | "kr" | "kpi";
   entityKey: string;
   title: string;
   currentUserEmail: string;

@@ -4,7 +4,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
-import type { CheckInFrequency, KeyResult, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, KeyResult, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -17,7 +17,6 @@ type ObjectiveOption = {
 type KeyResultEditControlsProps = {
   keyResult: KeyResult;
   objectiveOptions: ObjectiveOption[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -28,7 +27,6 @@ type KeyResultDraft = {
   title: string;
   owner: string;
   ownerEmail: string;
-  metricType: MetricType;
   baselineValue: string;
   status: KrStatus;
   dueDate: string;
@@ -64,7 +62,6 @@ function toDraft(keyResult: KeyResult): KeyResultDraft {
     title: keyResult.title,
     owner: resolveOwnerName(keyResult.owner, keyResult.ownerEmail),
     ownerEmail: resolveOwnerEmail(keyResult.owner, keyResult.ownerEmail),
-    metricType: keyResult.metricType,
     baselineValue: normalizeWeightValue(keyResult.baselineValue),
     status: keyResult.status,
     dueDate: toDateInput(keyResult.dueDate),
@@ -77,7 +74,6 @@ function toDraft(keyResult: KeyResult): KeyResultDraft {
 export default function KeyResultEditControls({
   keyResult,
   objectiveOptions,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: KeyResultEditControlsProps): JSX.Element {
@@ -122,7 +118,6 @@ export default function KeyResultEditControls({
         title: draft.title.trim(),
         owner: draft.owner.trim(),
         ownerEmail: draft.ownerEmail.trim(),
-        metricType: draft.metricType,
         baselineValue,
         status: draft.status,
         dueDate: draft.dueDate,
@@ -204,21 +199,6 @@ export default function KeyResultEditControls({
           <div className="field">
             <label htmlFor={`kr-owner-email-${keyResult.krKey}`}>Owner Email</label>
             <input id={`kr-owner-email-${keyResult.krKey}`} value={formatOwnerEmailLabel(draft.owner, draft.ownerEmail)} readOnly />
-          </div>
-
-          <div className="field">
-            <label htmlFor={`kr-metric-${keyResult.krKey}`}>Metric Type</label>
-            <select
-              id={`kr-metric-${keyResult.krKey}`}
-              value={draft.metricType}
-              onChange={(event) => setDraft((current) => ({ ...current, metricType: event.target.value as MetricType }))}
-            >
-              {metricTypeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="field">

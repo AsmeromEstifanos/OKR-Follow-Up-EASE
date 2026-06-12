@@ -7,6 +7,7 @@ import DashboardKrControls from "@/app/dashboard-kr-controls";
 import OwnerInput from "@/app/owner-input";
 import WeightGroupControls from "@/app/weight-group-controls";
 import useCurrentUserEmail from "@/app/use-current-user-email";
+import useBodyScrollLock from "@/app/use-body-scroll-lock";
 import { useSearchQuery } from "@/app/search-context";
 import { apiPath } from "@/lib/base-path";
 import {
@@ -17,7 +18,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import type { CheckInFrequency, Kpi, KeyResult, KrStatus, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle, Rag } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KeyResult, KrStatus, Objective, ObjectiveStatus, ObjectiveType, OkrCycle, Rag } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -41,7 +42,6 @@ type Props = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -130,7 +130,6 @@ export default function DashboardEaseObjectiveCard({
   objectiveTypeOptions,
   objectiveStatusOptions,
   objectiveCycleOptions,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -152,6 +151,7 @@ export default function DashboardEaseObjectiveCard({
   const [isKrSectionOpen, setIsKrSectionOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogEditing, setIsDialogEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState(objectiveCode);
@@ -161,7 +161,6 @@ export default function DashboardEaseObjectiveCard({
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>(objective.objectiveType);
   const [status, setStatus] = useState<ObjectiveStatus>(objective.status);
   const [okrCycle, setOkrCycle] = useState<OkrCycle>(objective.okrCycle);
-  const [metricType, setMetricType] = useState<MetricType>(objective.metricType);
   const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(objective.baselineValue)));
   const [dueDate, setDueDate] = useState(toDateInput(objective.dueDate));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(objective.checkInFrequency);
@@ -178,7 +177,6 @@ export default function DashboardEaseObjectiveCard({
     setObjectiveType(objective.objectiveType);
     setStatus(objective.status);
     setOkrCycle(objective.okrCycle);
-    setMetricType(objective.metricType);
     setBaselineValue(String(normalizeWeightValue(objective.baselineValue)));
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
@@ -206,7 +204,6 @@ export default function DashboardEaseObjectiveCard({
     setObjectiveType(objective.objectiveType);
     setStatus(objective.status);
     setOkrCycle(objective.okrCycle);
-    setMetricType(objective.metricType);
     setBaselineValue(String(normalizeWeightValue(objective.baselineValue)));
     setDueDate(toDateInput(objective.dueDate));
     setCheckInFrequency(objective.checkInFrequency);
@@ -216,8 +213,18 @@ export default function DashboardEaseObjectiveCard({
     setNotes(objective.notes ?? objective.description ?? "");
   };
 
-  const openDetails = (): void => { cancelEdit(); dialogRef.current?.showModal(); };
-  const closeDetails = (): void => { cancelEdit(); dialogRef.current?.close(); };
+  useBodyScrollLock(isDialogOpen);
+
+  const openDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.showModal();
+    setIsDialogOpen(true);
+  };
+  const closeDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.close();
+    setIsDialogOpen(false);
+  };
 
   const saveEdit = async (): Promise<void> => {
     if (isSaving) return;
@@ -230,10 +237,10 @@ export default function DashboardEaseObjectiveCard({
     const response = await fetch(apiPath(`/api/objectives/${encodeURIComponent(objective.objectiveKey)}`), {
       method: "PATCH",
       headers: { "content-type": "application/json", "x-user-email": signedInEmail },
-      body: JSON.stringify({ objectiveCode: code.trim(), title: title.trim(), owner: owner.trim(), ownerEmail: ownerEmail.trim(), objectiveType, okrCycle, metricType, baselineValue: baseline, status, dueDate, endDate: dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), keyRisksDependency: keyRisksDependency.trim(), notes: notes.trim() })
+      body: JSON.stringify({ objectiveCode: code.trim(), title: title.trim(), owner: owner.trim(), ownerEmail: ownerEmail.trim(), objectiveType, okrCycle, baselineValue: baseline, status, dueDate, endDate: dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), keyRisksDependency: keyRisksDependency.trim(), notes: notes.trim() })
     });
     if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to update objective."); setIsSaving(false); return; }
-    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); router.refresh();
+    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); setIsDialogOpen(false); router.refresh();
   };
 
   const deleteCurrentObjective = async (): Promise<void> => {
@@ -248,7 +255,7 @@ export default function DashboardEaseObjectiveCard({
       method: "DELETE", headers: { "x-user-email": signedInEmail }
     });
     if (!response.ok) { const p = await readJson<ApiError>(response); setError(p?.error ?? "Failed to delete objective."); setIsSaving(false); return; }
-    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); router.refresh();
+    setIsSaving(false); setIsEditing(false); setIsDialogEditing(false); dialogRef.current?.close(); setIsDialogOpen(false); router.refresh();
   };
 
   return (
@@ -270,7 +277,6 @@ export default function DashboardEaseObjectiveCard({
           {!isEditing && (
             <div className="ease-objective-chip-row">
               <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
-              <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
               <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
               <span className={statusChipClass(objective.status)}>{formatStatus(objective.status)}</span>
             </div>
@@ -290,7 +296,6 @@ export default function DashboardEaseObjectiveCard({
               <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(e) => setObjectiveType(e.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
               <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
               <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(e) => setOkrCycle(e.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-              <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
               <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
               <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
               <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
@@ -307,7 +312,7 @@ export default function DashboardEaseObjectiveCard({
                 <span className="ease-section-toggle-indicator" aria-hidden="true">{isKrSectionOpen ? "v" : ">"}</span>
                 <span className="ease-section-toggle-label">Key Results ({keyResults.length})</span>
               </button>
-              <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+              <DashboardKrControls objectiveKey={objective.objectiveKey} defaultDueDate={objective.endDate} defaultOwner={resolveOwnerName(objective.owner, objective.ownerEmail)} defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
             </div>
             {isKrSectionOpen && (
               <div className="ease-kr-list">
@@ -322,7 +327,7 @@ export default function DashboardEaseObjectiveCard({
                   keyResults.map((item) => (
                     <DashboardEaseKrCard key={item.keyResult.krKey} keyResult={item.keyResult} kpis={item.kpis ?? []} latestUpdatedAt={item.latestUpdatedAt}
                       forcedKpiSectionOpen={forcedKrSectionOpen} forcedBodyOpen={forcedKrSectionOpen}
-                      positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} metricTypeOptions={metricTypeOptions} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
+                      positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
                   ))
                 )}
               </div>
@@ -341,7 +346,7 @@ export default function DashboardEaseObjectiveCard({
       </div>
 
       {/* Details popup */}
-      <dialog ref={dialogRef} className="okr-details-dialog" >
+      <dialog ref={dialogRef} className="okr-details-dialog" onClose={() => setIsDialogOpen(false)}>
         <div className="okr-details-inner">
           <div className="okr-details-header">
             <div className="okr-details-title-area">
@@ -379,8 +384,7 @@ export default function DashboardEaseObjectiveCard({
                 <div className="field"><label>Objective Type</label><select className="objective-row-select" value={objectiveType} onChange={(e) => setObjectiveType(e.target.value as ObjectiveType)} disabled={isSaving}>{objectiveTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Health</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as ObjectiveStatus)} disabled={isSaving}>{objectiveStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>OKR Cycle</label><select className="objective-row-select" value={okrCycle} onChange={(e) => setOkrCycle(e.target.value as OkrCycle)} disabled={isSaving}>{objectiveCycleOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-                <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
+                  <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(e) => setCheckInFrequency(e.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
@@ -404,8 +408,7 @@ export default function DashboardEaseObjectiveCard({
                 <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">Due: {formatDate(objective.dueDate)}</span>
                 <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
-                <span className="ease-chip ease-chip-neutral">{objective.metricType}</span>
-                <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
+                  <span className="ease-chip ease-chip-neutral">{objective.okrCycle || getQuarterLabel(objective.dueDate)}</span>
                 <span className="ease-chip ease-chip-neutral">Progress: {Math.round(progressValue)}%</span>
               </div>
               <EaseCardDetailBlocks note={objective.notes ?? objective.description} blockers={objective.blockers} comment={objective.comment} keyRisksDependency={objective.keyRisksDependency} />

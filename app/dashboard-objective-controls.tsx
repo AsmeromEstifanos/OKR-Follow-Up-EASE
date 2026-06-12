@@ -11,7 +11,7 @@ import {
   includesSerializedOwnerEmail,
   resolveOwnerEmail,
 } from "@/lib/owner";
-import type { CheckInFrequency, MetricType, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
+import type { CheckInFrequency, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -29,7 +29,6 @@ type Props = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
-  metricTypeOptions: MetricType[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
 
@@ -44,7 +43,6 @@ type PendingObjective = {
   objectiveType: ObjectiveType;
   status: ObjectiveStatus;
   okrCycle: OkrCycle;
-  metricType: MetricType;
   baselineValue: number;
   dueDate: string;
   checkInFrequency: CheckInFrequency;
@@ -106,7 +104,6 @@ export default function DashboardObjectiveControls({
   objectiveTypeOptions,
   objectiveStatusOptions,
   objectiveCycleOptions,
-  metricTypeOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
   const labels = appProfile.labels;
@@ -133,7 +130,6 @@ export default function DashboardObjectiveControls({
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>(objectiveTypeOptions[0] ?? "Committed");
   const [status, setStatus] = useState<ObjectiveStatus>(objectiveStatusOptions[0] ?? "NotStarted");
   const [okrCycle, setOkrCycle] = useState<OkrCycle>(objectiveCycleOptions[0] ?? defaultCycle);
-  const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
   const [baselineValue, setBaselineValue] = useState<string>("1");
   const [dueDate, setDueDate] = useState<string>(defaultEndDate ?? todayPlus(90));
   const [checkInFrequency, setCheckInFrequency] = useState<CheckInFrequency>(checkInFrequencyOptions[0] ?? "Weekly");
@@ -170,7 +166,6 @@ export default function DashboardObjectiveControls({
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
-    setMetricType(metricTypeOptions[0] ?? "Operational");
     setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
@@ -189,7 +184,6 @@ export default function DashboardObjectiveControls({
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
-    setMetricType(metricTypeOptions[0] ?? "Operational");
     setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
@@ -212,7 +206,6 @@ export default function DashboardObjectiveControls({
     setObjectiveType(objectiveTypeOptions[0] ?? "Committed");
     setStatus(objectiveStatusOptions[0] ?? "NotStarted");
     setOkrCycle(objectiveCycleOptions[0] ?? defaultCycle);
-    setMetricType(metricTypeOptions[0] ?? "Operational");
     setBaselineValue("1");
     setDueDate(defaultEndDate ?? todayPlus(90));
     setCheckInFrequency(checkInFrequencyOptions[0] ?? "Weekly");
@@ -265,7 +258,6 @@ export default function DashboardObjectiveControls({
       objectiveType,
       status,
       okrCycle,
-      metricType,
       baselineValue: resolvedBaselineValue,
       dueDate: resolvedDueDate,
       checkInFrequency,
@@ -337,7 +329,6 @@ export default function DashboardObjectiveControls({
             strategicTheme,
             objectiveType: item.objectiveType,
             okrCycle: item.okrCycle,
-            metricType: item.metricType,
             baselineValue: item.baselineValue,
             blockers: item.blockers,
             comment: item.comment,
@@ -458,21 +449,6 @@ export default function DashboardObjectiveControls({
                 disabled={isSaving}
               >
                 {objectiveStatusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>{itemLabel} Metric Type</label>
-              <select
-                name="objectiveMetricType"
-                value={metricType}
-                onChange={(event) => setMetricType(event.target.value as MetricType)}
-                disabled={isSaving}
-              >
-                {metricTypeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>

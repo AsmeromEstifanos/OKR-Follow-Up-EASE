@@ -192,7 +192,6 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "StrategicTheme", type: "text" },
       { name: "ObjectiveType", type: "text" },
       { name: "OkrCycle", type: "text" },
-      { name: "MetricType", type: "text" },
       { name: "BaselineValue", type: "number" },
       { name: "TargetValue", type: "number" },
       { name: "CurrentValue", type: "number" },
@@ -222,7 +221,6 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "KrTitle", type: "text" },
       { name: "Owner", type: "text" },
       { name: "OwnerEmail", type: "text", optional: true },
-      { name: "MetricType", type: "text" },
       { name: "BaselineValue", type: "number" },
       { name: "TargetValue", type: "number" },
       { name: "CurrentValue", type: "number" },
@@ -248,7 +246,6 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "KpiTitle", type: "text" },
       { name: "Owner", type: "text" },
       { name: "OwnerEmail", type: "text", optional: true },
-      { name: "MetricType", type: "text" },
       { name: "BaselineValue", type: "number" },
       { name: "TargetValue", type: "number" },
       { name: "CurrentValue", type: "number" },
@@ -337,7 +334,8 @@ const LIST_DEFS: Record<AtomicListName, ListDefinition> = {
       { name: "AuthorEmail", type: "text" },
       { name: "AuthorName", type: "text" },
       { name: "Body", type: "multilineText" },
-      { name: "CreatedAt", type: "text" }
+      { name: "CreatedAt", type: "text" },
+      { name: "MentionedEmails", type: "text" }
     ]
   }
 };
@@ -747,7 +745,6 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   objectiveTypes: ["Aspirational", "Committed", "Learning"],
   objectiveStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   objectiveCycles: ["Q1", "Q2", "Q3", "Q4"],
-  keyResultMetricTypes: ["Delivery", "Financial", "Operational", "People", "Quality"],
   keyResultStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"]
 };
@@ -789,10 +786,6 @@ function normalizeFieldOptions(input: unknown): FieldOptions {
     objectiveCycles: normalizeUniqueOptionList(
       source.objectiveCycles,
       DEFAULT_FIELD_OPTIONS.objectiveCycles
-    ),
-    keyResultMetricTypes: normalizeUniqueOptionList(
-      source.keyResultMetricTypes,
-      DEFAULT_FIELD_OPTIONS.keyResultMetricTypes
     ),
     keyResultStatuses: normalizeUniqueOptionList(
       source.keyResultStatuses,
@@ -1167,7 +1160,6 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     StrategicTheme: objective.strategicTheme,
     ObjectiveType: objective.objectiveType,
     OkrCycle: objective.okrCycle,
-    MetricType: objective.metricType,
     BaselineValue: objective.baselineValue,
     TargetValue: objective.targetValue,
     CurrentValue: objective.currentValue,
@@ -1194,7 +1186,6 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     KrTitle: kr.title,
     Owner: kr.owner ?? "",
     ...(capabilities.hasKrOwnerEmailColumn ? { OwnerEmail: kr.ownerEmail ?? "" } : {}),
-    MetricType: kr.metricType,
     BaselineValue: kr.baselineValue,
     TargetValue: kr.targetValue,
     CurrentValue: kr.currentValue,
@@ -1217,7 +1208,6 @@ function buildAtomicRows(snapshot: SharePointStoreSnapshot, capabilities: Atomic
     KpiTitle: kpi.title,
     Owner: kpi.owner ?? "",
     ...(capabilities.hasKpiOwnerEmailColumn ? { OwnerEmail: kpi.ownerEmail ?? "" } : {}),
-    MetricType: kpi.metricType,
     BaselineValue: kpi.baselineValue,
     TargetValue: kpi.targetValue,
     CurrentValue: kpi.currentValue,
@@ -1471,7 +1461,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "StrategicTheme",
     "ObjectiveType",
     "OkrCycle",
-    "MetricType",
     "BaselineValue",
     "TargetValue",
     "CurrentValue",
@@ -1497,7 +1486,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "KrTitle",
     "Owner",
     ...(hasKrOwnerEmailColumn ? ["OwnerEmail"] : []),
-    "MetricType",
     "BaselineValue",
     "TargetValue",
     "CurrentValue",
@@ -1519,7 +1507,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
     "KpiTitle",
     "Owner",
     ...(hasKpiOwnerEmailColumn ? ["OwnerEmail"] : []),
-    "MetricType",
     "BaselineValue",
     "TargetValue",
     "CurrentValue",
@@ -1657,7 +1644,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         strategicTheme: asString(item.fields?.StrategicTheme),
         objectiveType: asString(item.fields?.ObjectiveType) as Objective["objectiveType"],
         okrCycle: asString(item.fields?.OkrCycle) as Objective["okrCycle"],
-        metricType: asString(item.fields?.MetricType) as Objective["metricType"],
         baselineValue: asNumber(item.fields?.BaselineValue, 0),
         targetValue: asNumber(item.fields?.TargetValue, 100),
         currentValue: asNumber(item.fields?.CurrentValue, 0),
@@ -1693,7 +1679,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
           title: asString(item.fields?.KrTitle),
           owner: asString(item.fields?.Owner) || undefined,
           ownerEmail: asOwnerEmail(item.fields?.OwnerEmail, item.fields?.Owner) || undefined,
-          metricType: asString(item.fields?.MetricType) as KeyResult["metricType"],
         baselineValue: asNumber(item.fields?.BaselineValue, 0),
         targetValue: asNullableNumber(item.fields?.TargetValue),
         currentValue: asNullableNumber(item.fields?.CurrentValue),
@@ -1725,7 +1710,6 @@ async function loadAtomicSnapshot(config: SharePointStorageConfig): Promise<Shar
         title: asString(item.fields?.KpiTitle),
         owner: asString(item.fields?.Owner) || undefined,
         ownerEmail: asOwnerEmail(item.fields?.OwnerEmail, item.fields?.Owner) || undefined,
-        metricType: asString(item.fields?.MetricType) as Kpi["metricType"],
         baselineValue: asNumber(item.fields?.BaselineValue, 0),
         targetValue: asNullableNumber(item.fields?.TargetValue),
         currentValue: asNullableNumber(item.fields?.CurrentValue),
@@ -2415,18 +2399,26 @@ export async function listComments(entityType: string, entityKey: string): Promi
   }
 }
 
-export async function listCommentCounts(): Promise<
-  Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }>
-> {
+export type CommentCountAggregate = {
+  count: number;
+  latestAt: string;
+  latestBody: string;
+  latestAuthor: string;
+  timestamps: string[];
+  participantEmails: string[];
+  mentionedEmails: string[];
+};
+
+export async function listCommentCounts(): Promise<Record<string, CommentCountAggregate>> {
   const config = getStorageConfig();
   if (!config.enabled) return {};
 
   try {
     const siteId = await resolveSiteId(config);
     const listId = await ensureCommentListId(config, siteId);
-    const items = await listItems(config, siteId, listId, ["EntityType", "EntityKey", "AuthorName", "Body", "CreatedAt"]);
+    const items = await listItems(config, siteId, listId, ["EntityType", "EntityKey", "AuthorName", "AuthorEmail", "Body", "CreatedAt", "MentionedEmails"]);
 
-    const counts: Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }> = {};
+    const counts: Record<string, CommentCountAggregate & { participants: Set<string>; mentioned: Set<string> }> = {};
     for (const item of items) {
       const entityType = asString(item.fields?.EntityType).trim();
       const entityKey = asString(item.fields?.EntityKey).trim();
@@ -2435,18 +2427,38 @@ export async function listCommentCounts(): Promise<
       const createdAt = asString(item.fields?.CreatedAt);
       const body = asString(item.fields?.Body);
       const author = asString(item.fields?.AuthorName);
+      const authorEmail = asString(item.fields?.AuthorEmail).trim().toLowerCase();
       if (!counts[id]) {
-        counts[id] = { count: 0, latestAt: "", latestBody: "", latestAuthor: "", timestamps: [] };
+        counts[id] = { count: 0, latestAt: "", latestBody: "", latestAuthor: "", timestamps: [], participantEmails: [], mentionedEmails: [], participants: new Set(), mentioned: new Set() };
       }
       counts[id].count += 1;
       counts[id].timestamps.push(createdAt);
+      if (authorEmail) counts[id].participants.add(authorEmail);
+      asString(item.fields?.MentionedEmails)
+        .split(/[;,\n]+/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+        .forEach((email) => counts[id].mentioned.add(email));
       if (!counts[id].latestAt || createdAt > counts[id].latestAt) {
         counts[id].latestAt = createdAt;
         counts[id].latestBody = body;
         counts[id].latestAuthor = author;
       }
     }
-    return counts;
+
+    const result: Record<string, CommentCountAggregate> = {};
+    for (const [id, entry] of Object.entries(counts)) {
+      result[id] = {
+        count: entry.count,
+        latestAt: entry.latestAt,
+        latestBody: entry.latestBody,
+        latestAuthor: entry.latestAuthor,
+        timestamps: entry.timestamps,
+        participantEmails: Array.from(entry.participants),
+        mentionedEmails: Array.from(entry.mentioned)
+      };
+    }
+    return result;
   } catch {
     return {};
   }
@@ -2458,6 +2470,7 @@ export async function appendComment(input: {
   authorEmail: string;
   authorName: string;
   body: string;
+  mentionedEmails?: string[];
 }): Promise<Comment | null> {
   const config = getStorageConfig();
   if (!config.enabled) return null;
@@ -2467,6 +2480,10 @@ export async function appendComment(input: {
   const siteId = await resolveSiteId(config);
   const listId = await ensureCommentListId(config, siteId);
 
+  const mentionedEmails = Array.isArray(input.mentionedEmails)
+    ? input.mentionedEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)
+    : [];
+
   await createItem(config, siteId, listId, {
     Title: input.body.slice(0, 255),
     CommentKey: commentKey,
@@ -2475,7 +2492,8 @@ export async function appendComment(input: {
     AuthorEmail: input.authorEmail.trim().toLowerCase(),
     AuthorName: input.authorName.trim(),
     Body: input.body,
-    CreatedAt: createdAt
+    CreatedAt: createdAt,
+    MentionedEmails: mentionedEmails.join("; ")
   });
 
   return {
@@ -2505,6 +2523,7 @@ export async function removeComment(commentKey: string): Promise<boolean> {
 
 export type ActivityLogQuery = {
   entityType?: string;
+  entityKeys?: string[];
   userEmail?: string;
   from?: string;
   to?: string;
@@ -2548,6 +2567,10 @@ export async function queryActivityLog(query: ActivityLogQuery): Promise<Activit
   if (query.entityType) {
     const et = query.entityType.toLowerCase();
     entries = entries.filter((e) => (e.entityType ?? "").toLowerCase() === et);
+  }
+  if (query.entityKeys) {
+    const allowed = new Set(query.entityKeys.map((key) => key.toLowerCase()));
+    entries = entries.filter((e) => allowed.has((e.entityKey ?? "").toLowerCase()));
   }
   if (query.userEmail) {
     const ue = query.userEmail.toLowerCase();

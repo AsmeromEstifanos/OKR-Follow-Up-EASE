@@ -1,8 +1,10 @@
 "use client";
 
+import ChatIconButton from "@/app/chat-icon-button";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
+import useBodyScrollLock from "@/app/use-body-scroll-lock";
 import { useSearchQuery } from "@/app/search-context";
 import { apiPath } from "@/lib/base-path";
 import {
@@ -13,7 +15,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -34,7 +36,6 @@ type Props = {
   forcedBodyOpen?: boolean;
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -162,7 +163,6 @@ export default function DashboardEaseKpiCard({
   forcedBodyOpen,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -184,6 +184,7 @@ export default function DashboardEaseKpiCard({
   const [isBodyOpen, setIsBodyOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogEditing, setIsDialogEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<KpiMode>(inferMode(kpi.targetValue));
@@ -192,7 +193,6 @@ export default function DashboardEaseKpiCard({
   const [title, setTitle] = useState(kpi.title);
   const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
   const [baselineValue, setBaselineValue] = useState(String(normalizeWeightValue(kpi.baselineValue)));
   const [targetValue, setTargetValue] = useState(kpi.targetValue === null ? "" : String(kpi.targetValue));
   const [currentValue, setCurrentValue] = useState(kpi.currentValue === null ? "" : String(kpi.currentValue));
@@ -206,6 +206,8 @@ export default function DashboardEaseKpiCard({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasDetails = !!(effectiveNotes.trim() || kpi.blockers?.trim() || kpi.comment?.trim());
 
+  useBodyScrollLock(isDialogOpen);
+
   useEffect(() => {
     if (typeof forcedBodyOpen === "boolean") setIsBodyOpen(forcedBodyOpen);
   }, [forcedBodyOpen]);
@@ -215,7 +217,6 @@ export default function DashboardEaseKpiCard({
     setTitle(kpi.title);
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-    setMetricType(kpi.metricType);
     setMode(inferMode(kpi.targetValue));
     setIsDone((kpi.currentValue ?? 0) >= 100);
     setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
@@ -243,7 +244,6 @@ export default function DashboardEaseKpiCard({
     setTitle(kpi.title);
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-    setMetricType(kpi.metricType);
     setMode(inferMode(kpi.targetValue));
     setIsDone((kpi.currentValue ?? 0) >= 100);
     setBaselineValue(String(normalizeWeightValue(kpi.baselineValue)));
@@ -257,8 +257,16 @@ export default function DashboardEaseKpiCard({
     setNotes(effectiveNotes);
   };
 
-  const openDetails = (): void => { cancelEdit(); dialogRef.current?.showModal(); };
-  const closeDetails = (): void => { cancelEdit(); dialogRef.current?.close(); };
+  const openDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.showModal();
+    setIsDialogOpen(true);
+  };
+  const closeDetails = (): void => {
+    cancelEdit();
+    dialogRef.current?.close();
+    setIsDialogOpen(false);
+  };
 
   const saveEdit = async (): Promise<void> => {
     if (isSaving) return;
@@ -313,7 +321,6 @@ export default function DashboardEaseKpiCard({
         kpiCode: code.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        metricType,
         baselineValue: baseline,
         targetValue: resolvedTarget,
         currentValue: resolvedCurrent,
@@ -337,6 +344,7 @@ export default function DashboardEaseKpiCard({
     setIsEditing(false);
     setIsDialogEditing(false);
     dialogRef.current?.close();
+    setIsDialogOpen(false);
     router.refresh();
   };
 
@@ -365,6 +373,7 @@ export default function DashboardEaseKpiCard({
     setIsEditing(false);
     setIsDialogEditing(false);
     dialogRef.current?.close();
+    setIsDialogOpen(false);
     router.refresh();
   };
 
@@ -400,6 +409,9 @@ export default function DashboardEaseKpiCard({
             </div>
             <span className="ease-kpi-bar-pct">{Math.round(progressValue)}%</span>
           </div>
+          <div onClick={(e) => e.stopPropagation()}>
+            <ChatIconButton entityType="kpi" entityKey={kpi.kpiKey} entityLabel={kpi.title} />
+          </div>
         </div>
       </div>
 
@@ -407,6 +419,7 @@ export default function DashboardEaseKpiCard({
       <dialog
         ref={dialogRef}
         className="okr-details-dialog"
+        onClose={() => setIsDialogOpen(false)}
       >
         <div className="okr-details-inner">
           <div className="okr-details-header">
@@ -442,8 +455,7 @@ export default function DashboardEaseKpiCard({
                 <input className="objective-row-input" value={code} onChange={(e) => setCode(e.target.value)} disabled={isSaving} placeholder="KPI Code" />
                 <OwnerInput id={`dialog-kpi-owner-${kpi.kpiKey}`} label="Owner (optional)" value={owner} onChange={setOwner} emailValue={ownerEmail} onEmailChange={setOwnerEmail} multiple disabled={isSaving} className="ease-edit-span" />
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
-                <div className="field"><label>Type</label><select className="objective-row-select" value={mode} onChange={(e) => setMode(e.target.value as KpiMode)} disabled={isSaving}><option value="measurable">Measurable</option><option value="binary">Non-measurable (Done/Not Done)</option></select></div>
-                <div className="field"><label>Metric Type</label><select className="objective-row-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div className="field"><label>Type</label><div className="objective-row-actions"><button type="button" className={mode === "measurable" ? "btn" : "tab-btn"} onClick={() => setMode("measurable")} disabled={isSaving}>Measurable</button><button type="button" className={mode === "binary" ? "btn" : "tab-btn"} onClick={() => setMode("binary")} disabled={isSaving}>Non-measurable</button></div></div>
                 <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
                 {mode === "measurable" ? (
                   <>
@@ -475,7 +487,6 @@ export default function DashboardEaseKpiCard({
                 <span className="ease-chip ease-chip-neutral">{formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"}</span>
                 <span className="ease-chip ease-chip-neutral">Due: {formatDate(kpi.dueDate)}</span>
                 <span className="ease-chip ease-chip-neutral">Weight: {displayWeight}</span>
-                <span className="ease-chip ease-chip-neutral">{kpi.metricType}</span>
                 <span className="ease-chip ease-chip-neutral">{formatCheckinFrequency(kpi.checkInFrequency)}</span>
                 {kpi.targetValue === null ? (
                   <span className="ease-chip ease-chip-neutral">{(kpi.currentValue ?? 0) >= 100 ? "Done" : "Not Done"}</span>

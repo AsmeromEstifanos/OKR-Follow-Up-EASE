@@ -29,7 +29,6 @@ import type {
   KeyResult,
   Kpi,
   KrStatus,
-  MetricType,
   Objective,
   OkrCycle,
   ObjectiveType,
@@ -87,13 +86,6 @@ const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   objectiveTypes: ["Aspirational", "Committed", "Learning"],
   objectiveStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   objectiveCycles: ["Q1", "Q2", "Q3", "Q4"],
-  keyResultMetricTypes: [
-    "Delivery",
-    "Financial",
-    "Operational",
-    "People",
-    "Quality",
-  ],
   keyResultStatuses: ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"],
   checkInFrequencies: ["Weekly", "BiWeekly", "Monthly", "AdHoc"],
 };
@@ -885,32 +877,6 @@ function normalizeCheckInFrequency(value?: string): CheckInFrequency {
   return "Weekly";
 }
 
-function normalizeMetricType(value?: string): MetricType {
-  if (
-    value === "Delivery" ||
-    value === "Financial" ||
-    value === "Operational" ||
-    value === "People" ||
-    value === "Quality"
-  ) {
-    return value;
-  }
-
-  if (value === "Currency") {
-    return "Financial";
-  }
-
-  if (value === "Percent") {
-    return "Delivery";
-  }
-
-  if (value === "Milestone") {
-    return "Quality";
-  }
-
-  return "Operational";
-}
-
 function normalizeUniqueOptionList(
   input: string[] | undefined,
   fallback: readonly string[],
@@ -952,10 +918,6 @@ function normalizeFieldOptions(input?: Partial<FieldOptions>): FieldOptions {
     objectiveCycles: normalizeUniqueOptionList(
       input?.objectiveCycles as string[] | undefined,
       DEFAULT_FIELD_OPTIONS.objectiveCycles,
-    ),
-    keyResultMetricTypes: normalizeUniqueOptionList(
-      input?.keyResultMetricTypes as string[] | undefined,
-      DEFAULT_FIELD_OPTIONS.keyResultMetricTypes,
     ),
     keyResultStatuses: normalizeUniqueOptionList(
       input?.keyResultStatuses as string[] | undefined,
@@ -1246,7 +1208,6 @@ function migrateObjectiveDefaults(store: StoreState): void {
       objective.okrCycle = getOkrCycleFromDate(objective.startDate);
     }
 
-    objective.metricType = normalizeMetricType(objective.metricType);
 
     if (!Number.isFinite(objective.baselineValue)) {
       objective.baselineValue = 0;
@@ -1309,7 +1270,6 @@ function migrateKrDefaults(store: StoreState): void {
       kr.checkInFrequency = "Weekly";
     }
 
-    kr.metricType = normalizeMetricType(kr.metricType);
 
     if (!Number.isFinite(kr.baselineValue)) {
       kr.baselineValue = 0;
@@ -1343,7 +1303,6 @@ function migrateKpiDefaults(store: StoreState): void {
       kpi.checkInFrequency = "Weekly";
     }
 
-    kpi.metricType = normalizeMetricType(kpi.metricType);
 
     if (!Number.isFinite(kpi.baselineValue)) {
       kpi.baselineValue = 0;
@@ -2276,7 +2235,6 @@ export function createObjective(input: CreateObjectiveInput): Objective {
   const comment = normalizeName(input.comment || "");
   const notes = normalizeName(input.notes || input.description || "");
   const cycle = normalizeOkrCycle(input.okrCycle);
-  const metricType = normalizeMetricType(input.metricType);
   const baselineValue = normalizeWeightInput(input.baselineValue, "Objective");
   const targetValue = 100;
   const currentValue = 0;
@@ -2316,7 +2274,6 @@ export function createObjective(input: CreateObjectiveInput): Objective {
     strategicTheme: strategicTheme || "General",
     objectiveType: (input.objectiveType ?? "Committed") as ObjectiveType,
     okrCycle: cycle,
-    metricType,
     baselineValue,
     targetValue,
     currentValue,
@@ -2417,10 +2374,6 @@ export function updateObjective(
 
     if (patch.okrCycle !== undefined) {
       objective.okrCycle = normalizeOkrCycle(patch.okrCycle);
-    }
-
-    if (patch.metricType !== undefined) {
-      objective.metricType = normalizeMetricType(patch.metricType);
     }
 
     if (patch.baselineValue !== undefined) {
@@ -2636,7 +2589,6 @@ export function createKeyResult(input: CreateKeyResultInput): KeyResult {
     ownerEmail:
       normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
       undefined,
-    metricType: normalizeMetricType(input.metricType),
     baselineValue: weightValue,
     targetValue,
     currentValue,
@@ -2751,7 +2703,6 @@ export function createKpi(input: CreateKpiInput): Kpi {
     ownerEmail:
       normalizeEmail(resolveOwnerEmail(input.owner, input.ownerEmail)) ||
       undefined,
-    metricType: normalizeMetricType(input.metricType),
     baselineValue,
     targetValue,
     currentValue,
@@ -2831,9 +2782,6 @@ export function updateKeyResult(
         ) || undefined;
     }
 
-    if (patch.metricType !== undefined) {
-      keyResult.metricType = normalizeMetricType(patch.metricType);
-    }
 
     if (patch.baselineValue !== undefined) {
       keyResult.baselineValue = normalizeWeightInput(
@@ -2959,9 +2907,6 @@ export function updateKpi(kpiKey: string, patch: UpdateKpiInput): Kpi | null {
         ) || undefined;
     }
 
-    if (patch.metricType !== undefined) {
-      kpi.metricType = normalizeMetricType(patch.metricType);
-    }
 
     if (patch.baselineValue !== undefined) {
       kpi.baselineValue = normalizeWeightInput(patch.baselineValue, "KPI");

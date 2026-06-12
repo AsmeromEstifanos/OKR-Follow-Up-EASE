@@ -5,7 +5,7 @@ import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
 import { formatOwnerEmailLabel, includesSerializedOwnerEmail, resolveOwnerEmail } from "@/lib/owner";
-import type { CheckInFrequency, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -17,7 +17,6 @@ type Props = {
   defaultOwnerEmail?: string;
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -28,7 +27,6 @@ type PendingKpi = {
   title: string;
   owner: string;
   ownerEmail: string;
-  metricType: MetricType;
   baselineValue: number;
   targetValue: number | null;
   currentValue: number | null;
@@ -79,7 +77,6 @@ export default function DashboardKeyResultControls({
   defaultOwnerEmail,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -100,7 +97,6 @@ export default function DashboardKeyResultControls({
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
   const [baselineValue, setBaselineValue] = useState("1");
   const [targetValue, setTargetValue] = useState("100");
   const [currentValue, setCurrentValue] = useState("0");
@@ -140,7 +136,6 @@ export default function DashboardKeyResultControls({
     setTitle("");
     setOwner("");
     setOwnerEmail("");
-    setMetricType(metricTypeOptions[0] ?? "Operational");
     setBaselineValue("1");
     setTargetValue("100");
     setCurrentValue("0");
@@ -218,7 +213,6 @@ export default function DashboardKeyResultControls({
       title: trimmedTitle,
       owner: owner.trim(),
       ownerEmail: ownerEmail.trim(),
-      metricType,
       baselineValue: baseline,
       targetValue: resolvedTarget,
       currentValue: resolvedCurrent,
@@ -338,17 +332,11 @@ export default function DashboardKeyResultControls({
               <input value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
             </div>
             <div className="field">
-              <label>{itemLabel} Metric Type</label>
-              <select value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>
-                {metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            </div>
-            <div className="field">
               <label>Type</label>
-              <select value={mode} onChange={(event) => setMode(event.target.value as KpiMode)} disabled={isSaving}>
-                <option value="measurable">Measurable</option>
-                <option value="binary">Non-measurable</option>
-              </select>
+              <div className="objective-row-actions">
+                <button type="button" className={mode === "measurable" ? "btn" : "tab-btn"} onClick={(e) => { e.stopPropagation(); setMode("measurable"); }} disabled={isSaving}>Measurable</button>
+                <button type="button" className={mode === "binary" ? "btn" : "tab-btn"} onClick={(e) => { e.stopPropagation(); setMode("binary"); }} disabled={isSaving}>Non-measurable</button>
+              </div>
             </div>
             <div className="field">
               <label>Weight</label>

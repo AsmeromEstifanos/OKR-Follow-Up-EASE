@@ -27,7 +27,6 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "strategicTheme",
   "objectiveType",
   "okrCycle",
-  "metricType",
   "baselineValue",
   "targetValue",
   "currentValue",
@@ -139,10 +138,6 @@ function parseObjectivePatch(body: unknown): UpdateObjectiveInput {
     patch.okrCycle = expectString(raw, "okrCycle");
   }
 
-  if (raw.metricType !== undefined) {
-    patch.metricType = expectString(raw, "metricType");
-  }
-
   if (raw.baselineValue !== undefined) {
     patch.baselineValue = expectNumber(raw, "baselineValue");
   }
@@ -217,7 +212,14 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
         : "";
       const label = toAsciiHeader(objective.objectiveCode ? `${objective.objectiveCode} ${objective.title}` : objective.title);
       const changedBy = (request.headers.get("x-user-email") ?? "").trim();
-      void sendChangeAlert({ entityType: "objective", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false });
+      void sendChangeAlert({
+        entityType: "objective",
+        entityLabel: label,
+        ownerEmail: objective.ownerEmail,
+        changedBy,
+        diffJson: detailsJson,
+        isNew: false
+      });
       const headers: Record<string, string> = { "x-activity-label": label };
       if (detailsJson) headers["x-activity-details"] = detailsJson;
       return NextResponse.json(objective, { headers });

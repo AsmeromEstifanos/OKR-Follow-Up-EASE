@@ -18,7 +18,6 @@ import type {
   Kpi,
   KeyResult,
   KrStatus,
-  MetricType,
   Objective,
   ObjectiveStatus,
   ObjectiveType,
@@ -170,9 +169,11 @@ export default function BoardViewClient({
                     return null;
                   }
 
+                  // Show only the KPIs the user is assigned to — owning the
+                  // parent KR must not reveal milestones they are not on.
                   return {
                     ...krEntry,
-                    kpis: krMatches ? krEntry.kpis : matchedKpis,
+                    kpis: matchedKpis,
                   };
                 })
                 .filter((entry): entry is BoardKrData => Boolean(entry));
@@ -181,11 +182,11 @@ export default function BoardViewClient({
                 return null;
               }
 
+              // Show only the KRs the user is assigned to — owning the parent
+              // objective must not reveal KRs they are not on.
               return {
                 ...objectiveEntry,
-                keyResults: objectiveMatches
-                  ? objectiveEntry.keyResults
-                  : matchedKeyResults,
+                keyResults: matchedKeyResults,
               };
             })
             .filter((entry): entry is BoardObjectiveData => Boolean(entry));
@@ -346,7 +347,7 @@ export default function BoardViewClient({
                       entry.objective.objectiveCode ?? entry.objective.title,
                     weight: entry.objective.baselineValue,
                   }))}
-                  forcedOpen={allSectionsOpen || isSearching}
+                  forcedOpen={allSectionsOpen}
                   adminEmails={adminEmails}
                 >
                   <div className="board-group-title-wrap">
@@ -372,9 +373,6 @@ export default function BoardViewClient({
                         objectiveCycleOptions={
                           fieldOptions.objectiveCycles as OkrCycle[]
                         }
-                        metricTypeOptions={
-                          fieldOptions.keyResultMetricTypes as MetricType[]
-                        }
                         checkInFrequencyOptions={
                           fieldOptions.checkInFrequencies as CheckInFrequency[]
                         }
@@ -394,7 +392,7 @@ export default function BoardViewClient({
                             key={entry.objective.objectiveKey}
                             objective={entry.objective}
                             keyResults={entry.keyResults}
-                            forcedKrSectionOpen={allSectionsOpen || isSearching}
+                            forcedKrSectionOpen={allSectionsOpen}
                             positionOwnerEmail={section.positionOwnerEmail}
                             adminEmails={adminEmails}
                             objectiveTypeOptions={
@@ -405,9 +403,6 @@ export default function BoardViewClient({
                             }
                             objectiveCycleOptions={
                               fieldOptions.objectiveCycles as OkrCycle[]
-                            }
-                            metricTypeOptions={
-                              fieldOptions.keyResultMetricTypes as MetricType[]
                             }
                             keyResultStatusOptions={
                               fieldOptions.keyResultStatuses as KrStatus[]
@@ -426,7 +421,6 @@ export default function BoardViewClient({
                           <tr>
                             <th>{objectiveLabel}</th>
                             <th>Owner</th>
-                            <th>{objectiveLabel} Metric Type</th>
                             <th>Weight</th>
                             <th>Target Value</th>
                             <th>Current Value</th>
@@ -464,9 +458,6 @@ export default function BoardViewClient({
                                   }
                                   objectiveCycleOptions={
                                     fieldOptions.objectiveCycles as OkrCycle[]
-                                  }
-                                  metricTypeOptions={
-                                    fieldOptions.keyResultMetricTypes as MetricType[]
                                   }
                                   keyResultStatusOptions={
                                     fieldOptions.keyResultStatuses as KrStatus[]

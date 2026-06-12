@@ -11,7 +11,7 @@ import {
   resolveOwnerEmail,
   resolveOwnerName
 } from "@/lib/owner";
-import type { CheckInFrequency, Kpi, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, Kpi, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,7 +21,6 @@ type Props = {
   latestUpdatedAt?: string | null;
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -74,7 +73,6 @@ export default function DashboardKeyResultRowEditor({
   latestUpdatedAt,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -90,7 +88,6 @@ export default function DashboardKeyResultRowEditor({
   const [title, setTitle] = useState(kpi.title);
   const [owner, setOwner] = useState(resolveOwnerName(kpi.owner, kpi.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(kpi.metricType);
   const [baselineValue, setBaselineValue] = useState(String(kpi.baselineValue));
   const [targetValue, setTargetValue] = useState(String(kpi.targetValue));
   const [currentValue, setCurrentValue] = useState(String(kpi.currentValue));
@@ -116,7 +113,6 @@ export default function DashboardKeyResultRowEditor({
     setTitle(kpi.title);
     setOwner(resolveOwnerName(kpi.owner, kpi.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(kpi.owner, kpi.ownerEmail));
-    setMetricType(kpi.metricType);
     setBaselineValue(String(kpi.baselineValue));
     setTargetValue(String(kpi.targetValue));
     setCurrentValue(String(kpi.currentValue));
@@ -178,7 +174,6 @@ export default function DashboardKeyResultRowEditor({
         kpiCode: code.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        metricType,
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
@@ -265,7 +260,6 @@ export default function DashboardKeyResultRowEditor({
           formatOwnerLabel(kpi.owner, kpi.ownerEmail) || "-"
         )}
       </td>
-      <td>{isEditing ? <select className="objective-row-select" value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>{metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select> : kpi.metricType}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.baselineValue)}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.targetValue)}</td>
       <td>{isEditing ? <input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} disabled={isSaving} /> : formatMetricValue(kpi.currentValue)}</td>

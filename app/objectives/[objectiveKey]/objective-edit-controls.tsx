@@ -4,7 +4,7 @@ import OwnerInput from "@/app/owner-input";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
-import type { CheckInFrequency, Confidence, MetricType, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
+import type { CheckInFrequency, Confidence, Objective, ObjectiveStatus, ObjectiveType, OkrCycle } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,7 +14,6 @@ type ObjectiveEditControlsProps = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
-  metricTypeOptions: MetricType[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
 
@@ -28,7 +27,6 @@ type ObjectiveDraft = {
   strategicTheme: string;
   objectiveType: ObjectiveType;
   okrCycle: OkrCycle;
-  metricType: MetricType;
   baselineValue: string;
   blockers: string;
   keyRisksDependency: string;
@@ -74,7 +72,6 @@ function toDraft(objective: Objective): ObjectiveDraft {
     strategicTheme: objective.strategicTheme,
     objectiveType: objective.objectiveType,
     okrCycle: objective.okrCycle,
-    metricType: objective.metricType,
     baselineValue: normalizeWeightValue(objective.baselineValue),
     blockers: objective.blockers ?? "",
     keyRisksDependency: objective.keyRisksDependency,
@@ -94,7 +91,6 @@ export default function ObjectiveEditControls({
   objectiveTypeOptions,
   objectiveStatusOptions,
   objectiveCycleOptions,
-  metricTypeOptions,
   checkInFrequencyOptions
 }: ObjectiveEditControlsProps): JSX.Element {
   const router = useRouter();
@@ -148,7 +144,6 @@ export default function ObjectiveEditControls({
         strategicTheme: draft.strategicTheme.trim(),
         objectiveType: draft.objectiveType,
         okrCycle: draft.okrCycle,
-        metricType: draft.metricType,
         baselineValue,
         blockers: draft.blockers.trim(),
         keyRisksDependency: draft.keyRisksDependency.trim(),
@@ -273,21 +268,6 @@ export default function ObjectiveEditControls({
                 onChange={(event) => setDraft((current) => ({ ...current, okrCycle: event.target.value as OkrCycle }))}
               >
                 {objectiveCycleOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field">
-              <label htmlFor="objective-metric-edit">Metric Type</label>
-              <select
-                id="objective-metric-edit"
-                value={draft.metricType}
-                onChange={(event) => setDraft((current) => ({ ...current, metricType: event.target.value as MetricType }))}
-              >
-                {metricTypeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0] — 2026-06-12
+
+### Added
+- KPI/milestone-level discussion threads (chat) with unread badges and notification-bell integration.
+- Activity Log: filter by venture (resolves each entry to its objective's venture, pagination-safe).
+- Change alert emails now include the owner email of the changed Objective, KR, or KPI in addition to configured recipients.
+
+### Changed
+- Notification bell now only surfaces a thread when the signed-in user is an owner of the Objective/KR/KPI, a participant in the chat, or was mentioned. Mentioned emails are now persisted on comments and participants are aggregated from comment authors.
+- "Assigned To Me" board filter now shows only the Objectives/KRs/KPIs the user is assigned to or participates in — owning a parent no longer reveals unassigned children.
+- KR Current Value and Progress % are now read-only (auto-computed from KPIs) and no longer sent in the KR edit payload.
+
+### Removed
+- Metric Type removed entirely from Objectives, KRs, and KPIs — edit/quick-create UI, the KR Metric Type config option, API patch fields, storage column usage, activity-log labels, and AI context.
+
+### Fixed
+- Collapse/Expand All now works while the search box has text (previously search forced everything open).
+- Objective, KR, and KPI detail dialogs now lock background page scrolling while open.
+
+---
+
 ## [0.4.16] — 2026-05-29
 
 ### Fixed

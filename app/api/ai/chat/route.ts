@@ -81,7 +81,7 @@ function buildOkrContext(
         const latest = latestCheckIn.get(kr.krKey);
         lines.push(`    KR: ${kr.krCode ?? kr.krKey} — "${kr.title}"`);
         lines.push(
-          `      Progress: ${kr.progressPct}% (${kr.currentValue}/${kr.targetValue} ${kr.metricType}) | Status: ${kr.status} | Due: ${kr.dueDate ?? "—"} | Owner: ${kr.ownerEmail ?? kr.owner ?? "unassigned"}`
+          `      Progress: ${kr.progressPct}% (${kr.currentValue}/${kr.targetValue}) | Status: ${kr.status} | Due: ${kr.dueDate ?? "—"} | Owner: ${kr.ownerEmail ?? kr.owner ?? "unassigned"}`
         );
         if (kr.blockers) lines.push(`      Blockers: ${kr.blockers}`);
         if (latest) {
@@ -94,7 +94,7 @@ function buildOkrContext(
         const krKpis = kpisByKr.get(kr.krKey) ?? [];
         for (const k of krKpis) {
           lines.push(
-            `      KPI: ${k.kpiCode ?? k.kpiKey} — "${k.title}" — Progress: ${k.progressPct}% (${k.currentValue}/${k.targetValue} ${k.metricType}) | Status: ${k.status} | Owner: ${k.ownerEmail ?? k.owner ?? "unassigned"}`
+            `      KPI: ${k.kpiCode ?? k.kpiKey} — "${k.title}" — Progress: ${k.progressPct}% (${k.currentValue}/${k.targetValue}) | Status: ${k.status} | Owner: ${k.ownerEmail ?? k.owner ?? "unassigned"}`
           );
           if (k.blockers) lines.push(`        Blockers: ${k.blockers}`);
         }

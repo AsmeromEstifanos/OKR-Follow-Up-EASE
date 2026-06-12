@@ -38,7 +38,6 @@ type ApiActionState = "idle" | "loading" | "saving";
 const OBJECTIVE_TYPE_VALUES = ["Aspirational", "Committed", "Learning"];
 const OBJECTIVE_STATUS_VALUES = ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"];
 const OBJECTIVE_CYCLE_VALUES = ["Q1", "Q2", "Q3", "Q4"];
-const KR_METRIC_TYPE_VALUES = ["Delivery", "Financial", "Operational", "People", "Quality"];
 const KR_STATUS_VALUES = ["NotStarted", "OnTrack", "AtRisk", "OffTrack", "Done"];
 const CHECKIN_FREQUENCY_VALUES = ["Weekly", "BiWeekly", "Monthly", "AdHoc"];
 const DEFAULT_BOARD_CARD_COLORS: BoardCardColors = {
@@ -185,14 +184,12 @@ export default function ConfigPage(): JSX.Element {
   const [objectiveTypes, setObjectiveTypes] = useState<string[]>(OBJECTIVE_TYPE_VALUES);
   const [objectiveStatuses, setObjectiveStatuses] = useState<string[]>(OBJECTIVE_STATUS_VALUES);
   const [objectiveCycles, setObjectiveCycles] = useState<string[]>(OBJECTIVE_CYCLE_VALUES);
-  const [keyResultMetricTypes, setKeyResultMetricTypes] = useState<string[]>(KR_METRIC_TYPE_VALUES);
   const [keyResultStatuses, setKeyResultStatuses] = useState<string[]>(KR_STATUS_VALUES);
   const [checkInFrequencies, setCheckInFrequencies] = useState<string[]>(CHECKIN_FREQUENCY_VALUES);
   const [boardCardColors, setBoardCardColors] = useState<BoardCardColors>(DEFAULT_BOARD_CARD_COLORS);
   const [objectiveTypeDraft, setObjectiveTypeDraft] = useState<string>("");
   const [objectiveStatusDraft, setObjectiveStatusDraft] = useState<string>("");
   const [objectiveCycleDraft, setObjectiveCycleDraft] = useState<string>("");
-  const [krMetricTypeDraft, setKrMetricTypeDraft] = useState<string>("");
   const [krStatusDraft, setKrStatusDraft] = useState<string>("");
   const [checkInFrequencyDraft, setCheckInFrequencyDraft] = useState<string>("");
 
@@ -216,7 +213,6 @@ export default function ConfigPage(): JSX.Element {
     setObjectiveTypes(payload.fieldOptions.objectiveTypes);
     setObjectiveStatuses(payload.fieldOptions.objectiveStatuses);
     setObjectiveCycles(payload.fieldOptions.objectiveCycles);
-    setKeyResultMetricTypes(payload.fieldOptions.keyResultMetricTypes);
     setKeyResultStatuses(payload.fieldOptions.keyResultStatuses);
     setCheckInFrequencies(payload.fieldOptions.checkInFrequencies);
     setBoardCardColors(payload.boardCardColors ?? DEFAULT_BOARD_CARD_COLORS);
@@ -330,7 +326,6 @@ export default function ConfigPage(): JSX.Element {
       objectiveTypes.length === 0 ||
       objectiveStatuses.length === 0 ||
       objectiveCycles.length === 0 ||
-      keyResultMetricTypes.length === 0 ||
       keyResultStatuses.length === 0 ||
       checkInFrequencies.length === 0
     ) {
@@ -352,7 +347,6 @@ export default function ConfigPage(): JSX.Element {
         objectiveTypes,
         objectiveStatuses,
         objectiveCycles,
-        keyResultMetricTypes,
         keyResultStatuses,
         checkInFrequencies
       })
@@ -728,18 +722,6 @@ export default function ConfigPage(): JSX.Element {
                   setObjectiveCycleDraft("");
                 }}
                 onRemove={(value) => setObjectiveCycles((current) => removeOption(current, value))}
-              />
-              <OptionEditor
-                title="KR Metric Type"
-                options={keyResultMetricTypes}
-                addValue={krMetricTypeDraft}
-                disabled={isBusy}
-                onAddValueChange={setKrMetricTypeDraft}
-                onAdd={() => {
-                  setKeyResultMetricTypes((current) => addOption(current, krMetricTypeDraft));
-                  setKrMetricTypeDraft("");
-                }}
-                onRemove={(value) => setKeyResultMetricTypes((current) => removeOption(current, value))}
               />
               <OptionEditor
                 title="KR Status"

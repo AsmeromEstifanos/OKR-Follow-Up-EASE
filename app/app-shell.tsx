@@ -8,7 +8,7 @@ import SharePointActivityLoader from "@/app/sharepoint-activity-loader";
 import useSharePointConnection from "@/app/use-sharepoint-connection";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { ensureActiveAccount } from "@/lib/auth/msal-client";
-import { apiPath, stripBasePath } from "@/lib/base-path";
+import { apiPath, stripBasePath, withBasePath } from "@/lib/base-path";
 import { OKR_REFRESH_SYNC_KEY } from "@/lib/tab-sync";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 import Link from "next/link";
@@ -110,9 +110,13 @@ function AppTabsNav(): JSX.Element {
           SVH
         </span>
       )}
-      <span className="app-tab app-tab-active" aria-current="page">
+      <a
+        className="app-tab app-tab-active"
+        aria-current="page"
+        href={withBasePath("/")}
+      >
         Ventures
-      </span>
+      </a>
     </>
   );
 }
@@ -410,8 +414,8 @@ export default function AppShell({ children }: Props): JSX.Element {
             </div>
           ) : null}
           {!isNavCollapsed ? (
-            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.4.16"}`}>
-              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.4.16"}
+            <div className="ln-version-label" aria-label={`Application version ${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.5.0"}`}>
+              Version {process.env.NEXT_PUBLIC_APP_VERSION ?? "0.5.0"}
             </div>
           ) : null}
         </div>

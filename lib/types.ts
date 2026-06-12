@@ -6,7 +6,6 @@ export type KrStatus = string;
 export type CheckInFrequency = string;
 export type Confidence = "High" | "Medium" | "Low";
 export type Rag = "Green" | "Amber" | "Red";
-export type MetricType = string;
 
 export type AppRole = "Admin" | "Manager" | "Editor" | "Viewer";
 
@@ -61,7 +60,6 @@ export interface FieldOptions {
   objectiveTypes: string[];
   objectiveStatuses: string[];
   objectiveCycles: string[];
-  keyResultMetricTypes: string[];
   keyResultStatuses: string[];
   checkInFrequencies: string[];
 }
@@ -87,7 +85,6 @@ export interface Objective {
   strategicTheme: string;
   objectiveType: ObjectiveType;
   okrCycle: OkrCycle;
-  metricType: MetricType;
   baselineValue: number;
   targetValue: number;
   currentValue: number;
@@ -114,7 +111,6 @@ export interface KeyResult {
   title: string;
   owner?: string;
   ownerEmail?: string;
-  metricType: MetricType;
   baselineValue: number;
   targetValue: number | null;
   currentValue: number | null;
@@ -137,7 +133,6 @@ export interface Kpi {
   title: string;
   owner?: string;
   ownerEmail?: string;
-  metricType: MetricType;
   baselineValue: number;
   targetValue: number | null;
   currentValue: number | null;
@@ -227,7 +222,6 @@ export type UpdateObjectiveInput = Partial<
     | "strategicTheme"
     | "objectiveType"
     | "okrCycle"
-    | "metricType"
     | "baselineValue"
     | "targetValue"
     | "currentValue"
@@ -280,7 +274,6 @@ export type UpdateKeyResultInput = Partial<
     | "title"
     | "owner"
     | "ownerEmail"
-    | "metricType"
     | "baselineValue"
     | "targetValue"
     | "currentValue"
@@ -302,7 +295,6 @@ export type UpdateKpiInput = Partial<
     | "title"
     | "owner"
     | "ownerEmail"
-    | "metricType"
     | "baselineValue"
     | "targetValue"
     | "currentValue"
@@ -345,7 +337,7 @@ export type UpdateDepartmentInput = Partial<Pick<Department, "name" | "owner" | 
 
 export interface Comment {
   commentKey: string;
-  entityType: "objective" | "kr";
+  entityType: "objective" | "kr" | "kpi";
   entityKey: string;
   authorEmail: string;
   authorName: string;

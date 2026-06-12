@@ -5,7 +5,7 @@ import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { beginOperationBatch } from "@/lib/client-operation-batch";
 import { formatOwnerEmailLabel, includesSerializedOwnerEmail, resolveOwnerEmail } from "@/lib/owner";
-import type { CheckInFrequency, KrStatus, MetricType } from "@/lib/types";
+import type { CheckInFrequency, KrStatus } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -16,7 +16,6 @@ type Props = {
   defaultOwnerEmail?: string;
   positionOwnerEmail?: string;
   adminEmails: string[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -26,7 +25,6 @@ type PendingKr = {
   title: string;
   owner: string;
   ownerEmail: string;
-  metricType: MetricType;
   baselineValue: number;
   targetValue: number;
   currentValue: number;
@@ -76,7 +74,6 @@ export default function DashboardKrControls({
   defaultOwnerEmail,
   positionOwnerEmail,
   adminEmails,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -94,7 +91,6 @@ export default function DashboardKrControls({
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(sanitizedDefaultOwner);
   const [ownerEmail, setOwnerEmail] = useState(resolveOwnerEmail(defaultOwner, defaultOwnerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(metricTypeOptions[0] ?? "Operational");
   const [baselineValue, setBaselineValue] = useState("1");
   const [targetValue, setTargetValue] = useState("100");
   const [currentValue, setCurrentValue] = useState("0");
@@ -135,7 +131,6 @@ export default function DashboardKrControls({
     setTitle("");
     setOwner("");
     setOwnerEmail("");
-    setMetricType(metricTypeOptions[0] ?? "Operational");
     setBaselineValue("1");
     setTargetValue("100");
     setCurrentValue("0");
@@ -168,7 +163,7 @@ export default function DashboardKrControls({
     if (!Number.isFinite(target) || !Number.isFinite(current)) { setError("Target and current values must be numbers."); return null; }
     if (target <= 0) { setError("Target value must be greater than 0."); return null; }
     if (!dueDate) { setError("Due date is required."); return null; }
-    return { title: trimmedTitle, owner: owner.trim(), ownerEmail: ownerEmail.trim(), metricType, baselineValue: baseline, targetValue: target, currentValue: current, status, dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), notes: notes.trim() };
+    return { title: trimmedTitle, owner: owner.trim(), ownerEmail: ownerEmail.trim(), baselineValue: baseline, targetValue: target, currentValue: current, status, dueDate, checkInFrequency, blockers: blockers.trim(), comment: comment.trim(), notes: notes.trim() };
   };
 
   const saveAll = async (): Promise<void> => {
@@ -246,12 +241,6 @@ export default function DashboardKrControls({
             <div className="field">
               <label>Owner Email</label>
               <input value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} />
-            </div>
-            <div className="field">
-              <label>{itemLabel} Metric Type</label>
-              <select value={metricType} onChange={(event) => setMetricType(event.target.value as MetricType)} disabled={isSaving}>
-                {metricTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
             </div>
             <div className="field"><label>Weight</label><input type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
             <div className="field"><label>Target Value</label><input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>

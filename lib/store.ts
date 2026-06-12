@@ -51,6 +51,7 @@ import {
   getSharePointStorageStatus,
   listActivityLogEntries,
   listCommentCounts,
+  type CommentCountAggregate,
   listComments,
   removeComment,
   setRoleAssignment,
@@ -687,9 +688,7 @@ export async function getComments(entityType: string, entityKey: string): Promis
   return listComments(entityType, entityKey);
 }
 
-export async function getCommentCounts(): Promise<
-  Record<string, { count: number; latestAt: string; latestBody: string; latestAuthor: string; timestamps: string[] }>
-> {
+export async function getCommentCounts(): Promise<Record<string, CommentCountAggregate>> {
   const status = getSharePointStorageStatus();
   if (!status.enabled) return {};
   return listCommentCounts();

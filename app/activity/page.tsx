@@ -64,7 +64,6 @@ const FIELD_LABELS: Record<string, string> = {
   keyRisksDependency: "Key risks & dependencies",
   constraintGuardrails: "Constraints & guardrails",
   supportNeeded: "Support needed",
-  metricType: "Metric type",
   measurementRule: "Measurement rule",
   checkInFrequency: "Check-in frequency",
   krCode: "KR code",
@@ -263,13 +262,13 @@ const OBJECTIVE_FIELD_ORDER = [
 ];
 
 const KR_FIELD_ORDER = [
-  "krCode", "title", "status", "progressPct", "metricType", "measurementRule",
+  "krCode", "title", "status", "progressPct", "measurementRule",
   "baselineValue", "targetValue", "currentValue", "owner", "ownerEmail",
   "dueDate", "checkInFrequency", "blockers", "supportNeeded", "notes", "lastCheckinAt"
 ];
 
 const KPI_FIELD_ORDER = [
-  "kpiCode", "title", "status", "progressPct", "metricType",
+  "kpiCode", "title", "status", "progressPct",
   "baselineValue", "targetValue", "currentValue", "weight",
   "owner", "ownerEmail", "dueDate", "checkInFrequency", "blockers", "notes", "lastCheckinAt"
 ];
@@ -416,6 +415,8 @@ export default function ActivityPage(): JSX.Element {
   const [customTo, setCustomTo] = useState("");
   const [filterEntityType, setFilterEntityType] = useState("");
   const [filterUser, setFilterUser] = useState("");
+  const [filterVenture, setFilterVenture] = useState("");
+  const [ventures, setVentures] = useState<{ ventureKey: string; name: string }[]>([]);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -442,6 +443,20 @@ export default function ActivityPage(): JSX.Element {
       .catch(() => { if (mounted) setAuthorized(false); });
     return () => { mounted = false; };
   }, [currentUserEmail]);
+
+  useEffect(() => {
+    if (authorized !== true || !currentUserEmail) return;
+    let mounted = true;
+    fetch(apiPath("/api/config/ventures"), { headers: { "x-user-email": currentUserEmail } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Array<{ ventureKey: string; name: string }>) => {
+        if (mounted && Array.isArray(data)) {
+          setVentures(data.map((v) => ({ ventureKey: v.ventureKey, name: v.name })));
+        }
+      })
+      .catch(() => { /* ignore */ });
+    return () => { mounted = false; };
+  }, [authorized, currentUserEmail]);
 
   useEffect(() => {
     if (authorized !== true || !currentUserEmail) return;
@@ -489,10 +504,11 @@ export default function ActivityPage(): JSX.Element {
     }
     if (filterEntityType) params.set("entityType", filterEntityType);
     if (filterUser) params.set("userEmail", filterUser);
+    if (filterVenture) params.set("ventureKey", filterVenture);
     params.set("limit", "50");
     if (cursor) params.set("cursor", cursor);
     return params.toString();
-  }, [period, customFrom, customTo, filterEntityType, filterUser]);
+  }, [period, customFrom, customTo, filterEntityType, filterUser, filterVenture]);
 
   const fetchPage = useCallback(async (cursor?: string) => {
     if (!currentUserEmail) return;
@@ -545,6 +561,7 @@ export default function ActivityPage(): JSX.Element {
           if (customFrom) params.set("from", customFrom + "T00:00:00.000Z");
           if (customTo) params.set("to", customTo + "T23:59:59.999Z");
         }
+        if (filterVenture) params.set("ventureKey", filterVenture);
         params.set("limit", "200");
         if (cursor) params.set("cursor", cursor);
         const res = await fetch(apiPath(`/api/activity?${params.toString()}`), {
@@ -559,7 +576,7 @@ export default function ActivityPage(): JSX.Element {
     } catch { /* ignore */ }
     setInsightsEntries(all);
     setInsightsLoading(false);
-  }, [currentUserEmail, period, customFrom, customTo]);
+  }, [currentUserEmail, period, customFrom, customTo, filterVenture]);
 
   useEffect(() => {
     if (authorized === true) void fetchPage();
@@ -649,6 +666,16 @@ export default function ActivityPage(): JSX.Element {
             </div>
           </>
         )}
+
+        <div className="act-filter-group">
+          <label className="act-filter-label">Venture</label>
+          <select className="act-select" value={filterVenture} onChange={(e) => setFilterVenture(e.target.value)}>
+            <option value="">All ventures</option>
+            {ventures.map((v) => (
+              <option key={v.ventureKey} value={v.ventureKey}>{v.name}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="act-filter-group">
           <label className="act-filter-label">Entity type</label>

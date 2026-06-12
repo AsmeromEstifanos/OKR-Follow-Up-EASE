@@ -5,12 +5,15 @@ export type CommentCount = {
   latestAt: string;
   latestBody?: string;
   latestAuthor?: string;
-  entityType?: "objective" | "kr";
+  entityType?: "objective" | "kr" | "kpi";
   entityKey?: string;
   title?: string;
   code?: string;
   department?: string;
   timestamps?: string[];
+  ownerEmails?: string[];
+  participantEmails?: string[];
+  mentionedEmails?: string[];
 };
 
 type CountsMap = Record<string, CommentCount>;

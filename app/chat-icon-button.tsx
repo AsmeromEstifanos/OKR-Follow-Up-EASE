@@ -10,7 +10,7 @@ import useCurrentUserEmail from "./use-current-user-email";
 const ChatModal = dynamic(() => import("@/app/chat-modal"), { ssr: false });
 
 type Props = {
-  entityType: "objective" | "kr";
+  entityType: "objective" | "kr" | "kpi";
   entityKey: string;
   entityLabel: string;
 };

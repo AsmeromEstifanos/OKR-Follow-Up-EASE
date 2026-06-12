@@ -19,7 +19,6 @@ import type {
   Kpi,
   KeyResult,
   KrStatus,
-  MetricType,
   Objective,
   ObjectiveStatus,
   ObjectiveType,
@@ -47,7 +46,6 @@ type Props = {
   objectiveTypeOptions: ObjectiveType[];
   objectiveStatusOptions: ObjectiveStatus[];
   objectiveCycleOptions: OkrCycle[];
-  metricTypeOptions: MetricType[];
   keyResultStatusOptions: KrStatus[];
   checkInFrequencyOptions: CheckInFrequency[];
 };
@@ -153,7 +151,6 @@ export default function DashboardObjectiveRowEditor({
   objectiveTypeOptions,
   objectiveStatusOptions,
   objectiveCycleOptions,
-  metricTypeOptions,
   keyResultStatusOptions,
   checkInFrequencyOptions
 }: Props): JSX.Element {
@@ -173,7 +170,6 @@ export default function DashboardObjectiveRowEditor({
   const [title, setTitle] = useState<string>(objective.title);
   const [owner, setOwner] = useState<string>(resolveOwnerName(objective.owner, objective.ownerEmail));
   const [ownerEmail, setOwnerEmail] = useState<string>(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-  const [metricType, setMetricType] = useState<MetricType>(objective.metricType);
   const [baselineValue, setBaselineValue] = useState<string>(String(objective.baselineValue));
   const [targetValue, setTargetValue] = useState<string>(String(objective.targetValue));
   const [currentValue, setCurrentValue] = useState<string>(String(objective.currentValue));
@@ -199,7 +195,6 @@ export default function DashboardObjectiveRowEditor({
     setTitle(objective.title);
     setOwner(resolveOwnerName(objective.owner, objective.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-    setMetricType(objective.metricType);
     setBaselineValue(String(objective.baselineValue));
     setTargetValue(String(objective.targetValue));
     setCurrentValue(String(objective.currentValue));
@@ -217,7 +212,6 @@ export default function DashboardObjectiveRowEditor({
     setTitle(objective.title);
     setOwner(resolveOwnerName(objective.owner, objective.ownerEmail));
     setOwnerEmail(resolveOwnerEmail(objective.owner, objective.ownerEmail));
-    setMetricType(objective.metricType);
     setBaselineValue(String(objective.baselineValue));
     setTargetValue(String(objective.targetValue));
     setCurrentValue(String(objective.currentValue));
@@ -289,7 +283,6 @@ export default function DashboardObjectiveRowEditor({
         title: title.trim(),
         owner: owner.trim(),
         ownerEmail: ownerEmail.trim(),
-        metricType,
         baselineValue: baseline,
         targetValue: target,
         currentValue: current,
@@ -444,24 +437,6 @@ export default function DashboardObjectiveRowEditor({
             />
         ) : (
           formatOwnerLabel(objective.owner, objective.ownerEmail) || "-"
-        )}
-      </td>
-      <td>
-        {isEditing && canEdit ? (
-          <select
-            className="objective-row-select"
-            value={metricType}
-            onChange={(event) => setMetricType(event.target.value as MetricType)}
-            disabled={isSaving}
-          >
-            {metricTypeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        ) : (
-          objective.metricType
         )}
       </td>
       <td>
@@ -625,7 +600,6 @@ export default function DashboardObjectiveRowEditor({
                   defaultOwnerEmail={resolveOwnerEmail(objective.owner, objective.ownerEmail)}
                   positionOwnerEmail={positionOwnerEmail}
                   adminEmails={adminEmails}
-                  metricTypeOptions={metricTypeOptions}
                   keyResultStatusOptions={keyResultStatusOptions}
                   checkInFrequencyOptions={checkInFrequencyOptions}
                 />
@@ -634,7 +608,6 @@ export default function DashboardObjectiveRowEditor({
                     <tr className="board-subheader-row">
                       <th>{childLabel}</th>
                       <th>Owner</th>
-                      <th>{childLabel} Metric Type</th>
                       <th>Weight</th>
                       <th>Target Value</th>
                       <th>Current Value</th>
@@ -661,8 +634,7 @@ export default function DashboardObjectiveRowEditor({
                           kpis={item.kpis ?? []}
                           positionOwnerEmail={positionOwnerEmail}
                           adminEmails={adminEmails}
-                          metricTypeOptions={metricTypeOptions}
-                          keyResultStatusOptions={keyResultStatusOptions}
+                                  keyResultStatusOptions={keyResultStatusOptions}
                           checkInFrequencyOptions={checkInFrequencyOptions}
                         />
                       ))

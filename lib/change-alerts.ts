@@ -1,4 +1,5 @@
 import { readNotificationSettings } from "@/lib/notification-settings";
+import { parseAssignedOwners } from "@/lib/owner";
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -17,7 +18,7 @@ const FIELD_LABELS: Record<string, string> = {
   title: "Title", owner: "Owner", ownerEmail: "Owner Email",
   status: "Status", progressPct: "Progress %", rag: "RAG",
   currentValue: "Current Value", targetValue: "Target Value", baselineValue: "Weight",
-  metricType: "Metric Type", objectiveType: "Objective Type", okrCycle: "OKR Cycle",
+  objectiveType: "Objective Type", okrCycle: "OKR Cycle",
   checkInFrequency: "Check-in Frequency", dueDate: "Due Date",
   blockers: "Blockers", notes: "Notes", comment: "Comment",
   keyRisksDependency: "Key Risks / Dependency", constraintGuardrails: "Constraint / Guardrails",
@@ -37,6 +38,7 @@ export type CascadeContext = {
 export type ChangeAlertPayload = {
   entityType: "objective" | "kr" | "kpi";
   entityLabel: string;
+  ownerEmail?: string;
   changedBy: string;
   diffJson: string;
   isNew: boolean;
@@ -167,11 +169,25 @@ function buildHtml(payload: ChangeAlertPayload): string {
   </div>`;
 }
 
+function buildRecipients(configuredRecipients: string[], ownerEmail?: string): string[] {
+  const recipients = new Map<string, string>();
+  const add = (value: string): void => {
+    const email = value.trim().toLowerCase();
+    if (!email || !email.includes("@")) return;
+    recipients.set(email, email);
+  };
+
+  configuredRecipients.forEach(add);
+  parseAssignedOwners(undefined, ownerEmail).forEach((owner) => add(owner.email));
+
+  return Array.from(recipients.values());
+}
+
 export async function sendChangeAlert(payload: ChangeAlertPayload): Promise<void> {
   try {
     const settings = await readNotificationSettings();
     const { changeAlerts } = settings;
-    if (!changeAlerts.enabled || changeAlerts.recipients.length === 0) return;
+    if (!changeAlerts.enabled) return;
 
     if (!payload.isNew && changeAlerts.trigger === "new_only") return;
     if (!payload.isNew && changeAlerts.trigger === "status_progress") {
@@ -193,13 +209,15 @@ export async function sendChangeAlert(payload: ChangeAlertPayload): Promise<void
     const subject = payload.isNew
       ? `[OKR] New ${typeLabel}: ${payload.entityLabel}`
       : `[OKR] ${typeLabel} updated: ${payload.entityLabel}`;
+    const recipients = buildRecipients(changeAlerts.recipients, payload.ownerEmail);
+    if (recipients.length === 0) return;
 
     const url = `${GRAPH_BASE_URL}/users/${encodeURIComponent(fromEmail)}/sendMail`;
     const body = {
       message: {
         subject,
         body: { contentType: "HTML", content: buildHtml(payload) },
-        toRecipients: changeAlerts.recipients.map((addr) => ({ emailAddress: { address: addr } }))
+        toRecipients: recipients.map((addr) => ({ emailAddress: { address: addr } }))
       },
       saveToSentItems: false
     };

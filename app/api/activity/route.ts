@@ -1,4 +1,12 @@
-import { getActivityLogPage, getUserRole } from "@/lib/store";
+import {
+  getActivityLogPage,
+  getConfig,
+  getUserRole,
+  listKeyResults,
+  listKpis,
+  listObjectives
+} from "@/lib/store";
+import { objectiveBelongsToVenture } from "@/lib/objective-scope";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +62,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const period = sp.get("period") ?? "";
   const entityType = sp.get("entityType") ?? undefined;
   const filterUserEmail = sp.get("userEmail") ?? undefined;
+  const ventureKey = sp.get("ventureKey") ?? undefined;
   const limitRaw = sp.get("limit");
   const cursor = sp.get("cursor") ?? undefined;
+
+  // Resolve the venture filter to the set of entity keys (objectives in the
+  // venture plus their KRs and KPIs) the activity entries must belong to.
+  let entityKeys: string[] | undefined;
+  if (ventureKey) {
+    const config = await getConfig();
+    const venture = config.ventures.find((v) => v.ventureKey === ventureKey);
+    if (!venture) {
+      return NextResponse.json({ entries: [], nextCursor: null });
+    }
+    const [objectives, krs, kpis] = await Promise.all([
+      listObjectives({}),
+      listKeyResults({}),
+      listKpis({})
+    ]);
+    const objectiveKeys = new Set(
+      objectives
+        .filter((o) => objectiveBelongsToVenture(o, venture))
+        .map((o) => o.objectiveKey.toLowerCase())
+    );
+    entityKeys = [
+      ...objectives.filter((o) => objectiveKeys.has(o.objectiveKey.toLowerCase())).map((o) => o.objectiveKey),
+      ...krs.filter((k) => objectiveKeys.has(k.objectiveKey.toLowerCase())).map((k) => k.krKey),
+      ...kpis.filter((k) => objectiveKeys.has(k.objectiveKey.toLowerCase())).map((k) => k.kpiKey)
+    ];
+  }
 
   let from = sp.get("from") ?? undefined;
   let to = sp.get("to") ?? undefined;
@@ -72,6 +107,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const page = await getActivityLogPage({
     entityType,
+    entityKeys,
     userEmail: filterUserEmail,
     from,
     to,

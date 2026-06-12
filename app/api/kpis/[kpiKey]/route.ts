@@ -22,7 +22,6 @@ const ALLOWED_PATCH_FIELDS = new Set([
   "title",
   "owner",
   "ownerEmail",
-  "metricType",
   "baselineValue",
   "targetValue",
   "currentValue",
@@ -96,7 +95,6 @@ function parseKpiPatch(body: unknown): UpdateKpiInput {
   if (raw.title !== undefined) patch.title = expectString(raw, "title");
   if (raw.owner !== undefined) patch.owner = expectString(raw, "owner", true);
   if (raw.ownerEmail !== undefined) patch.ownerEmail = expectString(raw, "ownerEmail", true);
-  if (raw.metricType !== undefined) patch.metricType = expectString(raw, "metricType");
   if (raw.baselineValue !== undefined) patch.baselineValue = expectNumber(raw, "baselineValue");
   if (raw.targetValue !== undefined) patch.targetValue = expectNullableNumber(raw, "targetValue");
   if (raw.currentValue !== undefined) patch.currentValue = expectNullableNumber(raw, "currentValue");
@@ -160,7 +158,15 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Nex
         // cascade context is best-effort
       }
 
-      void sendChangeAlert({ entityType: "kpi", entityLabel: label, changedBy, diffJson: detailsJson, isNew: false, cascade });
+      void sendChangeAlert({
+        entityType: "kpi",
+        entityLabel: label,
+        ownerEmail: kpi.ownerEmail,
+        changedBy,
+        diffJson: detailsJson,
+        isNew: false,
+        cascade
+      });
       const headers: Record<string, string> = { "x-activity-label": label };
       if (detailsJson) headers["x-activity-details"] = detailsJson;
       return NextResponse.json(kpi, { headers });

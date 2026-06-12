@@ -11,7 +11,7 @@ type Props = {
 
 type ChatThread = {
   id: string;
-  entityType: "objective" | "kr";
+  entityType: "objective" | "kr" | "kpi";
   entityKey: string;
   title: string;
   code: string;
@@ -85,9 +85,18 @@ export default function NotificationBell({ userEmail }: Props): JSX.Element {
     if (!userEmail) return;
     const counts = await getCommentCounts();
     const items: ChatThread[] = [];
+    const me = userEmail.trim().toLowerCase();
 
     for (const [id, entry] of Object.entries(counts)) {
       if (entry.count === 0 || !entry.entityType || !entry.entityKey) continue;
+
+      // Only notify the user about threads they are involved in: an owner of
+      // the obj/kr/kpi, a participant in the chat, or someone mentioned in it.
+      const isOwner = (entry.ownerEmails ?? []).includes(me);
+      const isParticipant = (entry.participantEmails ?? []).includes(me);
+      const isMentioned = (entry.mentionedEmails ?? []).includes(me);
+      if (!isOwner && !isParticipant && !isMentioned) continue;
+
       const lr = getLastRead(entry.entityType, entry.entityKey, userEmail);
       const timestamps = entry.timestamps ?? [];
       const newCount = lr ? timestamps.filter((t) => t > lr).length : entry.count;
