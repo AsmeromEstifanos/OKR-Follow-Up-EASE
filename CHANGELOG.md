@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2] — 2026-06-12
+
+### Changed
+- iOS-style "liquid glass" styling on the venture header toolbar and all modal surfaces (Objective/KR/KPI detail dialogs, chat, AI-summary, activity-detail): translucent gradient fill with `backdrop-filter` blur + saturation, bright specular rim, soft depth shadow, and blurred modal backdrops.
+
+---
+
 ## [0.5.1] — 2026-06-12
 
 ### Fixed
