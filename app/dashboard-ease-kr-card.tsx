@@ -1,6 +1,7 @@
 "use client";
 
 import ChatIconButton from "@/app/chat-icon-button";
+import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
 import ModalPortal from "@/app/modal-portal";
 import EaseCardDetailBlocks from "@/app/ease-card-detail-blocks";
 import DashboardEaseKpiCard from "@/app/dashboard-ease-kpi-card";
@@ -494,6 +495,7 @@ export default function DashboardEaseKrCard({
         className="okr-details-dialog"
         onClose={() => setIsDialogOpen(false)}
       >
+        <LiquidGlassBackdrop radius={26} zIndex={-1} />
         <div className="okr-details-inner">
           <div className="okr-details-header">
             <div className="okr-details-title-area">

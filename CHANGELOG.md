@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3] — 2026-06-15
+
+### Changed
+- Upgraded the "liquid glass" look to real Apple-style refraction, adapted from rdev/liquid-glass-react (MIT, vendored in `app/liquid-glass/` — no npm dependency, React-18/App-Router safe). A new `LiquidGlassBackdrop` renders the effect as a behind-content layer (so each surface keeps its own layout/typography), applied to the venture header toolbar, the chat / AI-summary / Objective-KR-KPI detail / activity-detail modals, and the floating OKR AI assistant panel. Refraction/displacement renders in Chromium; Safari/Firefox fall back to blur + specular shine.
+
+---
+
 ## [0.5.2] — 2026-06-12
 
 ### Changed

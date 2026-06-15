@@ -1,5 +1,6 @@
 "use client";
 
+import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
 import OwnerInput from "@/app/owner-input";
 import { apiPath } from "@/lib/base-path";
 import { formatOwnerEmailLabel, resolveOwnerEmail, resolveOwnerName } from "@/lib/owner";
@@ -249,6 +250,7 @@ export default function DashboardVentureTabs({
   return (
     <section className="venture-tabs" aria-label="Venture selector">
       <div className="venture-tabs-row" role="tablist" aria-label="Ventures">
+        <LiquidGlassBackdrop radius={22} />
         {ventures.map((venture) => {
           const isActive = activeVentureKey.toLowerCase() === venture.ventureKey.toLowerCase();
           return (

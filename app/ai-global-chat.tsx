@@ -1,5 +1,6 @@
 "use client";
 
+import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
 import { apiPath, withBasePath } from "@/lib/base-path";
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 
@@ -473,6 +474,7 @@ export default function AiGlobalChat({
           role="dialog"
           aria-label="OKR AI Assistant"
         >
+          <LiquidGlassBackdrop radius={16} zIndex={-1} />
           <div className="ai-fab-header">
             <div className="ai-fab-header-left">
               <span className="ai-fab-header-icon" aria-hidden="true">

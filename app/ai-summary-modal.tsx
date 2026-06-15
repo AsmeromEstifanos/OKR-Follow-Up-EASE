@@ -1,6 +1,7 @@
 "use client";
 
 import ModalPortal from "@/app/modal-portal";
+import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
 import { apiPath } from "@/lib/base-path";
 import { useEffect, useState } from "react";
 
@@ -64,6 +65,7 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
       <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
 
       <div className="chat-modal ai-modal" role="dialog" aria-modal="true" aria-label={`AI Summary: ${objectiveTitle}`}>
+        <LiquidGlassBackdrop radius={24} zIndex={-1} />
         {/* Header */}
         <div className="chat-modal-header">
           <div className="chat-modal-title-wrap">

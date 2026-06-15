@@ -603,30 +603,14 @@ a {
   gap: 0.5rem;
   flex-wrap: wrap;
   padding: 0.55rem 0.65rem;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: none;
   border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(231, 248, 241, 0.26) 52%, rgba(255, 255, 255, 0.42)),
-    color-mix(in srgb, var(--accent) 6%, transparent);
+  /* Glass surface is provided by <LiquidGlassBackdrop> (real refraction in Chrome). */
+  background: transparent;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
-    inset 0 -10px 22px rgba(255, 255, 255, 0.32),
-    0 16px 40px rgba(18, 55, 49, 0.16),
-    0 3px 10px rgba(24, 48, 56, 0.09);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+    0 16px 40px rgba(18, 55, 49, 0.18),
+    0 3px 10px rgba(24, 48, 56, 0.1);
   overflow: hidden;
-}
-
-.venture-tabs-row::before {
-  content: "";
-  position: absolute;
-  inset: 0.06rem 0.08rem auto;
-  height: 52%;
-  border-radius: 17px 17px 12px 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0));
-  pointer-events: none;
 }
 
 .venture-tabs-row > * {
@@ -1008,22 +992,23 @@ mark.search-highlight {
 
 /* Details dialog */
 .okr-details-dialog {
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: none;
   border-radius: 26px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
     0 30px 70px rgba(15, 35, 45, 0.28),
     0 6px 18px rgba(15, 35, 45, 0.14);
   padding: 0;
   max-width: 700px;
   width: calc(100% - 2rem);
   max-height: 90vh;
+  /* Scroll moved to .okr-details-inner so the glass backdrop covers the whole panel. */
+  overflow: hidden;
+  background: transparent;
+}
+
+.okr-details-inner {
+  max-height: 90vh;
   overflow-y: auto;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(238, 248, 244, 0.6) 55%, rgba(255, 255, 255, 0.7));
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
 }
 
 .okr-details-dialog::backdrop {
@@ -3807,17 +3792,13 @@ textarea {
   height: min(600px, 88vh);
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(238, 248, 244, 0.62) 55%, rgba(255, 255, 255, 0.72));
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  /* Glass surface provided by <LiquidGlassBackdrop> (real refraction in Chrome). */
+  background: transparent;
+  border: none;
   border-radius: 24px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
     0 30px 70px rgba(13, 30, 48, 0.3),
     0 6px 18px rgba(13, 30, 48, 0.14);
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
   overflow: hidden;
 }
 
@@ -4067,12 +4048,14 @@ textarea {
 
 /* Panel */
 .ai-fab-panel {
+  position: relative;
   width: min(380px, 96vw);
   height: min(520px, 80vh);
   display: flex;
   flex-direction: column;
-  background: var(--card);
-  border: 1px solid var(--line);
+  /* Glass surface provided by <LiquidGlassBackdrop> (real refraction in Chrome). */
+  background: transparent;
+  border: none;
   border-radius: 16px;
   box-shadow: 0 20px 60px #0d1e3045;
   overflow: hidden;
@@ -6111,17 +6094,13 @@ textarea {
   padding: 1rem;
 }
 .act-popup {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(238, 248, 244, 0.64) 55%, rgba(255, 255, 255, 0.74));
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  position: relative;
+  background: transparent;
+  border: none;
   border-radius: 22px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
     0 30px 70px rgba(15, 35, 45, 0.28),
     0 6px 18px rgba(15, 35, 45, 0.14);
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
   width: 100%;
   max-width: 560px;
   max-height: 80vh;

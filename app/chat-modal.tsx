@@ -2,6 +2,7 @@
 
 import type { Comment } from "@/lib/types";
 import ModalPortal from "@/app/modal-portal";
+import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
 import { apiPath } from "@/lib/base-path";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
@@ -330,6 +331,7 @@ export default function ChatModal({
       <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
 
       <div className="chat-modal" role="dialog" aria-modal="true" aria-label={`Discussion: ${title}`}>
+        <LiquidGlassBackdrop radius={24} zIndex={-1} />
         <div className="chat-modal-header">
           <div className="chat-modal-title-wrap">
             <span className="chat-modal-icon" aria-hidden="true">
