@@ -484,7 +484,7 @@ export default function AiGlobalChat({
           role="dialog"
           aria-label="OKR AI Assistant"
         >
-          <LiquidGlassBackdrop radius={16} zIndex={-1} />
+          <LiquidGlassBackdrop radius={16} zIndex={-1} tint={0.4} blurAmount={18} />
           <div className="ai-fab-header">
             <div className="ai-fab-header-left">
               <span className="ai-fab-header-icon" aria-hidden="true">

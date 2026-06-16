@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.5] — 2026-06-16
+
+### Fixed
+- Liquid glass on the OKR AI assistant (and any overlay-less panel) showed the board sharply instead of frosted. Two causes: (1) the modal pop animation used `animation-fill-mode: both`, leaving a `scale` on the panel — a lingering transform makes the panel a backdrop-root and silently disables the child `backdrop-filter` blur; switched to `backwards` so no transform is retained at rest. (2) The glass blur and SVG displacement shared one element, but an element with `filter` can drop its own `backdrop-filter` in Chromium; split into a dedicated frost layer (always composites) plus the refraction layer.
+
+### Changed
+- The AI assistant panel reads as see-through glass: lower white tint (new `tint` prop on the glass backdrop), stronger blur, and translucent message bubbles + header bar so the frosted board shows through.
+
+---
+
 ## [0.5.4] — 2026-06-16
 
 ### Added

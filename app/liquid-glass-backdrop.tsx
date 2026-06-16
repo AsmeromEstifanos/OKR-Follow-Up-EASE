@@ -27,6 +27,9 @@ type Props = {
   /** Stacking position of the layer. Use -1 to sit behind in-flow content
    *  without needing per-child z-index (e.g. inside modal panels). */
   zIndex?: number;
+  /** Strength of the white frosting overlay (0 = clear glass, 1 = default).
+   *  Lower it on content-heavy panels so the backdrop reads see-through. */
+  tint?: number;
 };
 
 export default function LiquidGlassBackdrop({
@@ -36,6 +39,7 @@ export default function LiquidGlassBackdrop({
   aberrationIntensity = 2,
   radius = "inherit",
   zIndex = 0,
+  tint = 1,
 }: Props): JSX.Element {
   const rawId = useId();
   const filterId = `lg-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -86,16 +90,30 @@ export default function LiquidGlassBackdrop({
         </defs>
       </svg>
 
-      {/* Warp layer — blurs + refracts the backdrop (refraction is Chrome-only). */}
+      {/* Frost layer — reliable backdrop blur. Kept free of any `filter`, because an
+          element with `filter` can drop its own `backdrop-filter` in Chromium. This
+          guarantees the frosted-glass blur even when the refraction layer can't blur. */}
       <span
         style={{
           position: "absolute",
           inset: 0,
           backdropFilter: `blur(${blurAmount}px) saturate(${saturation}%)`,
           WebkitBackdropFilter: `blur(${blurAmount}px) saturate(${saturation}%)`,
-          filter: isFirefox ? undefined : `url(#${filterId})`,
         }}
       />
+
+      {/* Refraction layer — Chromium-only edge displacement of the frosted backdrop. */}
+      {!isFirefox && (
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            backdropFilter: `blur(${Math.max(0, blurAmount - 2)}px) saturate(${saturation}%)`,
+            WebkitBackdropFilter: `blur(${Math.max(0, blurAmount - 2)}px) saturate(${saturation}%)`,
+            filter: `url(#${filterId})`,
+          }}
+        />
+      )}
 
       {/* Tint + top-center specular shine. */}
       <span
@@ -103,7 +121,7 @@ export default function LiquidGlassBackdrop({
           position: "absolute",
           inset: 0,
           background:
-            "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 55%), linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05))",
+            `radial-gradient(circle at 50% 0%, rgba(255,255,255,${0.5 * tint}) 0%, rgba(255,255,255,0) 55%), linear-gradient(135deg, rgba(255,255,255,${0.18 * tint}), rgba(255,255,255,${0.05 * tint}))`,
         }}
       />
 

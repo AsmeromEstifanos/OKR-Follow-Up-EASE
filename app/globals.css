@@ -3787,8 +3787,10 @@ textarea {
 .chat-modal,
 .act-popup,
 .ai-fab-panel {
-  /* overshoot ("back out") easing gives the springy Mac pop */
-  animation: lg-pop-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* overshoot ("back out") easing gives the springy Mac pop.
+     `backwards` (not `both`) so no transform is retained at rest — a lingering
+     scale would turn the panel into a backdrop-root and kill the glass blur. */
+  animation: lg-pop-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 /* Pop from a corner: centered modals grow from their top-left; the AI assistant
    grows from the bottom-right, toward its launch button. */
@@ -4117,7 +4119,8 @@ textarea {
   align-items: center;
   justify-content: space-between;
   padding: 0.8rem 1rem;
-  background: linear-gradient(135deg, #1e0e4b, #0a3d36);
+  /* translucent so the glass shows through the header bar */
+  background: linear-gradient(135deg, rgba(30, 14, 75, 0.72), rgba(10, 61, 54, 0.72));
   color: #fff;
   flex-shrink: 0;
 }
@@ -4221,7 +4224,8 @@ textarea {
 }
 
 .ai-fab-msg-ai .ai-fab-bubble {
-  background: #f3f4f6;
+  /* translucent so the frosted glass shows through behind the text */
+  background: rgba(255, 255, 255, 0.55);
   border-bottom-left-radius: 4px;
 }
 
