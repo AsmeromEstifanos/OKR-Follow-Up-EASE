@@ -1,9 +1,7 @@
 "use client";
 
-import { useMsal } from "@azure/msal-react";
 import { useCallback, useEffect, useState } from "react";
-import { initializeMsal, sharePointProbeScopes } from "@/lib/auth/msal-client";
-import { getConfiguredSharePointSiteUrl, probeSharePointSiteConnection } from "@/lib/sharepoint/graph-client";
+import { apiPath } from "@/lib/base-path";
 
 export type SharePointConnectionStatus = "not-configured" | "checking" | "linked" | "error";
 
@@ -14,13 +12,20 @@ type SharePointConnectionState = {
 };
 
 const INITIAL_STATE: SharePointConnectionState = {
-  status: "not-configured",
-  message: "Not configured",
-  detail: "Set NEXT_PUBLIC_SHAREPOINT_SITE_URL to enable SharePoint checks."
+  status: "checking",
+  message: "Checking",
+  detail: "Checking SharePoint connection..."
 };
 
+type SetupStatus = { enabled: boolean; reason?: string; siteUrl?: string; listName?: string };
+
+/**
+ * Reflects the app's actual SharePoint connectivity (the server-side app-only
+ * connection that powers all data), not a delegated client probe. The app uses
+ * application permissions, so the signed-in user has no delegated Sites access —
+ * the old client probe always failed and showed "Offline" even when connected.
+ */
 export default function useSharePointConnection(enabled: boolean): SharePointConnectionState & { refresh: () => void } {
-  const { instance, accounts } = useMsal();
   const [state, setState] = useState<SharePointConnectionState>(INITIAL_STATE);
   const [refreshToken, setRefreshToken] = useState<number>(0);
 
@@ -29,13 +34,6 @@ export default function useSharePointConnection(enabled: boolean): SharePointCon
   }, []);
 
   useEffect(() => {
-    const siteUrl = getConfiguredSharePointSiteUrl();
-
-    if (!siteUrl) {
-      setState(INITIAL_STATE);
-      return;
-    }
-
     if (!enabled) {
       setState({
         status: "error",
@@ -46,41 +44,39 @@ export default function useSharePointConnection(enabled: boolean): SharePointCon
     }
 
     let cancelled = false;
-    setState({
-      status: "checking",
-      message: "Checking",
-      detail: "Validating SharePoint site access..."
-    });
+    setState({ status: "checking", message: "Checking", detail: "Checking SharePoint connection..." });
 
-    void initializeMsal()
-      .then(() => probeSharePointSiteConnection(instance, siteUrl, sharePointProbeScopes))
-      .then((site) => {
-        if (cancelled) {
-          return;
+    fetch(apiPath("/api/sharepoint/setup"), { cache: "no-store" })
+      .then((res) => (res.ok ? (res.json() as Promise<SetupStatus>) : Promise.reject(new Error("Status check failed"))))
+      .then((status) => {
+        if (cancelled) return;
+        if (status.enabled) {
+          setState({
+            status: "linked",
+            message: "Online",
+            detail: status.siteUrl ? `Connected to ${status.siteUrl}` : "SharePoint connected"
+          });
+        } else {
+          setState({
+            status: "error",
+            message: "Offline",
+            detail: status.reason || "SharePoint is not configured."
+          });
         }
-
-        setState({
-          status: "linked",
-          message: "Linked",
-          detail: site.displayName || site.webUrl || site.id
-        });
       })
       .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setState({
           status: "error",
-          message: "Error",
-          detail: error instanceof Error ? error.message : "Failed to verify SharePoint site."
+          message: "Offline",
+          detail: error instanceof Error ? error.message : "Failed to check SharePoint connection."
         });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [accounts, enabled, instance, refreshToken]);
+  }, [enabled, refreshToken]);
 
   return { ...state, refresh };
 }

@@ -1,0 +1,44 @@
+{
+  "rules": {
+    "weeklyDigest": {
+      "enabled": true,
+      "hour": 8,
+      "minute": 30,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1,
+      "message": "Here is where your OKRs stand this week."
+    },
+    "endOfWeekReflection": {
+      "enabled": true,
+      "hour": 15,
+      "minute": 30,
+      "dayOfWeek": 5,
+      "dayOfMonth": 1,
+      "message": "Please review progress, blockers, and priorities before next week."
+    },
+    "midMonthCheckpoint": {
+      "enabled": true,
+      "hour": 10,
+      "minute": 0,
+      "dayOfWeek": 1,
+      "dayOfMonth": 15,
+      "message": "Mid-month checkpoint: objectives requiring attention."
+    },
+    "thirdWeekFocus": {
+      "enabled": true,
+      "hour": 9,
+      "minute": 0,
+      "dayOfWeek": 1,
+      "dayOfMonth": 22,
+      "message": "Please review and focus on objectives needing attention before month-end."
+    },
+    "monthEndReadiness": {
+      "enabled": true,
+      "hour": 11,
+      "minute": 0,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1,
+      "message": "Please ensure all OKR statuses and updates are complete."
+    }
+  }
+}

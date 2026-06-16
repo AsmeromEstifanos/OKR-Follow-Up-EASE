@@ -1,5 +1,6 @@
 import { readNotificationSettings } from "@/lib/notification-settings";
 import { parseAssignedOwners } from "@/lib/owner";
+import { emailAppButton } from "@/lib/app-url";
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -164,6 +165,7 @@ function buildHtml(payload: ChangeAlertPayload): string {
     <p style="font-weight:600;margin:0 0 16px;color:#1d3d52">${entityLabel}</p>
     ${changesHtml}
     ${cascadeHtml}
+    ${emailAppButton()}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
     <p style="color:#9ca3af;font-size:0.8rem">OKR Follow-Up &mdash; automated change alert</p>
   </div>`;

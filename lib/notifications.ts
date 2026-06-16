@@ -1,5 +1,6 @@
 import type { KeyResult, Objective } from "@/lib/types";
 import type { RuleId } from "@/lib/notification-rules";
+import { emailAppButton } from "@/lib/app-url";
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -263,6 +264,7 @@ export function buildAggregatedEmail(
   <p style="color:#4f6770;margin-top:0">Hi ${firstName}, ${intro}</p>
   ${sectionsHtml}
   <p style="color:#4f6770;margin-top:20px;font-size:0.875rem">Open the OKR Follow-Up system to update progress, check in, or flag blockers.</p>
+  ${emailAppButton()}
 </div>`;
 
   return { subject, html };

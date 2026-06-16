@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.6] — 2026-06-16
+
+### Fixed
+- Sidebar SharePoint status always showed **Offline**. It ran a client-side *delegated* `Sites.Read.All` probe, but the app authenticates to SharePoint with *application* permissions — the signed-in user has no delegated Sites access, so the probe always failed. The status now reflects the real server-side app connection via `/api/sharepoint/setup` (`enabled` → Online), and shows the connected site URL on hover.
+
+### Added
+- Every outgoing email (change alerts, reminder digests) now includes an "Open in the OKR app" button linking back to the app (`lib/app-url.ts`, driven by `NEXT_PUBLIC_REDIRECT_URI`). Mention emails already deep-linked to the discussion.
+
+---
+
 ## [0.5.5] — 2026-06-16
 
 ### Fixed
