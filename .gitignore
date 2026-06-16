@@ -25,3 +25,8 @@ sharepoint_admin_mcp/.token_cache.bin
 deploy-manual.tgz
 deploy-prod.tgz
 debug.log
+
+# dev server logs / build cache (runtime junk)
+dev-*.log
+dev-boot.log
+*.tsbuildinfo
