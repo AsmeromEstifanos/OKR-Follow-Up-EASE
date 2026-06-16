@@ -3773,6 +3773,57 @@ textarea {
 /* --- AI assistant (chat + summaries) --- */
 
 /* Chat modal shell (used by AI Summary Modal) */
+/* ---- Modal open/close animations ----
+   macOS-style "pop from a corner": scale up from a transform-origin corner with
+   a slight overshoot. Uses the individual `scale` property (independent of
+   `transform`) so it doesn't fight the centered modals' translate(-50%, -50%). */
+@keyframes lg-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lg-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes lg-pop-in { from { opacity: 0; scale: 0.82; } to { opacity: 1; scale: 1; } }
+@keyframes lg-pop-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.88; } }
+
+.chat-overlay,
+.act-popup-backdrop { animation: lg-fade-in 0.18s ease both; }
+.chat-modal,
+.act-popup,
+.ai-fab-panel {
+  /* overshoot ("back out") easing gives the springy Mac pop */
+  animation: lg-pop-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+/* Pop from a corner: centered modals grow from their top-left; the AI assistant
+   grows from the bottom-right, toward its launch button. */
+.chat-modal,
+.act-popup { transform-origin: top left; }
+.ai-fab-panel { transform-origin: bottom right; }
+
+[data-modal-state="closing"].chat-overlay,
+[data-modal-state="closing"].act-popup-backdrop { animation: lg-fade-out 0.16s ease both; }
+[data-modal-state="closing"].chat-modal,
+[data-modal-state="closing"].act-popup,
+[data-modal-state="closing"].ai-fab-panel { animation: lg-pop-out 0.16s ease both; }
+
+/* Native <dialog> detail modals: pure-CSS enter/exit (Chromium allow-discrete). */
+.okr-details-dialog {
+  opacity: 0;
+  scale: 0.82;
+  transform-origin: top left;
+  transition: opacity 0.22s ease, scale 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), overlay 0.28s allow-discrete, display 0.28s allow-discrete;
+}
+.okr-details-dialog[open] { opacity: 1; scale: 1; }
+@starting-style {
+  .okr-details-dialog[open] { opacity: 0; scale: 0.82; }
+}
+.okr-details-dialog::backdrop { opacity: 0; transition: opacity 0.2s ease, overlay 0.2s allow-discrete, display 0.2s allow-discrete; }
+.okr-details-dialog[open]::backdrop { opacity: 1; }
+@starting-style {
+  .okr-details-dialog[open]::backdrop { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-overlay, .act-popup-backdrop, .chat-modal, .act-popup, .ai-fab-panel,
+  .okr-details-dialog, .okr-details-dialog::backdrop { animation: none; transition: none; }
+}
+
 .chat-overlay {
   position: fixed;
   inset: 0;
@@ -4059,7 +4110,6 @@ textarea {
   border-radius: 16px;
   box-shadow: 0 20px 60px #0d1e3045;
   overflow: hidden;
-  animation: rise 0.2s ease;
 }
 
 .ai-fab-header {

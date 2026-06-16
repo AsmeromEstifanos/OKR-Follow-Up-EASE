@@ -2,6 +2,7 @@
 
 import ModalPortal from "@/app/modal-portal";
 import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
+import { useModalTransition } from "@/app/use-modal-transition";
 import useCurrentUserEmail from "@/app/use-current-user-email";
 import { apiPath } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
@@ -312,6 +313,7 @@ function codeFromLabel(label: string | undefined): string | null {
 }
 
 function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; userEmail: string; onClose: () => void }): JSX.Element {
+  const { state: modalState, requestClose } = useModalTransition(onClose);
   const basePath = entry.entityType ? ENTITY_ITEM_PATH[entry.entityType] : undefined;
   const canFetch = Boolean(basePath && entry.entityKey);
 
@@ -352,15 +354,15 @@ function DetailPopup({ entry, userEmail, onClose }: { entry: ActivityEntry; user
 
   return (
     <ModalPortal>
-    <div className="act-popup-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="act-popup" onClick={(e) => e.stopPropagation()}>
+    <div className="act-popup-backdrop" data-modal-state={modalState} onClick={requestClose} role="dialog" aria-modal="true">
+      <div className="act-popup" data-modal-state={modalState} onClick={(e) => e.stopPropagation()}>
         <LiquidGlassBackdrop radius={22} zIndex={-1} />
         <div className="act-popup-header">
           <div>
             <span className={actionClass(entry.httpMethod)}>{composeActionSentence(entry)}</span>
             {entry.entityLabel && <strong className="act-popup-entity">{entry.entityLabel}</strong>}
           </div>
-          <button type="button" className="act-popup-close" onClick={onClose} aria-label="Close">×</button>
+          <button type="button" className="act-popup-close" onClick={requestClose} aria-label="Close">×</button>
         </div>
         <div className="act-popup-meta">
           <span>{entry.userEmail}</span>

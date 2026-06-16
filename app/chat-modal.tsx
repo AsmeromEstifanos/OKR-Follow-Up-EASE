@@ -3,6 +3,7 @@
 import type { Comment } from "@/lib/types";
 import ModalPortal from "@/app/modal-portal";
 import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
+import { useModalTransition } from "@/app/use-modal-transition";
 import { apiPath } from "@/lib/base-path";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
@@ -95,6 +96,7 @@ export default function ChatModal({
   onClose,
   onCommentsLoaded
 }: Props): JSX.Element {
+  const { state: modalState, requestClose } = useModalTransition(onClose);
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -148,13 +150,13 @@ export default function ChatModal({
         if (mentionQuery !== null) {
           setMentionQuery(null);
         } else {
-          onClose();
+          requestClose();
         }
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose, mentionQuery]);
+  }, [requestClose, mentionQuery]);
 
   useEffect(() => {
     if (mentionQuery === null) {
@@ -328,9 +330,9 @@ export default function ChatModal({
 
   return (
     <ModalPortal>
-      <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
+      <div className="chat-overlay" data-modal-state={modalState} onClick={requestClose} aria-hidden="true" />
 
-      <div className="chat-modal" role="dialog" aria-modal="true" aria-label={`Discussion: ${title}`}>
+      <div className="chat-modal" data-modal-state={modalState} role="dialog" aria-modal="true" aria-label={`Discussion: ${title}`}>
         <LiquidGlassBackdrop radius={24} zIndex={-1} />
         <div className="chat-modal-header">
           <div className="chat-modal-title-wrap">
@@ -344,7 +346,7 @@ export default function ChatModal({
               <div className="chat-modal-title">{title}</div>
             </div>
           </div>
-          <button type="button" className="chat-close-btn" onClick={onClose} aria-label="Close discussion">
+          <button type="button" className="chat-close-btn" onClick={requestClose} aria-label="Close discussion">
             ✕
           </button>
         </div>

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4] — 2026-06-16
+
+### Added
+- Open/close animations for modals: overlay fades and panels pop (scale + fade) on open, and reverse on close. A small `useModalTransition` hook intercepts close so portal-rendered modals (chat, AI-summary, activity-detail, OKR AI assistant) play their exit before unmounting; native detail dialogs use CSS `@starting-style` + `allow-discrete`. Respects `prefers-reduced-motion`.
+
+---
+
 ## [0.5.3] — 2026-06-15
 
 ### Changed

@@ -275,6 +275,15 @@ export default function AiGlobalChat({
   userName,
 }: Props): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  // Play the exit animation before unmounting the panel.
+  const closePanel = (): void => {
+    setIsClosing(true);
+    window.setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 180);
+  };
   const [messages, setMessages] = useState<Message[]>(() =>
     loadStoredMessages([makeWelcome(userName)]),
   );
@@ -471,6 +480,7 @@ export default function AiGlobalChat({
       {isOpen && (
         <div
           className="ai-fab-panel"
+          data-modal-state={isClosing ? "closing" : "open"}
           role="dialog"
           aria-label="OKR AI Assistant"
         >
@@ -512,7 +522,7 @@ export default function AiGlobalChat({
               <button
                 type="button"
                 className="ai-fab-action-btn"
-                onClick={() => setIsOpen(false)}
+                onClick={closePanel}
                 aria-label="Close"
               >
                 ✕
@@ -671,7 +681,7 @@ export default function AiGlobalChat({
         <button
           type="button"
           className="ai-fab-btn"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => (isOpen ? closePanel() : setIsOpen(true))}
           aria-label={isOpen ? "Close OKR assistant" : "Open OKR assistant"}
           title="OKR AI Assistant"
         >

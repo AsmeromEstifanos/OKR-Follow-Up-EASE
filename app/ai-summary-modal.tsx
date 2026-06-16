@@ -2,6 +2,7 @@
 
 import ModalPortal from "@/app/modal-portal";
 import LiquidGlassBackdrop from "@/app/liquid-glass-backdrop";
+import { useModalTransition } from "@/app/use-modal-transition";
 import { apiPath } from "@/lib/base-path";
 import { useEffect, useState } from "react";
 
@@ -20,6 +21,7 @@ function SparkleIcon(): JSX.Element {
 }
 
 export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }: Props): JSX.Element {
+  const { state: modalState, requestClose } = useModalTransition(onClose);
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -28,11 +30,11 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [requestClose]);
 
   async function generate(): Promise<void> {
     setIsLoading(true);
@@ -62,9 +64,9 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
 
   return (
     <ModalPortal>
-      <div className="chat-overlay" onClick={onClose} aria-hidden="true" />
+      <div className="chat-overlay" data-modal-state={modalState} onClick={requestClose} aria-hidden="true" />
 
-      <div className="chat-modal ai-modal" role="dialog" aria-modal="true" aria-label={`AI Summary: ${objectiveTitle}`}>
+      <div className="chat-modal ai-modal" data-modal-state={modalState} role="dialog" aria-modal="true" aria-label={`AI Summary: ${objectiveTitle}`}>
         <LiquidGlassBackdrop radius={24} zIndex={-1} />
         {/* Header */}
         <div className="chat-modal-header">
@@ -77,7 +79,7 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
               <div className="chat-modal-title">{objectiveTitle}</div>
             </div>
           </div>
-          <button type="button" className="chat-close-btn" onClick={onClose} aria-label="Close AI summary">
+          <button type="button" className="chat-close-btn" onClick={requestClose} aria-label="Close AI summary">
             ✕
           </button>
         </div>
@@ -119,7 +121,7 @@ export default function AiSummaryModal({ objectiveKey, objectiveTitle, onClose }
             <SparkleIcon />
             {isLoading ? "Generating…" : hasGenerated ? "Regenerate" : "Generate Summary"}
           </button>
-          <button type="button" className="tab-btn" onClick={onClose}>
+          <button type="button" className="tab-btn" onClick={requestClose}>
             Close
           </button>
         </div>
