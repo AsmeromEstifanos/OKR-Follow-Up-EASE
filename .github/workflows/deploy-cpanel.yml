@@ -62,6 +62,11 @@ jobs:
           SECRET_NOTIFICATION_FROM_EMAIL: ${{ secrets.NOTIFICATION_FROM_EMAIL }}
         run: |
           : > .env.deploy
+          # next.config.mjs is re-evaluated when Passenger boots the app, so the
+          # base path is needed at RUNTIME as well as at build time. Without it
+          # Next runs with basePath "" and emits the <head> asset URLs (CSS,
+          # webpack-*, main-app-*, polyfills-*) with no prefix, which 404.
+          printf 'NEXT_PUBLIC_BASE_PATH=%s\n' "$NEXT_PUBLIC_BASE_PATH" >> .env.deploy
           if [ -n "$SECRET_OPENAI_API_KEY" ]; then
             printf 'OPENAI_API_KEY=%s\n' "$SECRET_OPENAI_API_KEY" >> .env.deploy
           fi
@@ -119,6 +124,24 @@ jobs:
             mkdir -p /tmp/okr-follow-up-deploy/extracted
 
             tar -xzf /tmp/okr-follow-up-deploy/deploy.tgz -C /tmp/okr-follow-up-deploy/extracted
+
+            # Decide whether dependencies actually changed, BEFORE the old
+            # package-lock.json is deleted. npm forks many processes and this
+            # account sits near its CloudLinux NPROC cap, so an unnecessary
+            # `npm ci` is what makes deploys fail with
+            # "pthread_create: Resource temporarily unavailable" (status 134).
+            OLD_LOCK_HASH=""
+            if [ -f "$APP_DIR/package-lock.json" ]; then
+              OLD_LOCK_HASH="$(sha256sum "$APP_DIR/package-lock.json" | cut -d' ' -f1)"
+            fi
+            NEW_LOCK_HASH="$(sha256sum /tmp/okr-follow-up-deploy/extracted/package-lock.json | cut -d' ' -f1)"
+
+            NEED_INSTALL=1
+            if [ -n "$OLD_LOCK_HASH" ] && [ "$OLD_LOCK_HASH" = "$NEW_LOCK_HASH" ] && [ -e "$APP_DIR/node_modules/next/package.json" ]; then
+              NEED_INSTALL=0
+            fi
+            echo "Dependency install needed: $NEED_INSTALL"
+
             find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" ! -name ".htaccess" ! -name "tmp" ! -name "logs" ! -name "node_modules" -exec rm -rf {} +
 
             cp -R /tmp/okr-follow-up-deploy/extracted/. "$APP_DIR"
@@ -159,27 +182,32 @@ jobs:
               export PATH="$NODE_BIN_DIR:$PATH"
             fi
 
-            if ! command -v npm >/dev/null 2>&1; then
-              echo "npm is not available in this SSH session."
-              echo "Expected a cPanel nodevenv bin directory under $HOME/nodevenv/$APP_NAME or a host-level Node install."
-              echo "Current PATH: $PATH"
-              if [ -d "$HOME/nodevenv" ]; then
-                echo "Available nodevenv directories:"
-                find "$HOME/nodevenv" -maxdepth 3 -type d | sed 's#^#- #'
-              else
-                echo "$HOME/nodevenv does not exist."
-              fi
-              exit 127
-            fi
-
-            echo "Using npm: $(command -v npm)"
-            npm --version
-            node --version
-
             export NODE_ENV=production
 
-            echo "Installing production dependencies"
-            npm ci --omit=dev --no-audit --no-fund
+            if [ "$NEED_INSTALL" = "0" ]; then
+              echo "package-lock.json unchanged and node_modules present - skipping npm install."
+              echo "(Deliberate: npm is not invoked at all, so the deploy needs no NPROC headroom.)"
+            else
+              if ! command -v npm >/dev/null 2>&1; then
+                echo "npm is not available in this SSH session."
+                echo "Expected a cPanel nodevenv bin directory under $HOME/nodevenv/$APP_NAME or a host-level Node install."
+                echo "Current PATH: $PATH"
+                if [ -d "$HOME/nodevenv" ]; then
+                  echo "Available nodevenv directories:"
+                  find "$HOME/nodevenv" -maxdepth 3 -type d | sed 's#^#- #'
+                else
+                  echo "$HOME/nodevenv does not exist."
+                fi
+                exit 127
+              fi
+
+              echo "Using npm: $(command -v npm)"
+              npm --version
+              node --version
+
+              echo "Installing production dependencies"
+              npm ci --omit=dev --no-audit --no-fund
+            fi
 
             echo "Restarting application"
             (
