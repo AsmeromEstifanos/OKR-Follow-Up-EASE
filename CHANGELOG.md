@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.8] — 2026-08-17
+
+### Fixed
+- `app.js` stripped the `/ease-okr` prefix before handing the request to Next. That was only correct while the runtime config had **no** `basePath` — i.e. while `NEXT_PUBLIC_BASE_PATH` was missing from the server `.env`, which is also what caused the v0.5.7 asset 404s (the config is re-evaluated at boot, so without the variable Next emitted `<head>` asset URLs with no prefix). Once the variable is set, Next expects the prefix and the stripped `/` 404'd the whole app. `app.js` now **ensures** the prefix is present instead of removing it, which is correct whether or not Passenger forwards `PassengerBaseURI`. This matches the SVH twin, whose `app.js` never stripped.
+
+### Required server configuration
+- `NEXT_PUBLIC_BASE_PATH=/ease-okr` must be present in the server `.env` (or the Node Selector environment variables). The deploy workflow sets it only for the **build**; it is also needed at **runtime**, or the CSS and framework chunks lose the prefix.
+
+---
+
 ## [0.5.7] — 2026-08-17
 
 ### Fixed

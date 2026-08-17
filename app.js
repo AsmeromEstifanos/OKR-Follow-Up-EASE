@@ -34,13 +34,22 @@ app
     http
       .createServer((req, res) => {
         const originalUrl = req.url;
+        // Next is configured with basePath, so it expects the prefix to still be
+        // on the URL. Passenger's PassengerBaseURI behaviour varies by host: some
+        // forward the full path, some strip it. Normalize by ENSURING the prefix
+        // is present rather than removing it, which works either way.
+        //
+        // Do not strip the prefix here. Stripping only appeared to work while the
+        // runtime config had no basePath (NEXT_PUBLIC_BASE_PATH missing from the
+        // server .env); in that state Next served "/" but emitted asset URLs
+        // without the prefix, so the CSS and framework chunks 404'd.
         if (basePath && req.url) {
           if (req.url === basePath) {
-            req.url = "/";
-          } else if (req.url.startsWith(basePath + "/")) {
-            req.url = req.url.slice(basePath.length);
-          } else if (req.url.startsWith(basePath + "?")) {
-            req.url = "/" + req.url.slice(basePath.length + 1);
+            req.url = basePath + "/";
+          } else if (req.url.startsWith(basePath + "/") || req.url.startsWith(basePath + "?")) {
+            // already prefixed - leave it alone
+          } else {
+            req.url = basePath + (req.url.startsWith("/") ? "" : "/") + req.url;
           }
         }
         debug(`[req] ${req.method} ${originalUrl} -> ${req.url}`);
