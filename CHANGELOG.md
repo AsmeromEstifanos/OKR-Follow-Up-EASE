@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.7] — 2026-08-17
+
+### Fixed
+- Under the `/ease-okr` sub-path deploy, the CSS `<link>` and the framework/runtime chunks (`webpack-*`, `main-app-*`, `polyfills-*`, and the shared vendor chunk) were emitted at `/_next/...` instead of `/ease-okr/_next/...` and returned 404, leaving the page unstyled and non-interactive. Next.js applies `basePath` to route chunks but not to the webpack runtime's asset URLs. Setting `assetPrefix` to the same value as `basePath` in `next.config.mjs` prefixes every asset at build time. This replaces the Referer-scoped `.htaccess` rewrite documented in `README.md`, which cPanel's "Setup Node.js App" wipes whenever it regenerates `.htaccess`.
+
+---
+
 ## [0.5.6] — 2026-06-16
 
 ### Fixed

@@ -14,7 +14,11 @@ const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
 const nextConfig = {
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
-  ...(basePath ? { basePath } : {}),
+  // basePath alone does not reach the webpack runtime: framework chunks
+  // (webpack-*, main-app-*, polyfills-*) and the CSS <link> are emitted at
+  // /_next/... and 404 under a sub-path deploy. assetPrefix fixes them at
+  // the source, so no .htaccess Referer rewrite is needed.
+  ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "0.1.4",
     NEXT_PUBLIC_APP_PROFILE: process.env.NEXT_PUBLIC_APP_PROFILE ?? "",
