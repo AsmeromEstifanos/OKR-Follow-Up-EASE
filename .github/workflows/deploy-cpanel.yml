@@ -209,30 +209,32 @@ jobs:
               npm ci --omit=dev --no-audit --no-fund
             fi
 
+            # Restart. Deliberately NOT wrapped in a `( ... ) || true` subshell:
+            # that forks, and on a NPROC-capped account the fork can fail with no
+            # output at all, so the deploy reported success while the app was
+            # never restarted and kept serving the previous build from memory.
+            # `touch tmp/restart.txt` is what Passenger watches; it costs no extra
+            # process. passenger-config is skipped because it is fork-heavy.
+            set +e
             echo "Restarting application"
-            (
-              set +e
-              if [ -n "$RESTART_COMMAND" ]; then
-                echo "Running custom restart command"
-                sh -lc "$RESTART_COMMAND"
-                echo "Custom restart exit code: $?"
-              else
-                echo "Ensuring tmp directory exists"
-                mkdir -p tmp
-                echo "tmp mkdir exit code: $?"
-                echo "Touching tmp/restart.txt"
-                touch tmp/restart.txt
-                echo "touch exit code: $?"
-                if [ -x "$HOME/nodevenv/$APP_NAME/20/bin/passenger-config" ]; then
-                  echo "Attempting passenger-config restart-app"
-                  "$HOME/nodevenv/$APP_NAME/20/bin/passenger-config" restart-app "$APP_DIR"
-                  echo "passenger-config exit code: $?"
-                else
-                  echo "passenger-config not found for $APP_NAME"
-                fi
+            if [ -n "$RESTART_COMMAND" ]; then
+              echo "Running custom restart command"
+              sh -lc "$RESTART_COMMAND"
+              echo "Custom restart exit code: $?"
+            else
+              mkdir -p tmp
+              echo "tmp mkdir exit code: $?"
+              touch tmp/restart.txt
+              TOUCH_RC=$?
+              echo "touch tmp/restart.txt exit code: $TOUCH_RC"
+              if [ "$TOUCH_RC" != "0" ] || [ ! -f tmp/restart.txt ]; then
+                echo "WARNING: could not signal a restart. The new build is on disk"
+                echo "but Passenger is still serving the old process."
+                echo "Free processes on the account (NPROC) and redeploy, or restart"
+                echo "the app from cPanel -> Setup Node.js App."
               fi
-              exit 0
-            ) || true
+            fi
+            set -e
 
             echo "Cleaning temp deployment files"
             rm -rf /tmp/okr-follow-up-deploy
