@@ -101,6 +101,20 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+function deriveDirectProgress(
+  targetValue: string,
+  currentValue: string,
+  fallback: number
+): number {
+  const target = Number(targetValue);
+  const current = Number(currentValue);
+  if (!Number.isFinite(target) || target <= 0 || !Number.isFinite(current)) {
+    return fallback;
+  }
+
+  return clampPercent((current / target) * 100);
+}
+
 function normalizeWeightValue(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
@@ -223,6 +237,14 @@ export default function DashboardEaseKrCard({
   const showBody = isBodyOpen || isEditing;
   const progressValue = clampPercent(keyResult.progressPct);
   const displayWeight = normalizeWeightValue(keyResult.baselineValue);
+  // A KR with KPIs is scored by its KPIs; a KR without any is scored directly.
+  const hasKpis = kpis.length > 0;
+  const editedProgressValue = hasKpis
+    ? progressValue
+    : deriveDirectProgress(targetValue, currentValue, progressValue);
+  const currentValueTitle = hasKpis
+    ? "Auto-computed from KPIs"
+    : "This key result has no KPIs, so enter its progress value here.";
 
   const hasDetails = !!(keyResult.notes?.trim() || keyResult.blockers?.trim() || keyResult.comment?.trim());
 
@@ -282,6 +304,12 @@ export default function DashboardEaseKrCard({
       return;
     }
 
+    const current = Number(currentValue);
+    if (!hasKpis && !Number.isFinite(current)) {
+      setError("Current value must be numeric.");
+      return;
+    }
+
     if (!dueDate) {
       setError("Due date is required.");
       return;
@@ -303,6 +331,7 @@ export default function DashboardEaseKrCard({
         ownerEmail: ownerEmail.trim(),
         baselineValue: baseline,
         targetValue: target,
+        ...(hasKpis ? {} : { currentValue: current }),
         status,
         dueDate,
         checkInFrequency,
@@ -418,8 +447,8 @@ export default function DashboardEaseKrCard({
                   <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
                   <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(event) => setBaselineValue(event.target.value)} disabled={isSaving} /></div>
                   <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} disabled={isSaving} /></div>
-                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} readOnly disabled title="Auto-computed from KPIs" /></div>
-                  <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
+                  <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(event) => setCurrentValue(event.target.value)} readOnly={hasKpis} disabled={hasKpis || isSaving} title={currentValueTitle} /></div>
+                  <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" step="any" value={String(Math.round(editedProgressValue * 100) / 100)} readOnly disabled /></div>
                   <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(event) => setStatus(event.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
                   <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={isSaving} /></div>
                   <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(event) => setCheckInFrequency(event.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
@@ -462,7 +491,7 @@ export default function DashboardEaseKrCard({
                   />
                 ) : null}
                 {kpis.length === 0 ? (
-                  <p className="meta">No KPIs for this key result yet.</p>
+                  <p className="meta">No KPIs for this key result yet - progress is tracked directly on the key result (edit its Current Value).</p>
                 ) : (
                   kpis.map((item) => (
                     <DashboardEaseKpiCard key={item.kpi.kpiKey} kpi={item.kpi} latestUpdateNotes={item.latestUpdateNotes} latestUpdatedAt={item.latestUpdatedAt} forcedBodyOpen={forcedKpiSectionOpen} positionOwnerEmail={positionOwnerEmail} adminEmails={adminEmails} keyResultStatusOptions={keyResultStatusOptions} checkInFrequencyOptions={checkInFrequencyOptions} />
@@ -532,8 +561,8 @@ export default function DashboardEaseKrCard({
                 <div className="field ease-edit-span"><label>Owner Email</label><input className="objective-row-input" value={formatOwnerEmailLabel(owner, ownerEmail)} readOnly disabled={isSaving} /></div>
                 <div className="field"><label>Weight</label><input className="objective-row-input" type="number" step="0.01" min="0" max="1" value={baselineValue} onChange={(e) => setBaselineValue(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Target Value</label><input className="objective-row-input" type="number" step="any" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} disabled={isSaving} /></div>
-                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} readOnly disabled title="Auto-computed from KPIs" /></div>
-                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(progressValue * 100) / 100)} readOnly disabled /></div>
+                <div className="field"><label>Current Value</label><input className="objective-row-input" type="number" step="any" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} readOnly={hasKpis} disabled={hasKpis || isSaving} title={currentValueTitle} /></div>
+                <div className="field"><label>Progress %</label><input className="objective-row-input" type="number" value={String(Math.round(editedProgressValue * 100) / 100)} readOnly disabled /></div>
                 <div className="field"><label>Status</label><select className="objective-row-select" value={status} onChange={(e) => setStatus(e.target.value as KrStatus)} disabled={isSaving}>{keyResultStatusOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 <div className="field"><label>Due Date</label><input className="objective-row-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isSaving} /></div>
                 <div className="field"><label>Check-in Frequency</label><select className="objective-row-select" value={checkInFrequency} onChange={(e) => setCheckInFrequency(e.target.value as CheckInFrequency)} disabled={isSaving}>{checkInFrequencyOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>

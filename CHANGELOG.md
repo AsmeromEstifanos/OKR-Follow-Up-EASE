@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.6.0] - 2026-09-07
+
+### Fixed
+- **Key results without KPIs could never record progress.** Departments that track at key-result level (no KPIs underneath) had no way to move a KR off 0%: the recalculation forced `progressPct = 0`, `currentValue = 0`, `targetValue = 100` whenever a KR had no child KPIs, the KR card's Current Value field was permanently read-only ("Auto-computed from KPIs"), `updateKeyResult` silently dropped any `targetValue`/`currentValue` patch, and a KR-level check-in had its value overwritten by the same reset. Those KRs - and the objectives above them - stayed stuck at zero.
+
+  A key result is now scored one of two ways, decided by whether it has KPIs:
+  - **With KPIs** - unchanged: progress is the weighted roll-up of its KPIs, Current Value stays read-only, and direct value edits are ignored.
+  - **Without KPIs** - the KR is scored directly from its own Target and Current values (`progress = current / target`). Current Value is editable on the KR card (inline and in the details popup), the Progress % preview updates live while editing, and the KR-level check-in page (`/krs/[krKey]/checkin`) now actually persists its Current Value.
+
+  Adding the first KPI to a directly-scored KR switches it back to roll-up; deleting the last KPI keeps the rolled-up value as the KR's own starting Current Value instead of resetting it to 0.
+
+- An explicitly chosen key-result status is no longer overwritten by the derived status during the recalculation cascade (`recalcObjectiveInStore` re-recalculated every KR of the objective without preserving it).
+
+### Changed
+- The empty-KPI message under a key result now explains that progress is tracked on the key result itself.
+- Help > "Updating your progress" documents the two scoring modes.
+
+### Notes
+- Existing KRs with no KPIs keep their stored `currentValue` (0 for ones the old reset had zeroed), so nothing changes until someone enters a value - no retro-active progress appears.
+- **Mirror to the SVH twin** (`Solstice-Ventures/OKR-Follow-Up-SVH`): this is a functional change and applies there too.
+
+---
+
 ## [0.5.8] — 2026-08-17
 
 ### Fixed

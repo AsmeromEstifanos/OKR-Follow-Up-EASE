@@ -1014,7 +1014,22 @@ function getStatusFromProgress(progressPct: number): KrStatus {
   return "OffTrack";
 }
 
-function recalcKeyResultInStore(store: StoreState, krKey: string): void {
+function krHasKpis(store: StoreState, krKey: string): boolean {
+  return store.kpis.some(
+    (kpi) => kpi.krKey.toLowerCase() === krKey.toLowerCase(),
+  );
+}
+
+type RecalcKeyResultOptions = {
+  /** Keep an explicitly chosen status instead of deriving it from progress. */
+  preserveStatus?: boolean;
+};
+
+function recalcKeyResultInStore(
+  store: StoreState,
+  krKey: string,
+  options: RecalcKeyResultOptions = {},
+): void {
   const keyResult = store.keyResults.find((item) => item.krKey === krKey);
   if (!keyResult) {
     return;
@@ -1022,10 +1037,16 @@ function recalcKeyResultInStore(store: StoreState, krKey: string): void {
 
   const childKpis = store.kpis.filter((kpi) => kpi.krKey === krKey);
   if (childKpis.length === 0) {
-    keyResult.progressPct = 0;
-    keyResult.currentValue = 0;
-    keyResult.targetValue = 100;
-    keyResult.status = getStatusFromProgress(keyResult.progressPct);
+    // No KPIs: the KR is scored directly from its own target/current values so
+    // teams that track at KR level can still record progress.
+    keyResult.progressPct = computeKrProgress(
+      keyResult.baselineValue,
+      keyResult.targetValue,
+      keyResult.currentValue,
+    );
+    if (!options.preserveStatus) {
+      keyResult.status = getStatusFromProgress(keyResult.progressPct);
+    }
     return;
   }
 
@@ -1113,7 +1134,16 @@ function ensureNoObjectiveUsesAnyDepartment(
   }
 }
 
-function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
+type RecalcObjectiveOptions = {
+  /** KR whose explicitly chosen status must survive the cascading recalc. */
+  preserveStatusForKrKey?: string;
+};
+
+function recalcObjectiveInStore(
+  store: StoreState,
+  objectiveKey: string,
+  options: RecalcObjectiveOptions = {},
+): void {
   const objective = store.objectives.find(
     (item) => item.objectiveKey === objectiveKey,
   );
@@ -1122,10 +1152,16 @@ function recalcObjectiveInStore(store: StoreState, objectiveKey: string): void {
     return;
   }
 
+  const preservedKrKey = (options.preserveStatusForKrKey ?? "").toLowerCase();
   const objectiveKrs = store.keyResults.filter(
     (kr) => kr.objectiveKey === objectiveKey,
   );
-  objectiveKrs.forEach((kr) => recalcKeyResultInStore(store, kr.krKey));
+  objectiveKrs.forEach((kr) =>
+    recalcKeyResultInStore(store, kr.krKey, {
+      preserveStatus: Boolean(preservedKrKey)
+        && kr.krKey.toLowerCase() === preservedKrKey,
+    }),
+  );
 
   if (objectiveKrs.length === 0) {
     objective.progressPct = 0;
@@ -2790,6 +2826,18 @@ export function updateKeyResult(
       );
     }
 
+    // Target/current values are owned by the KPIs when the KR has any; a KR
+    // without KPIs is scored directly, so it accepts them itself.
+    const isDirectlyScored = !krHasKpis(store, keyResult.krKey);
+
+    if (patch.targetValue !== undefined && isDirectlyScored) {
+      keyResult.targetValue = patch.targetValue;
+    }
+
+    if (patch.currentValue !== undefined && isDirectlyScored) {
+      keyResult.currentValue = patch.currentValue;
+    }
+
     if (patch.status !== undefined) {
       keyResult.status = patch.status;
     }
@@ -2839,8 +2887,13 @@ export function updateKeyResult(
       recalcObjectiveInStore(store, previousObjectiveKey);
     }
 
-    recalcKeyResultInStore(store, keyResult.krKey);
-    recalcObjectiveInStore(store, keyResult.objectiveKey);
+    recalcKeyResultInStore(store, keyResult.krKey, {
+      preserveStatus: patch.status !== undefined,
+    });
+    recalcObjectiveInStore(store, keyResult.objectiveKey, {
+      preserveStatusForKrKey:
+        patch.status !== undefined ? keyResult.krKey : undefined,
+    });
     persistStore(store);
     return clone(keyResult);
   } catch (error) {
@@ -3119,6 +3172,8 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
 
   const checkInAt = input.checkInAt ?? nowIso();
   const currentValueSnapshot = input.currentValueSnapshot;
+  // A KR with KPIs is scored by its KPIs; one without is scored by this value.
+  const isDirectlyScoredKr = !krHasKpis(store, keyResult.krKey);
   const progressPctSnapshot =
     input.progressPctSnapshot ??
     (kpi
@@ -3127,7 +3182,13 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
           kpi.targetValue,
           currentValueSnapshot,
         )
-      : keyResult.progressPct);
+      : isDirectlyScoredKr
+        ? computeKrProgress(
+            keyResult.baselineValue,
+            keyResult.targetValue,
+            currentValueSnapshot,
+          )
+        : keyResult.progressPct);
 
   const status = input.status;
   const checkIn: CheckIn = {
@@ -3158,14 +3219,20 @@ export function createCheckIn(input: CreateCheckInInput): CheckIn {
     kpi.lastCheckinAt = checkInAt;
     recalcKeyResultInStore(store, keyResult.krKey);
   } else {
+    if (isDirectlyScoredKr) {
+      keyResult.currentValue = currentValueSnapshot;
+      keyResult.progressPct = progressPctSnapshot;
+    }
     keyResult.status = status;
     keyResult.blockers = normalizeName(input.blockers);
     keyResult.notes = normalizeName(input.updateNotes);
     keyResult.lastCheckinAt = checkInAt;
-    recalcKeyResultInStore(store, keyResult.krKey);
+    recalcKeyResultInStore(store, keyResult.krKey, { preserveStatus: true });
   }
 
-  recalcObjectiveInStore(store, keyResult.objectiveKey);
+  recalcObjectiveInStore(store, keyResult.objectiveKey, {
+    preserveStatusForKrKey: kpi ? undefined : keyResult.krKey,
+  });
   persistStore(store);
   return clone(checkIn);
 }

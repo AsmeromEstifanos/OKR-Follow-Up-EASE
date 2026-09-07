@@ -101,6 +101,8 @@ Weight: If you assign weights to KPIs, the dashboard uses them to calculate a we
 
 To update a KPI, click the pencil icon on the KPI row and change the current value.
 
+Key results with KPIs vs without: If a key result has KPIs under it, its progress is the weighted roll-up of those KPIs and its Current value is read-only — update the KPIs instead. If a key result has no KPIs, you score it directly: its Current value is editable and its progress is Current / Target.
+
 Tip: Update your progress at least once a week. If a goal goes more than 7 days without an update during an active period, it gets flagged with a warning icon.`
   },
   {
