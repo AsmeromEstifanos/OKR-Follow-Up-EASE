@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.2] - 2026-09-07
+
+### Fixed
+- **The restart now runs as its own SSH step.** The v0.6.1 instrumentation ruled out the fork/NPROC explanation: the run printed the new `Restarting application (shell pid 471168, cwd ...)` echo and then exited with status 1 at the very next line - `if [ -n "$RESTART_COMMAND" ]`, a shell builtin that cannot fail, with `set +e` in force. An identical construct earlier in the same script (`if [ -n "$APP_PORT" ]`, also empty) runs fine, so the fault is something about the tail of that ~4.7 KB script, not the account and not the commands. Rather than keep guessing, the restart moved out of the long extract script into a separate `appleboy/ssh-action` step with a seven-line script of its own. The extract step is renamed accordingly.
+
+### Changed
+- A restart failure is now unambiguous: the "Signal Passenger restart" step does nothing but signal the restart, and prints the directory, pid, write result and `ls -l` of `tmp/restart.txt`.
+
+---
+
 ## [0.6.1] - 2026-09-07
 
 ### Fixed

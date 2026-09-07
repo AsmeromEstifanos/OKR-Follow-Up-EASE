@@ -103,7 +103,7 @@ jobs:
           source: deploy.tgz
           target: /tmp/okr-follow-up-deploy
 
-      - name: Extract, install production deps, and restart on cPanel
+      - name: Extract and install production deps on cPanel
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.CPANEL_HOST }}
@@ -209,56 +209,31 @@ jobs:
               npm ci --omit=dev --no-audit --no-fund
             fi
 
-            # Restart. `tmp/restart.txt` is what Passenger watches. Nothing here
-            # forks a subshell and passenger-config is never called: both are
-            # fork-heavy, and a failed fork on this account is silent.
-            # Every command below is a shell BUILTIN wherever possible:
-            # `touch` and `mkdir` are external binaries, so each one forks, and
-            # on this NPROC-capped account a failed fork kills the whole SSH
-            # shell instantly - no error, no exit code, nothing after the last
-            # echo. `: > file` is a redirection, which costs no process at all.
-            set +e
-            echo "Restarting application (shell pid $$, cwd $PWD)"
-
-            if [ -n "$RESTART_COMMAND" ]; then
-              echo "Running custom restart command"
-              sh -lc "$RESTART_COMMAND"
-              echo "Custom restart exit code: $?"
-            else
-              echo "No RESTART_COMMAND set - signalling Passenger via tmp/restart.txt"
-
-              if [ -e tmp ] && [ ! -d tmp ]; then
-                echo "WARNING: '$PWD/tmp' exists but is not a directory. Removing it."
-                rm -f tmp
-                echo "rm exit code: $?"
-              fi
-
-              if [ ! -d tmp ]; then
-                echo "tmp/ missing - creating it (this forks)"
-                mkdir tmp
-                echo "mkdir exit code: $?"
-              else
-                echo "tmp/ already exists - no fork needed"
-              fi
-
-              : > tmp/restart.txt
-              WRITE_RC=$?
-              echo "write tmp/restart.txt exit code: $WRITE_RC"
-
-              if [ "$WRITE_RC" != "0" ] || [ ! -f tmp/restart.txt ]; then
-                echo "WARNING: could not signal a restart. The new build is on disk"
-                echo "but Passenger may still be serving the old process."
-                echo "Free processes on the account (NPROC) and redeploy, or restart"
-                echo "the app from cPanel -> Setup Node.js App."
-                set -e
-                exit 1
-              fi
-
-              echo "Restart signalled."
-            fi
-            set -e
-
             echo "Cleaning temp deployment files"
             rm -rf /tmp/okr-follow-up-deploy
 
             echo "Deployment complete"
+
+      # Deliberately a SEPARATE ssh-action step with a short script. The restart
+      # used to be the tail of the long extract script above, and it never once
+      # ran: that shell exited with status 1 immediately after the last echo
+      # before it, at a plain `if [ -n "$VAR" ]` builtin that cannot fail. A
+      # fresh, short session sidesteps whatever the long script trips over, and
+      # a failure here is now unambiguous - this step does nothing else.
+      - name: Signal Passenger restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          key: ${{ secrets.CPANEL_SSH_KEY }}
+          port: ${{ secrets.CPANEL_PORT || 22 }}
+          script_stop: true
+          envs: APP_DIR
+          script: |
+            cd "$APP_DIR" || exit 1
+            echo "Signalling restart in $PWD (pid $$)"
+            [ -d tmp ] || mkdir tmp
+            : > tmp/restart.txt
+            echo "restart.txt written, rc=$?"
+            ls -l tmp/restart.txt
+            echo "Restart signalled."
