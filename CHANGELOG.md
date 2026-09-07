@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.1] - 2026-09-07
+
+### Fixed
+- **The deploy workflow's restart step has failed every single run since it was written** (17 Aug), on both remotes, before and after the NPROC backlog was cleared. It died silently right after printing `Restarting application` - `Process exited with status 1`, with none of the block's own diagnostic echoes reaching the log, so there was nothing to debug from. The restart block is now fork-free and instrumented:
+  - `touch tmp/restart.txt` is replaced by `: > tmp/restart.txt`, a shell redirection that spawns no process (`touch` is an external binary, so it forks - and a failed fork kills the SSH shell outright, before any error can print).
+  - `mkdir -p tmp` (also a fork) now runs only when `tmp/` is actually missing, tested with the `[ -d ]` builtin. On a normal deploy `tmp/` already exists, so the restart costs zero processes.
+  - A `tmp` that exists but is not a directory is detected and removed rather than making `mkdir -p` fail.
+  - Every branch echoes what it did and its exit code, including the shell pid and cwd, so the next failure names itself.
+  - The step now exits non-zero when the restart signal genuinely could not be written, instead of warning and reporting success.
+
+### Notes
+- v0.6.0 reached production despite its failed deploy: everything before the restart (extract, copy into `APP_DIR`, `.env` merge) had completed, and Passenger respawned from the new on-disk build on its own. Verified by the live help chunk containing v0.6.0 text. Do not rely on that - a failed run leaves the served version unknown, so check a served string.
+
+---
+
 ## [0.6.0] - 2026-09-07
 
 ### Fixed

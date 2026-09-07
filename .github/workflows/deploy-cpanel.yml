@@ -209,30 +209,52 @@ jobs:
               npm ci --omit=dev --no-audit --no-fund
             fi
 
-            # Restart. Deliberately NOT wrapped in a `( ... ) || true` subshell:
-            # that forks, and on a NPROC-capped account the fork can fail with no
-            # output at all, so the deploy reported success while the app was
-            # never restarted and kept serving the previous build from memory.
-            # `touch tmp/restart.txt` is what Passenger watches; it costs no extra
-            # process. passenger-config is skipped because it is fork-heavy.
+            # Restart. `tmp/restart.txt` is what Passenger watches. Nothing here
+            # forks a subshell and passenger-config is never called: both are
+            # fork-heavy, and a failed fork on this account is silent.
+            # Every command below is a shell BUILTIN wherever possible:
+            # `touch` and `mkdir` are external binaries, so each one forks, and
+            # on this NPROC-capped account a failed fork kills the whole SSH
+            # shell instantly - no error, no exit code, nothing after the last
+            # echo. `: > file` is a redirection, which costs no process at all.
             set +e
-            echo "Restarting application"
+            echo "Restarting application (shell pid $$, cwd $PWD)"
+
             if [ -n "$RESTART_COMMAND" ]; then
               echo "Running custom restart command"
               sh -lc "$RESTART_COMMAND"
               echo "Custom restart exit code: $?"
             else
-              mkdir -p tmp
-              echo "tmp mkdir exit code: $?"
-              touch tmp/restart.txt
-              TOUCH_RC=$?
-              echo "touch tmp/restart.txt exit code: $TOUCH_RC"
-              if [ "$TOUCH_RC" != "0" ] || [ ! -f tmp/restart.txt ]; then
+              echo "No RESTART_COMMAND set - signalling Passenger via tmp/restart.txt"
+
+              if [ -e tmp ] && [ ! -d tmp ]; then
+                echo "WARNING: '$PWD/tmp' exists but is not a directory. Removing it."
+                rm -f tmp
+                echo "rm exit code: $?"
+              fi
+
+              if [ ! -d tmp ]; then
+                echo "tmp/ missing - creating it (this forks)"
+                mkdir tmp
+                echo "mkdir exit code: $?"
+              else
+                echo "tmp/ already exists - no fork needed"
+              fi
+
+              : > tmp/restart.txt
+              WRITE_RC=$?
+              echo "write tmp/restart.txt exit code: $WRITE_RC"
+
+              if [ "$WRITE_RC" != "0" ] || [ ! -f tmp/restart.txt ]; then
                 echo "WARNING: could not signal a restart. The new build is on disk"
-                echo "but Passenger is still serving the old process."
+                echo "but Passenger may still be serving the old process."
                 echo "Free processes on the account (NPROC) and redeploy, or restart"
                 echo "the app from cPanel -> Setup Node.js App."
+                set -e
+                exit 1
               fi
+
+              echo "Restart signalled."
             fi
             set -e
 
